@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>RamzApp -  </title>
+    <title>RamzApp - تسجيل الدخول</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -143,6 +143,10 @@
         .login-btn:active {
             transform: scale(0.98);
         }
+        .login-btn:disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
         .guest-btn {
             background: transparent !important;
             border: 2px solid var(--accent) !important;
@@ -182,10 +186,6 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-        .btn:disabled {
-            opacity: 0.6;
-            pointer-events: none;
-        }
         .toast-container {
             position: fixed;
             bottom: 30px;
@@ -209,6 +209,46 @@
         .toast-msg.show {
             opacity: 1;
         }
+        #statusBar {
+            color: var(--text3);
+            font-size: 12px;
+            text-align: center;
+            min-height: 20px;
+            margin-top: 4px;
+        }
+        .auth-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 8px 0 12px;
+        }
+        .auth-toggle button {
+            background: transparent;
+            border: none;
+            color: var(--text3);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 6px 16px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+        .auth-toggle button.active {
+            color: var(--accent);
+            background: rgba(255, 0, 80, 0.1);
+        }
+        .auth-toggle button:hover {
+            color: var(--text);
+        }
+        .extra-fields {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .extra-fields.show {
+            display: flex;
+        }
         @media (max-width: 400px) {
             .logo { font-size: 40px; }
             .phone-row select { width: 100px; }
@@ -217,67 +257,141 @@
 </head>
 <body>
 
-    <div class="logo"> RamzApp</div>
-    <div class="subtitle">   </div>
+    <div class="logo">💬 RamzApp</div>
+    <div class="subtitle">تطبيق مراسلة آمن ومتكامل</div>
+    <div id="statusBar">⏳ جاري التهيئة...</div>
 
     <div class="form-container">
-        <!--  -->
+        <!-- تبويبات -->
         <div class="tab-row">
-            <button class="tab-btn active" id="tabEmail">  </button>
-            <button class="tab-btn" id="tabPhone">  </button>
+            <button class="tab-btn active" id="tabEmail">📧 البريد الإلكتروني</button>
+            <button class="tab-btn" id="tabPhone">📱 رقم الهاتف</button>
         </div>
 
-        <!--    -->
+        <!-- نموذج البريد الإلكتروني (دخول / تسجيل) -->
         <div id="emailForm">
-            <input type="email" class="login-input" id="emailInput" placeholder=" " autocomplete="email" dir="ltr">
-            <input type="password" class="login-input" id="passwordInput" placeholder=" " autocomplete="current-password" dir="ltr">
+            <!-- أزرار التبديل بين تسجيل الدخول وإنشاء حساب -->
+            <div class="auth-toggle">
+                <button id="loginToggle" class="active">🔑 تسجيل الدخول</button>
+                <button id="signupToggle">📝 إنشاء حساب</button>
+            </div>
+
+            <input type="email" class="login-input" id="emailInput" placeholder="البريد الإلكتروني" autocomplete="email" dir="ltr">
+            <input type="password" class="login-input" id="passwordInput" placeholder="كلمة المرور" autocomplete="current-password" dir="ltr">
+
+            <!-- الحقول الإضافية للتسجيل -->
+            <div class="extra-fields" id="signupFields">
+                <input type="password" class="login-input" id="confirmPasswordInput" placeholder="تأكيد كلمة المرور" dir="ltr">
+                <input type="text" class="login-input" id="nameInput" placeholder="الاسم (اختياري)" dir="rtl">
+            </div>
+
             <div class="error" id="emailError"></div>
-            <button class="login-btn" id="emailLoginBtn"><span id="emailBtnText"> </span></button>
+            <button class="login-btn" id="emailLoginBtn"><span id="emailBtnText">🚀 دخول</span></button>
+            <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;" id="emailToggleHint">🔑 سجل دخولك باستخدام بريدك الإلكتروني</p>
         </div>
 
-        <!--   -->
+        <!-- نموذج الهاتف -->
         <div id="phoneForm" style="display:none;">
             <div class="phone-row">
                 <select id="countryCode">
-                    <option value="+967"> +967</option>
-                    <option value="+966"> +966</option>
-                    <option value="+971"> +971</option>
-                    <option value="+968"> +968</option>
-                    <option value="+974"> +974</option>
-                    <option value="+973"> +973</option>
-                    <option value="+965"> +965</option>
-                    <option value="+962"> +962</option>
-                    <option value="+961"> +961</option>
-                    <option value="+20"> +20</option>
-                    <option value="+1"> +1</option>
-                    <option value="+44"> +44</option>
-                    <option value="+33"> +33</option>
-                    <option value="+49"> +49</option>
+                    <option value="+967">🇾🇪 +967</option>
+                    <option value="+966">🇸🇦 +966</option>
+                    <option value="+971">🇦🇪 +971</option>
+                    <option value="+968">🇴🇲 +968</option>
+                    <option value="+974">🇶🇦 +974</option>
+                    <option value="+973">🇧🇭 +973</option>
+                    <option value="+965">🇰🇼 +965</option>
+                    <option value="+962">🇯🇴 +962</option>
+                    <option value="+961">🇱🇧 +961</option>
+                    <option value="+20">🇪🇬 +20</option>
+                    <option value="+1">🇺🇸 +1</option>
+                    <option value="+44">🇬🇧 +44</option>
+                    <option value="+33">🇫🇷 +33</option>
+                    <option value="+49">🇩🇪 +49</option>
                 </select>
-                <input type="tel" class="login-input" id="phoneInput" placeholder=" " dir="ltr">
+                <input type="tel" class="login-input" id="phoneInput" placeholder="رقم الهاتف" dir="ltr">
             </div>
             <div class="error" id="phoneError"></div>
-            <button class="login-btn" id="phoneLoginBtn"><span id="phoneBtnText"> </span></button>
+            <button class="login-btn" id="phoneLoginBtn"><span id="phoneBtnText">📱 متابعة</span></button>
         </div>
 
-        <!--    -->
-        <button class="login-btn guest-btn" id="guestBtn"><span id="guestBtnText">  </span></button>
-        <p class="hint">    .    </p>
+        <!-- زر الدخول كضيف -->
+        <button class="login-btn guest-btn" id="guestBtn"><span id="guestBtnText">👤 الدخول كضيف</span></button>
+        <p class="hint">يتم إنشاء حساب رسمي تلقائياً. ستتمكن من الدخول لاحقاً</p>
     </div>
 
-    <!--   -->
+    <!-- حاوية التوست -->
     <div class="toast-container" id="toastContainer">
         <div class="toast-msg" id="toastMsg"></div>
     </div>
 
+    <!-- ========== تحميل supabase.js ========== -->
+    <script src="supabase.js?v=4"></script>
+
     <script>
         // ============================================================
-        //       supabase.js
-        //           supabase.js .
-        //          .
+        // منع التنفيذ المتكرر
         // ============================================================
+        if (window._loginInit) {
+            console.warn('⚠️ login.html تم تهيئته مسبقاً، تجاهل التكرار');
+        } else {
+            window._loginInit = true;
+            console.log('🚀 بدء تهيئة login.html (مع إنشاء حساب)');
+        }
 
-        //   
+        // ============================================================
+        // التحقق من الجلسة الحالية (مرة واحدة)
+        // ============================================================
+        (async function checkSession() {
+            if (window._sessionChecked) return;
+            window._sessionChecked = true;
+
+            const savedUser = localStorage.getItem('ramzapp_user');
+            if (savedUser) {
+                try {
+                    const user = JSON.parse(savedUser);
+                    if (user && user.id) {
+                        console.log('👤 مستخدم موجود، التوجيه إلى index.html');
+                        setTimeout(() => window.location.href = 'index.html', 200);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('⚠️ بيانات المستخدم فاسدة، سيتم مسحها');
+                    localStorage.removeItem('ramzapp_user');
+                }
+            }
+            console.log('📌 لا يوجد مستخدم، عرض صفحة تسجيل الدخول');
+            document.getElementById('statusBar').textContent = '✅ جاهز لتسجيل الدخول';
+        })();
+
+        // ============================================================
+        // انتظار تحميل supabase.js
+        // ============================================================
+        function waitForSupabase() {
+            return new Promise((resolve) => {
+                let attempts = 0;
+                const check = () => {
+                    attempts++;
+                    if (typeof window.signInWithEmail === 'function' &&
+                        typeof window.signUpWithEmail === 'function' &&
+                        typeof window.signInWithPhone === 'function' &&
+                        typeof window.signInAsGuest === 'function') {
+                        console.log('✅ دوال supabase.js جاهزة');
+                        resolve(true);
+                    } else if (attempts < 30) {
+                        setTimeout(check, 300);
+                    } else {
+                        console.warn('⚠️ انتهى الوقت، دوال supabase.js غير متوفرة');
+                        resolve(false);
+                    }
+                };
+                check();
+            });
+        }
+
+        // ============================================================
+        // دوال مساعدة (UI)
+        // ============================================================
         function showError(elementId, message) {
             const el = document.getElementById(elementId);
             if (el) {
@@ -292,7 +406,7 @@
             if (!btn || !textEl) return;
             if (isLoading) {
                 btn.disabled = true;
-                textEl.innerHTML = `<span class="loading-spinner"></span> ...`;
+                textEl.innerHTML = `<span class="loading-spinner"></span> جاري...`;
             } else {
                 btn.disabled = false;
                 textEl.textContent = originalText;
@@ -311,230 +425,214 @@
             }, duration);
         }
 
-        //      window ( supabase.js)
-        function isSupabaseReady() {
-            return typeof window.signInWithEmail === 'function' &&
-                   typeof window.signInWithPhone === 'function' &&
-                   typeof window.signInAsGuest === 'function';
-        }
+        // ============================================================
+        // ربط الأحداث
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', async function() {
+            const ready = await waitForSupabase();
+            if (!ready) {
+                showToast('⚠️ تعذر تحميل خدمات المصادقة، حاول تحديث الصفحة');
+                document.getElementById('statusBar').textContent = '❌ فشل تحميل supabase.js';
+            } else {
+                document.getElementById('statusBar').textContent = '✅ جاهز لتسجيل الدخول';
+            }
 
-        //        supabase.js (    )
-        //       .
-        if (!isSupabaseReady()) {
-            //  supabase.js   
-            const script = document.createElement('script');
-            script.src = 'supabase.js';
-            script.onload = () => {
-                console.log('   supabase.js ');
-                //     
-                bindEvents();
-            };
-            script.onerror = () => {
-                console.error('   supabase.js     ');
-                //      (   )
-                window.signInWithEmail = async (email, password) => {
-                    if (email && password) {
-                        return { id: 'mock_' + Date.now(), email };
-                    }
-                    throw new Error('  ');
-                };
-                window.signInWithPhone = async (phone, name) => {
-                    if (phone) {
-                        return { id: 'mock_' + Date.now(), phone, name: name || '' };
-                    }
-                    throw new Error('  ');
-                };
-                window.signInAsGuest = async () => {
-                    return { id: 'guest_' + Date.now(), email: 'guest@local' };
-                };
-                window.supabaseClient = {
-                    from: () => ({ select: () => ({ single: async () => ({ data: null, error: null }) }) })
-                };
-                bindEvents();
-            };
-            document.head.appendChild(script);
-        } else {
-            bindEvents();
-        }
-
-        //   
-        function bindEvents() {
-            //  
+            // ====== تبديل التبويبات ======
             const tabEmail = document.getElementById('tabEmail');
             const tabPhone = document.getElementById('tabPhone');
             const emailForm = document.getElementById('emailForm');
             const phoneForm = document.getElementById('phoneForm');
 
-            if (tabEmail && tabPhone) {
-                tabEmail.addEventListener('click', () => {
-                    tabEmail.classList.add('active');
-                    tabPhone.classList.remove('active');
-                    emailForm.style.display = 'block';
-                    phoneForm.style.display = 'none';
-                });
-                tabPhone.addEventListener('click', () => {
-                    tabPhone.classList.add('active');
-                    tabEmail.classList.remove('active');
-                    emailForm.style.display = 'none';
-                    phoneForm.style.display = 'block';
-                });
-            }
+            tabEmail.addEventListener('click', () => {
+                tabEmail.classList.add('active');
+                tabPhone.classList.remove('active');
+                emailForm.style.display = 'block';
+                phoneForm.style.display = 'none';
+            });
+            tabPhone.addEventListener('click', () => {
+                tabPhone.classList.add('active');
+                tabEmail.classList.remove('active');
+                emailForm.style.display = 'none';
+                phoneForm.style.display = 'block';
+            });
 
-            //   
+            // ====== تبديل بين تسجيل الدخول وإنشاء حساب ======
+            const loginToggle = document.getElementById('loginToggle');
+            const signupToggle = document.getElementById('signupToggle');
+            const signupFields = document.getElementById('signupFields');
+            const emailBtnText = document.getElementById('emailBtnText');
+            const emailHint = document.getElementById('emailToggleHint');
             const emailLoginBtn = document.getElementById('emailLoginBtn');
-            if (emailLoginBtn) {
-                emailLoginBtn.addEventListener('click', async () => {
-                    const email = document.getElementById('emailInput').value.trim();
-                    const password = document.getElementById('passwordInput').value;
-                    if (!email || !password) {
-                        showError('emailError', '    ');
-                        return;
-                    }
-                    if (!navigator.onLine) {
-                        showError('emailError', '    ');
-                        return;
-                    }
-                    setLoading('emailLoginBtn', 'emailBtnText', true, ' ');
-                    try {
-                        if (typeof window.signInWithEmail !== 'function') {
-                            throw new Error('   ');
-                        }
-                        const user = await window.signInWithEmail(email, password);
-                        //     Supabase ( supabaseClient)
-                        let userData = { id: user.id, email: user.email, name: '', avatar: '', phone: '' };
-                        if (window.supabaseClient) {
-                            try {
-                                const { data: profile } = await window.supabaseClient
-                                    .from('users')
-                                    .select('*')
-                                    .eq('id', user.id)
-                                    .single();
-                                if (profile) {
-                                    userData.name = profile.name || '';
-                                    userData.avatar = profile.avatar || '';
-                                    userData.phone = profile.phone || '';
-                                }
-                            } catch (e) {}
-                        }
-                        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
-                        showToast('  !');
-                        setTimeout(() => window.location.href = 'index.html', 600);
-                    } catch (err) {
-                        showError('emailError', err.message || '  ');
-                        setLoading('emailLoginBtn', 'emailBtnText', false, ' ');
-                    }
-                });
-            }
 
-            //   
-            const phoneLoginBtn = document.getElementById('phoneLoginBtn');
-            if (phoneLoginBtn) {
-                phoneLoginBtn.addEventListener('click', async () => {
-                    const countryCode = document.getElementById('countryCode').value;
-                    let phone = document.getElementById('phoneInput').value.trim().replace(/[\s\-\(\)]/g, '');
-                    if (!phone) {
-                        showError('phoneError', '   ');
-                        return;
-                    }
-                    if (phone.startsWith('0')) phone = phone.substring(1);
-                    const fullPhone = countryCode + phone;
-                    if (!navigator.onLine) {
-                        showError('phoneError', '    ');
-                        return;
-                    }
-                    setLoading('phoneLoginBtn', 'phoneBtnText', true, ' ');
-                    try {
-                        if (typeof window.signInWithPhone !== 'function') {
-                            throw new Error('   ');
-                        }
-                        const user = await window.signInWithPhone(fullPhone);
-                        const userData = {
-                            id: user.id,
-                            email: user.email || '',
-                            name: user.name || '',
-                            avatar: user.avatar || '',
-                            phone: user.phone || fullPhone
-                        };
-                        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
-                        showToast('   ');
-                        setTimeout(() => window.location.href = 'index.html', 600);
-                    } catch (err) {
-                        showError('phoneError', err.message || '  ');
-                        setLoading('phoneLoginBtn', 'phoneBtnText', false, ' ');
-                    }
-                });
-            }
-
-            //  
-            const guestBtn = document.getElementById('guestBtn');
-            if (guestBtn) {
-                guestBtn.addEventListener('click', async () => {
-                    if (!navigator.onLine) {
-                        showToast('    ');
-                        return;
-                    }
-                    setLoading('guestBtn', 'guestBtnText', true, '  ');
-                    try {
-                        if (typeof window.signInAsGuest !== 'function') {
-                            throw new Error('   ');
-                        }
-                        const user = await window.signInAsGuest();
-                        const userData = {
-                            id: user.id,
-                            email: user.email || '',
-                            name: '',
-                            avatar: '',
-                            phone: ''
-                        };
-                        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
-                        showToast('    ');
-                        setTimeout(() => window.location.href = 'index.html', 600);
-                    } catch (err) {
-                        showToast('    : ' + err.message);
-                        setLoading('guestBtn', 'guestBtnText', false, '  ');
-                    }
-                });
-            }
-
-            //     
-            (async () => {
-                const savedUser = localStorage.getItem('ramzapp_user');
-                if (savedUser) {
-                    try {
-                        const user = JSON.parse(savedUser);
-                        if (user && user.id) {
-                            window.location.href = 'index.html';
-                            return;
-                        }
-                    } catch (e) {}
+            function setAuthMode(mode) {
+                if (mode === 'login') {
+                    loginToggle.classList.add('active');
+                    signupToggle.classList.remove('active');
+                    signupFields.classList.remove('show');
+                    emailBtnText.textContent = '🚀 دخول';
+                    emailHint.textContent = '🔑 سجل دخولك باستخدام بريدك الإلكتروني';
+                    // تغيير لون الزر إذا أردت
+                } else {
+                    loginToggle.classList.remove('active');
+                    signupToggle.classList.add('active');
+                    signupFields.classList.add('show');
+                    emailBtnText.textContent = '📝 إنشاء حساب';
+                    emailHint.textContent = '📝 أنشئ حسابك الجديد مجاناً';
                 }
-                //      Supabase  (  supabase.js)
-                if (window.supabaseClient && typeof window.getCurrentSession === 'function') {
-                    try {
-                        const session = await window.getCurrentSession();
-                        if (session) {
-                            //   
+            }
+
+            loginToggle.addEventListener('click', () => setAuthMode('login'));
+            signupToggle.addEventListener('click', () => setAuthMode('signup'));
+
+            // ====== معالج زر البريد الإلكتروني (دخول / تسجيل) ======
+            emailLoginBtn.addEventListener('click', async () => {
+                const email = document.getElementById('emailInput').value.trim();
+                const password = document.getElementById('passwordInput').value;
+                const isSignup = signupToggle.classList.contains('active');
+
+                if (!email || !password) {
+                    showError('emailError', 'يرجى إدخال البريد وكلمة المرور');
+                    return;
+                }
+
+                // إذا كان تسجيل، تحقق من تطابق كلمة المرور
+                if (isSignup) {
+                    const confirm = document.getElementById('confirmPasswordInput').value;
+                    if (password !== confirm) {
+                        showError('emailError', 'كلمة المرور غير متطابقة');
+                        return;
+                    }
+                    if (password.length < 6) {
+                        showError('emailError', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+                        return;
+                    }
+                }
+
+                if (!navigator.onLine) {
+                    showError('emailError', '📡 لا يوجد اتصال بالإنترنت');
+                    return;
+                }
+
+                // تعطيل الزر أثناء المعالجة
+                const originalText = emailBtnText.textContent;
+                setLoading('emailLoginBtn', 'emailBtnText', true, originalText);
+
+                try {
+                    let user;
+                    if (isSignup) {
+                        // إنشاء حساب جديد
+                        const name = document.getElementById('nameInput').value.trim() || 'مستخدم';
+                        if (typeof window.signUpWithEmail !== 'function') {
+                            throw new Error('خدمة التسجيل غير متاحة');
+                        }
+                        user = await window.signUpWithEmail(email, password, name);
+                        showToast('✅ تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
+                    } else {
+                        // تسجيل الدخول
+                        if (typeof window.signInWithEmail !== 'function') {
+                            throw new Error('خدمة تسجيل الدخول غير متاحة');
+                        }
+                        user = await window.signInWithEmail(email, password);
+                        showToast('✅ مرحباً بعودتك!');
+                    }
+
+                    // جلب بيانات المستخدم الإضافية
+                    let userData = {
+                        id: user.id,
+                        email: user.email,
+                        name: user.user_metadata?.name || 'مستخدم',
+                        avatar: '👤',
+                        phone: ''
+                    };
+                    if (window.supabaseClient) {
+                        try {
                             const { data: profile } = await window.supabaseClient
                                 .from('users')
                                 .select('*')
-                                .eq('id', session.user.id)
+                                .eq('id', user.id)
                                 .single();
-                            const userData = {
-                                id: session.user.id,
-                                email: session.user.email,
-                                name: profile?.name || '',
-                                avatar: profile?.avatar || '',
-                                phone: profile?.phone || ''
-                            };
-                            localStorage.setItem('ramzapp_user', JSON.stringify(userData));
-                            window.location.href = 'index.html';
-                            return;
-                        }
-                    } catch (e) {}
+                            if (profile) {
+                                userData.name = profile.name || userData.name;
+                                userData.avatar = profile.avatar || '👤';
+                                userData.phone = profile.phone || '';
+                            }
+                        } catch (e) {}
+                    }
+                    localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+                    setTimeout(() => window.location.href = 'index.html', 500);
+                } catch (err) {
+                    showError('emailError', err.message || 'فشل العملية');
+                    setLoading('emailLoginBtn', 'emailBtnText', false, originalText);
                 }
-            })();
+            });
 
-            //    Enter
+            // ====== تسجيل الدخول بالهاتف ======
+            const phoneLoginBtn = document.getElementById('phoneLoginBtn');
+            phoneLoginBtn.addEventListener('click', async () => {
+                const countryCode = document.getElementById('countryCode').value;
+                let phone = document.getElementById('phoneInput').value.trim().replace(/[\s\-\(\)]/g, '');
+                if (!phone) {
+                    showError('phoneError', 'يرجى إدخال رقم الهاتف');
+                    return;
+                }
+                if (phone.startsWith('0')) phone = phone.substring(1);
+                const fullPhone = countryCode + phone;
+                if (!navigator.onLine) {
+                    showError('phoneError', '📡 لا يوجد اتصال بالإنترنت');
+                    return;
+                }
+                setLoading('phoneLoginBtn', 'phoneBtnText', true, '📱 متابعة');
+                try {
+                    if (typeof window.signInWithPhone !== 'function') {
+                        throw new Error('خدمة المصادقة غير متاحة');
+                    }
+                    const user = await window.signInWithPhone(fullPhone);
+                    const userData = {
+                        id: user.id,
+                        email: user.email || '',
+                        name: user.name || 'مستخدم',
+                        avatar: user.avatar || '👤',
+                        phone: user.phone || fullPhone
+                    };
+                    localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+                    showToast('✅ تم الدخول بنجاح');
+                    setTimeout(() => window.location.href = 'index.html', 500);
+                } catch (err) {
+                    showError('phoneError', err.message || 'فشل تسجيل الدخول');
+                    setLoading('phoneLoginBtn', 'phoneBtnText', false, '📱 متابعة');
+                }
+            });
+
+            // ====== الدخول كضيف ======
+            const guestBtn = document.getElementById('guestBtn');
+            guestBtn.addEventListener('click', async () => {
+                if (!navigator.onLine) {
+                    showToast('📡 لا يوجد اتصال بالإنترنت');
+                    return;
+                }
+                setLoading('guestBtn', 'guestBtnText', true, '👤 الدخول كضيف');
+                try {
+                    if (typeof window.signInAsGuest !== 'function') {
+                        throw new Error('خدمة المصادقة غير متاحة');
+                    }
+                    const user = await window.signInAsGuest();
+                    const userData = {
+                        id: user.id,
+                        email: user.email || '',
+                        name: 'زائر',
+                        avatar: '👤',
+                        phone: ''
+                    };
+                    localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+                    showToast('✅ تم إنشاء حساب ضيف');
+                    setTimeout(() => window.location.href = 'index.html', 500);
+                } catch (err) {
+                    showToast('❌ فشل إنشاء حساب الضيف: ' + err.message);
+                    setLoading('guestBtn', 'guestBtnText', false, '👤 الدخول كضيف');
+                }
+            });
+
+            // ====== دعم الضغط على Enter ======
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
                     const activeTab = document.querySelector('.tab-btn.active');
@@ -545,10 +643,9 @@
                     }
                 }
             });
-        }
 
-        //           .
-        console.log(' login.html (  ) ');
+            console.log('✅ login.html (نسخة نهائية مع إنشاء حساب) جاهز');
+        });
     </script>
 </body>
 </html>
