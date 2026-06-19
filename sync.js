@@ -1,236 +1,275 @@
-// sync.js - طبقة المزامنة الذكية (نسخة نهائية حقيقية)
-// يقوم بمزامنة الرسائل المعلقة محلياً مع Supabase، وجلب الرسائل الجديدة من الخادم
+// ==================== sync.js - الإصدار النهائي الكامل v4.0 ====================
+// طبقة المزامنة الذكية: إدارة الرسائل المعلقة، إعادة المحاولة، المزامنة الدورية، التكامل مع الأحداث
+
 (function() {
+    // ======================================================================
+    // التكوين الأساسي
+    // ======================================================================
+    const CONFIG = {
+        MAX_RETRIES: 5,                    // أقصى عدد محاولات لإعادة إرسال رسالة
+        BASE_DELAY: 2000,                  // التأخير الأساسي (بالملي ثانية)
+        MAX_DELAY: 60000,                  // أقصى تأخير (دقيقة واحدة)
+        SYNC_INTERVAL: 15000,              // الفاصل الزمني للمزامنة الدورية (15 ثانية)
+        BATCH_SIZE: 5,                     // عدد الرسائل المرسلة في كل دفعة
+        ONLINE_CHECK_INTERVAL: 3000,       // التحقق من الاتصال كل 3 ثوان
+        MAX_PENDING_STORAGE: 1000          // أقصى عدد رسائل معلقة في التخزين المحلي
+    };
+
     let isSyncing = false;
     let periodicSyncInterval = null;
-    const MAX_RETRIES = 5;
-    const BASE_DELAY = 2000;
-    const MAX_DELAY = 60000;
-    const SYNC_INTERVAL = 15000; // كل 15 ثانية
-    const BATCH_SIZE = 5;
+    let isOnline = navigator.onLine;
+    let syncQueue = [];
 
-    function isOnline() { return navigator.onLine; }
+    // ======================================================================
+    // دوال مساعدة
+    // ======================================================================
+    function isNetworkOnline() {
+        return navigator.onLine;
+    }
 
-    // ================== دوال مساعدة للوصول إلى البيانات ==================
+    function getRetryDelay(attempts) {
+        return Math.min(CONFIG.BASE_DELAY * Math.pow(2, attempts), CONFIG.MAX_DELAY);
+    }
+
     function getPendingMessages() {
         if (window.getPendingMessages) return window.getPendingMessages();
+        // إذا لم تكن الدالة موجودة، نحاول جلبها من inMemoryDB مباشرة
         const all = [];
         const chats = window.getChats?.() || [];
         chats.forEach(c => {
             const msgs = window.getMessages?.(c.id) || [];
             msgs.forEach(m => {
-                if (m.sync_status === 'pending-send' || m.sync_status === 'failed') all.push(m);
+                if (m.sync_status === 'pending-send' || m.sync_status === 'failed') {
+                    all.push(m);
+                }
             });
         });
         return all;
     }
 
-    function getRetryDelay(attempts) {
-        return Math.min(BASE_DELAY * Math.pow(2, attempts), MAX_DELAY);
+    function updateMessageStatus(msgId, updates) {
+        if (window.updateMessage) window.updateMessage(msgId, updates);
     }
 
-    // ================== مزامنة رسالة واحدة ==================
+    function addMessage(msg) {
+        if (window.addMessage) window.addMessage(msg);
+    }
+
+    function getChat(chatId) {
+        if (window.getChat) return window.getChat(chatId);
+        const chats = window.getChats?.() || [];
+        return chats.find(c => c.id === chatId);
+    }
+
+    function saveChat(chatData) {
+        if (window.saveChat) window.saveChat(chatData);
+    }
+
+    function renderMessages() {
+        if (typeof renderMessages === 'function') renderMessages();
+        else if (window.renderMessages) window.renderMessages();
+    }
+
+    function renderChats() {
+        if (typeof renderChats === 'function') renderChats();
+        else if (window.renderChats) window.renderChats();
+    }
+
+    function updateStats() {
+        if (typeof updateStats === 'function') updateStats();
+        else if (window.updateStats) window.updateStats();
+    }
+
+    function toast(message) {
+        if (typeof toast === 'function') toast(message);
+        else if (window.toast) window.toast(message);
+        else console.log('📢', message);
+    }
+
+    // ======================================================================
+    // الدوال الأساسية للمزامنة
+    // ======================================================================
+
+    // مزامنة رسالة واحدة
     async function syncSingleMessage(msg) {
-        if (!isOnline()) return { success: false, offline: true };
-        window.updateMessage?.(msg.id, { sync_status: 'sending' });
+        if (!isNetworkOnline()) return { success: false, offline: true };
+
+        updateMessageStatus(msg.id, { sync_status: 'sending' });
+
         try {
-            const result = window.sendMessageRealtime
-                ? await window.sendMessageRealtime(msg)
-                : { success: false, error: 'Supabase missing' };
-            if (result.success) {
-                window.updateMessage?.(msg.id, { 
-                    sync_status: 'sent', 
-                    status: 'sent', 
-                    sync_time: new Date().toISOString(),
-                    sync_attempts: 0 // إعادة ضبط المحاولات عند النجاح
-                });
-                return { success: true };
-            } else if (result.offline) {
-                return { success: false, offline: true };
+            // استخدام sendMessageRealtime من supabase.js
+            if (window.sendMessageRealtime) {
+                const result = await window.sendMessageRealtime(msg);
+                if (result.success) {
+                    updateMessageStatus(msg.id, {
+                        sync_status: 'sent',
+                        status: 'sent',
+                        sync_time: new Date().toISOString(),
+                        sync_attempts: 0
+                    });
+                    return { success: true };
+                } else if (result.offline) {
+                    return { success: false, offline: true };
+                } else {
+                    const attempts = (msg.sync_attempts || 0) + 1;
+                    const newStatus = attempts >= CONFIG.MAX_RETRIES ? 'failed' : 'pending-send';
+                    updateMessageStatus(msg.id, {
+                        sync_status: newStatus,
+                        status: newStatus === 'failed' ? 'failed' : 'pending-send',
+                        sync_error: result.error || 'فشل الإرسال',
+                        sync_attempts: attempts
+                    });
+                    return { success: false, error: result.error, attempts };
+                }
             } else {
-                const attempts = (msg.sync_attempts || 0) + 1;
-                const newStatus = attempts >= MAX_RETRIES ? 'failed' : 'pending-send';
-                window.updateMessage?.(msg.id, { 
-                    sync_status: newStatus, 
-                    status: newStatus === 'failed' ? 'failed' : 'pending-send',
-                    sync_error: result.error, 
-                    sync_attempts: attempts 
-                });
-                return { success: false, error: result.error, attempts };
+                console.warn('⚠️ window.sendMessageRealtime غير متوفرة');
+                return { success: false, error: 'sendMessageRealtime not available' };
             }
         } catch (e) {
             const attempts = (msg.sync_attempts || 0) + 1;
-            const newStatus = attempts >= MAX_RETRIES ? 'failed' : 'pending-send';
-            window.updateMessage?.(msg.id, { 
-                sync_status: newStatus, 
+            const newStatus = attempts >= CONFIG.MAX_RETRIES ? 'failed' : 'pending-send';
+            updateMessageStatus(msg.id, {
+                sync_status: newStatus,
                 status: newStatus === 'failed' ? 'failed' : 'pending-send',
-                sync_error: e.message, 
-                sync_attempts: attempts 
+                sync_error: e.message || 'خطأ غير معروف',
+                sync_attempts: attempts
             });
             return { success: false, error: e.message, attempts };
         }
     }
 
-    // ================== وضع علامة "مقروء" على الرسائل المستلمة ==================
-    async function markMessagesAsRead(chatId, messageIds) {
-        if (!isOnline() || !window.supabaseClient) return;
-        try {
-            await window.supabaseClient
-                .from('messages')
-                .update({ status: 'read', read_at: new Date().toISOString() })
-                .in('id', messageIds);
-        } catch (e) {
-            // تجاهل الأخطاء هنا لأنها ليست حرجة للمستخدم
-        }
-    }
+    // ======================================================================
+    // المزامنة الرئيسية لجميع الرسائل المعلقة
+    // ======================================================================
 
-    // ================== المزامنة الرئيسية ==================
     window.syncAllPendingMessages = async function() {
-        if (isSyncing) return { synced: 0, failed: 0, alreadyRunning: true };
-        if (!isOnline()) return { synced: 0, failed: 0, offline: true };
-        
-        isSyncing = true;
-        const pending = getPendingMessages();
-        let synced = 0, failed = 0;
+        if (isSyncing) {
+            console.log('⏳ المزامنة قيد التشغيل بالفعل');
+            return { synced: 0, failed: 0, alreadyRunning: true };
+        }
 
-        // ====== 1. إرسال الرسائل المعلقة (دفعات) ======
-        if (pending.length > 0) {
-            // ترتيب حسب الأقدمية
+        if (!isNetworkOnline()) {
+            console.log('📡 غير متصل بالإنترنت، تأجيل المزامنة');
+            return { synced: 0, failed: 0, offline: true };
+        }
+
+        isSyncing = true;
+        let synced = 0;
+        let failed = 0;
+
+        try {
+            const pending = getPendingMessages();
+
+            if (pending.length === 0) {
+                console.log('✅ لا توجد رسائل معلقة للمزامنة');
+                isSyncing = false;
+                return { synced: 0, failed: 0 };
+            }
+
+            console.log(`📤 بدء مزامنة ${pending.length} رسالة معلقة`);
+
+            // ترتيب الرسائل حسب الأقدمية
             pending.sort((a, b) => new Date(a.time) - new Date(b.time));
-            
+
             // تصفية الرسائل التي تجاوزت عدد المحاولات المسموح
-            const validPending = pending.filter(m => (m.sync_attempts || 0) < MAX_RETRIES);
-            const stuckMessages = pending.filter(m => (m.sync_attempts || 0) >= MAX_RETRIES);
+            const validPending = pending.filter(m => (m.sync_attempts || 0) < CONFIG.MAX_RETRIES);
+            const stuckMessages = pending.filter(m => (m.sync_attempts || 0) >= CONFIG.MAX_RETRIES);
             failed += stuckMessages.length;
 
             // معالجة الدفعات
-            for (let i = 0; i < validPending.length; i += BATCH_SIZE) {
-                const batch = validPending.slice(i, i + BATCH_SIZE);
-                // إرسال الدفعة بالتوازي (لكن ننتظر جميع النتائج)
+            for (let i = 0; i < validPending.length; i += CONFIG.BATCH_SIZE) {
+                // التأكد من أننا ما زلنا متصلين
+                if (!isNetworkOnline()) {
+                    console.warn('⚠️ انقطع الاتصال أثناء المزامنة');
+                    isSyncing = false;
+                    return { synced, failed, offline: true, partial: true };
+                }
+
+                const batch = validPending.slice(i, i + CONFIG.BATCH_SIZE);
                 const results = await Promise.all(batch.map(msg => syncSingleMessage(msg)));
+
                 for (const res of results) {
-                    if (res.success) synced++;
-                    else if (res.offline) {
-                        // إذا انقطع الاتصال، نوقف المعالجة ونحفظ ما تم
+                    if (res.success) {
+                        synced++;
+                    } else if (res.offline) {
+                        // إذا انقطع الاتصال، نوقف المعالجة فوراً
                         isSyncing = false;
-                        refreshUI();
                         return { synced, failed, offline: true, partial: true };
                     } else {
                         failed++;
                     }
                 }
+
                 // تأخير بسيط بين الدفعات لتجنب ضغط الخادم
-                if (i + BATCH_SIZE < validPending.length) {
+                if (i + CONFIG.BATCH_SIZE < validPending.length) {
                     await new Promise(r => setTimeout(r, 500));
                 }
             }
+
+            // تحديث الواجهة
+            renderChats();
+            renderMessages();
+            updateStats();
+
+            console.log(`✅ اكتملت المزامنة: ${synced} ناجحة، ${failed} فاشلة`);
+            return { synced, failed, offline: false };
+
+        } catch (e) {
+            console.error('❌ خطأ أثناء المزامنة:', e);
+            return { synced, failed, error: e.message };
+        } finally {
+            isSyncing = false;
         }
-
-        // ====== 2. جلب الرسائل الجديدة من الخادم ======
-        if (window.fetchAllPendingMessages) {
-            try {
-                const received = await window.fetchAllPendingMessages();
-                if (received?.length) {
-                    const readIds = [];
-                    for (const msg of received) {
-                        // التأكد من عدم وجودها مكررة
-                        const existingChatMsgs = window.getMessages?.(msg.chat_id) || [];
-                        const exists = existingChatMsgs.find(m => m.id === msg.id);
-                        if (!exists) {
-                            msg.sync_status = 'delivered';
-                            msg.status = 'delivered';
-                            window.addMessage?.(msg);
-                            
-                            // تحديث المحادثة (آخر رسالة)
-                            const chat = window.getChat?.(msg.chat_id);
-                            if (chat) {
-                                chat.last_msg = msg.text || (msg.img ? '📷' : msg.voice_blob ? '🎤' : '📎');
-                                chat.last_time = msg.time;
-                                if (!chat.online && msg.sender_id !== 'me') {
-                                    chat.unread = (chat.unread || 0) + 1;
-                                }
-                                window.saveChat?.(chat);
-                            }
-                            
-                            // تجميع معرفات الرسائل لتعليمها كمقروءة لاحقاً
-                            if (msg.sender_id !== 'me') {
-                                readIds.push(msg.id);
-                            }
-                        }
-                    }
-
-                    // تعليم الرسائل المستلمة كمقروءة (بشكل غير متزامن)
-                    if (readIds.length > 0 && window.supabaseClient) {
-                        // تجميع حسب chat_id لتحديث الكل
-                        const chatGroups = {};
-                        received.forEach(msg => {
-                            if (readIds.includes(msg.id)) {
-                                if (!chatGroups[msg.chat_id]) chatGroups[msg.chat_id] = [];
-                                chatGroups[msg.chat_id].push(msg.id);
-                            }
-                        });
-                        for (const [chatId, ids] of Object.entries(chatGroups)) {
-                            await markMessagesAsRead(chatId, ids);
-                        }
-                    }
-
-                    // تشغيل صوت الإشعار إذا كانت هناك رسائل جديدة
-                    if (readIds.length > 0 && typeof playNotificationSound === 'function') {
-                        playNotificationSound();
-                    }
-                }
-            } catch (e) {
-                console.warn('⚠️ فشل جلب الرسائل الجديدة', e);
-            }
-        }
-
-        refreshUI();
-        isSyncing = false;
-        return { synced, failed, offline: false };
     };
 
-    // ================== تحديث الواجهة ==================
-    function refreshUI() {
-        if (typeof renderChats === 'function') renderChats();
-        if (typeof renderMessages === 'function' && typeof currentChatId !== 'undefined') renderMessages();
-        if (typeof updateStats === 'function') updateStats();
-    }
+    // ======================================================================
+    // دوال إضافية للتحكم في المزامنة
+    // ======================================================================
 
-    // ================== دوال عامة للتحكم ==================
+    // إضافة رسالة لقائمة الانتظار للمزامنة
     window.queueMessageForSync = function(msg) {
         if (msg.sync_status !== 'pending-send' && msg.sync_status !== 'failed') {
-            window.updateMessage?.(msg.id, { sync_status: 'pending-send' });
+            updateMessageStatus(msg.id, { sync_status: 'pending-send' });
         }
-        if (isOnline() && !isSyncing) window.syncAllPendingMessages();
+        if (isNetworkOnline() && !isSyncing) {
+            // ننتظر قليلاً ثم نبدأ المزامنة
+            setTimeout(() => window.syncAllPendingMessages(), 500);
+        }
     };
 
-    window.forceSyncNow = () => window.syncAllPendingMessages();
-    
+    // فرض المزامنة فوراً
+    window.forceSyncNow = function() {
+        return window.syncAllPendingMessages();
+    };
+
+    // إعادة محاولة رسالة محددة
     window.retryMessage = async function(msgId) {
         const pending = getPendingMessages();
         const msg = pending.find(m => m.id === msgId);
-        if (!msg) return { success: false, error: 'Not found' };
-        window.updateMessage?.(msgId, { sync_attempts: 0, sync_status: 'pending-send' });
+        if (!msg) return { success: false, error: 'الرسالة غير موجودة' };
+        updateMessageStatus(msgId, { sync_attempts: 0, sync_status: 'pending-send' });
         return await syncSingleMessage({ ...msg, sync_attempts: 0 });
     };
-    
+
+    // إعادة محاولة جميع الرسائل الفاشلة
     window.retryAllFailed = async function() {
         const pending = getPendingMessages();
         const failedMsgs = pending.filter(m => m.sync_status === 'failed');
         for (const m of failedMsgs) {
-            window.updateMessage?.(m.id, { sync_attempts: 0, sync_status: 'pending-send' });
+            updateMessageStatus(m.id, { sync_attempts: 0, sync_status: 'pending-send' });
         }
         return window.syncAllPendingMessages();
     };
 
+    // الحصول على إحصائيات المزامنة
     window.getSyncStats = function() {
         const pending = getPendingMessages();
-        const stats = { 
-            pending: pending.length, 
-            total: 0, 
-            byStatus: {}, 
-            isSyncing, 
-            online: isOnline() 
+        const stats = {
+            pending: pending.length,
+            total: 0,
+            byStatus: {},
+            isSyncing: isSyncing,
+            online: isNetworkOnline()
         };
         const chats = window.getChats?.() || [];
         chats.forEach(c => {
@@ -243,51 +282,147 @@
         return stats;
     };
 
-    // ================== المزامنة الدورية ==================
+    // تنظيف الرسائل المعلقة القديمة (للتخزين المحلي)
+    window.cleanupPendingMessages = function() {
+        const pending = getPendingMessages();
+        if (pending.length > CONFIG.MAX_PENDING_STORAGE) {
+            // ترتيب حسب الأقدمية وحذف الأقدم
+            const sorted = pending.sort((a, b) => new Date(a.time) - new Date(b.time));
+            const toRemove = sorted.slice(0, pending.length - CONFIG.MAX_PENDING_STORAGE);
+            for (const msg of toRemove) {
+                updateMessageStatus(msg.id, { sync_status: 'failed', sync_error: 'تمت الأرشفة' });
+            }
+            console.log(`🧹 تمت أرشفة ${toRemove.length} رسالة معلقة قديمة`);
+        }
+    };
+
+    // ======================================================================
+    // المزامنة الدورية
+    // ======================================================================
+
     function startPeriodicSync() {
         if (periodicSyncInterval) return;
+
         periodicSyncInterval = setInterval(() => {
-            if (!isSyncing && isOnline()) {
+            if (!isSyncing && isNetworkOnline()) {
                 const pending = getPendingMessages();
                 if (pending.length > 0) {
+                    console.log(`🔄 مزامنة دورية: ${pending.length} رسالة معلقة`);
                     window.syncAllPendingMessages();
                 } else {
-                    // حتى لو لم تكن هناك رسائل معلقة، نحاول جلب رسائل جديدة
-                    window.syncAllPendingMessages();
+                    // حتى لو لم تكن هناك رسائل معلقة، نحاول جلب رسائل جديدة من الخادم
+                    // هذا يتم عبر fetchAllPendingMessages في supabase.js
+                    if (window.fetchAllPendingMessages) {
+                        window.fetchAllPendingMessages().then(msgs => {
+                            if (msgs && msgs.length > 0) {
+                                console.log(`📥 تم جلب ${msgs.length} رسالة جديدة من الخادم`);
+                                for (const msg of msgs) {
+                                    // التحقق من عدم وجودها مكررة
+                                    const existing = window.getMessages?.(msg.chat_id) || [];
+                                    if (!existing.find(m => m.id === msg.id)) {
+                                        window.addMessage?.(msg);
+                                        // تحديث المحادثة
+                                        const chat = window.getChat?.(msg.chat_id);
+                                        if (chat) {
+                                            chat.last_msg = msg.text || (msg.img ? '📷' : msg.voice_blob ? '🎤' : '📎');
+                                            chat.last_time = msg.time;
+                                            if (!chat.online && msg.sender_id !== 'me') {
+                                                chat.unread = (chat.unread || 0) + 1;
+                                            }
+                                            window.saveChat?.(chat);
+                                        }
+                                    }
+                                }
+                                renderChats();
+                                renderMessages();
+                                // تشغيل صوت الإشعار
+                                if (typeof playNotificationSound === 'function') {
+                                    playNotificationSound();
+                                }
+                            }
+                        }).catch(() => {});
+                    }
                 }
             }
-        }, SYNC_INTERVAL);
+        }, CONFIG.SYNC_INTERVAL);
+
+        console.log(`⏰ بدأت المزامنة الدورية (كل ${CONFIG.SYNC_INTERVAL / 1000} ثانية)`);
     }
+
+    function stopPeriodicSync() {
+        if (periodicSyncInterval) {
+            clearInterval(periodicSyncInterval);
+            periodicSyncInterval = null;
+            console.log('⏹️ تم إيقاف المزامنة الدورية');
+        }
+    }
+
+    // ======================================================================
+    // دوال بدء/إيقاف المزامنة (للتحكم الخارجي)
+    // ======================================================================
 
     window.startSync = function() {
         startPeriodicSync();
-        if (isOnline()) setTimeout(() => window.syncAllPendingMessages(), 1000);
+        if (isNetworkOnline()) {
+            setTimeout(() => window.syncAllPendingMessages(), 1000);
+        }
+        console.log('✅ تم تشغيل المزامنة');
     };
 
-    window.stopSync = () => { clearInterval(periodicSyncInterval); periodicSyncInterval = null; };
+    window.stopSync = function() {
+        stopPeriodicSync();
+        console.log('⏹️ تم إيقاف المزامنة');
+    };
 
-    // ================== مستمعات الأحداث ==================
-    window.addEventListener('online', async () => {
-        // ننتظر ثانية لإستقرار الاتصال
-        await new Promise(r => setTimeout(r, 1500));
-        // تحديث حالة المستخدم إلى متصل
-        if (window.setUserOnlineStatus) window.setUserOnlineStatus(true);
-        // بدء المزامنة فوراً
-        window.syncAllPendingMessages();
+    // ======================================================================
+    // مستمعي أحداث الشبكة
+    // ======================================================================
+
+    window.addEventListener('online', () => {
+        isOnline = true;
+        console.log('🟢 عودة الاتصال بالإنترنت، بدء المزامنة...');
+        // ننتظر قليلاً لاستقرار الاتصال
+        setTimeout(() => {
+            // تحديث حالة المستخدم
+            if (window.setUserOnlineStatus) {
+                window.setUserOnlineStatus(true).catch(() => {});
+            }
+            window.syncAllPendingMessages();
+        }, 1500);
     });
 
     window.addEventListener('offline', () => {
+        isOnline = false;
+        console.log('🔴 انقطع الاتصال بالإنترنت، تعليق المزامنة');
         isSyncing = false;
-        if (window.setUserOnlineStatus) window.setUserOnlineStatus(false);
-        toast?.('🔴 أنت غير متصل بالإنترنت - سيتم المزامنة تلقائياً عند العودة');
+        if (window.setUserOnlineStatus) {
+            window.setUserOnlineStatus(false).catch(() => {});
+        }
+        // إشعار المستخدم
+        if (typeof toast === 'function') {
+            toast('🔴 أنت غير متصل بالإنترنت - سيتم المزامنة تلقائياً عند العودة');
+        }
     });
 
-    // ================== بدء التشغيل ==================
-    console.log('✅ sync.js (نسخة نهائية حقيقية) جاهز');
-    startPeriodicSync();
-    // تشغيل مزامنة أولية بعد 2 ثانية من التحميل
+    // ======================================================================
+    // تهيئة المزامنة
+    // ======================================================================
+
+    // بدء المزامنة تلقائياً عند تحميل الصفحة
     setTimeout(() => {
-        if (isOnline()) window.syncAllPendingMessages();
-    }, 2000);
+        startPeriodicSync();
+        if (isNetworkOnline()) {
+            setTimeout(() => window.syncAllPendingMessages(), 2000);
+        }
+    }, 1000);
+
+    // تنظيف الرسائل المعلقة القديمة كل ساعة
+    setInterval(() => {
+        window.cleanupPendingMessages();
+    }, 3600000);
+
+    console.log('✅ sync.js (الإصدار النهائي الكامل) جاهز');
+    console.log(`🔄 المزامنة الدورية: ${CONFIG.SYNC_INTERVAL / 1000} ثانية`);
+    console.log(`📤 أقصى عدد محاولات: ${CONFIG.MAX_RETRIES}`);
 
 })();
