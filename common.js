@@ -1,6 +1,7 @@
 // ======================================================================
-// common.js - الإصدار النهائي الكامل v4.0
+// common.js - الإصدار النهائي المعدل v4.0
 // جميع الميزات: القوائم، المجموعات، القنوات، الإشعارات، التشفير، المزامنة
+// مع إصلاحات: updateConnectionIndicator, subscribeToCurrentChat, bottomNav, الأخطاء العامة
 // ======================================================================
 
 // ==================== نظام تحميل الأيقونات (بدون احتياطي إيموجي) ====================
@@ -147,6 +148,65 @@ let isOnline = navigator.onLine;
 let initRun = false;
 let appReady = false;
 
+// ==================== مؤشر الاتصال (مع تحسين) ====================
+function updateConnectionIndicator() {
+    const indicator = document.getElementById('connectionIndicator');
+    if (!indicator) {
+        console.warn('⚠️ عنصر connectionIndicator غير موجود');
+        return;
+    }
+    if (!isOnline) {
+        indicator.textContent = '📡 أنت غير متصل بالإنترنت - التطبيق يعمل محلياً';
+        indicator.classList.add('offline');
+    } else {
+        indicator.classList.remove('offline');
+        setTimeout(() => {
+            if (isOnline) indicator.classList.remove('offline');
+        }, 2000);
+    }
+}
+
+// ==================== الاشتراك في المحادثة الحالية ====================
+function subscribeToCurrentChat() {
+    if (!currentChatId || !isOnline) {
+        console.warn('⚠️ لا توجد محادثة حالية أو غير متصل');
+        return;
+    }
+    if (typeof window.subscribeToChat === 'function') {
+        window.subscribeToChat(currentChatId, (msg) => {
+            const existingMsgs = DB_getMessages(currentChatId);
+            if (!existingMsgs.find(m => m.id === msg.id)) {
+                msg.sync_status = 'delivered'; msg.status = 'delivered';
+                DB_addMessage(msg);
+                const chat = DB_getChats().find(c => c.id === currentChatId);
+                if (chat) {
+                    chat.last_msg = msg.text || (msg.img ? '📷 صورة' : msg.voice_blob ? '🎤 رسالة صوتية' : '📎');
+                    chat.last_time = msg.time;
+                    if (!chat.online && msg.sender_id !== 'me') chat.unread = (chat.unread || 0) + 1;
+                    DB_saveChat(chat);
+                }
+                renderMessages();
+                renderChats();
+                playNotificationSound();
+            }
+        }, (senderId, isTyping) => {
+            const chat = DB_getChats().find(c => c.id === currentChatId);
+            if (chat && senderId !== DB_getCurrentUser()?.id) {
+                chat._typing = isTyping ? Date.now() : null;
+                const st = $('#chatStatusDisp');
+                if (st) {
+                    if (isTyping) { st.textContent = 'يكتب الآن...'; st.className = 'chat-header-status typing'; }
+                    else { st.textContent = chat.online ? 'متصل الآن' : (chat.last_seen || ''); st.className = 'chat-header-status' + (chat.online ? ' online' : ''); }
+                }
+                DB_saveChat(chat);
+                if (currentScreen === 'chats') renderChats();
+            }
+        });
+    } else {
+        console.warn('⚠️ window.subscribeToChat غير معرف');
+    }
+}
+
 // ==================== دوال التفاف db.js ====================
 function DB_getChats() { return window.getChats ? window.getChats() : []; }
 function DB_getMessages(chatId) { return window.getMessages ? window.getMessages(chatId) : []; }
@@ -274,9 +334,9 @@ async function decryptMessage(payload) {
     return new TextDecoder().decode(decryptedData);
 }
 
-// ==================== دخول التطبيق ====================
+// ==================== دخول التطبيق (محسن) ====================
 function enterApp() {
-    if (appReady) { console.warn('⚠️ enterApp() called multiple times'); return; }
+    if (appReady) { console.warn('⚠️ enterApp() تم استدعاؤها أكثر من مرة'); return; }
     appReady = true;
     console.log('📌 enterApp() - عرض واجهة التطبيق');
     document.getElementById('appContainer').style.display = 'flex';
@@ -289,13 +349,21 @@ function enterApp() {
     showScreen('chats');
     updateStats();
     applyTheme();
-    updateConnectionIndicator();
-    bindCustomMenuButtons();
+    // استدعاء updateConnectionIndicator بأمان
+    if (typeof updateConnectionIndicator === 'function') {
+        updateConnectionIndicator();
+    } else {
+        console.warn('⚠️ updateConnectionIndicator غير معرفة');
+    }
+    if (typeof bindCustomMenuButtons === 'function') {
+        bindCustomMenuButtons();
+    }
+    // تأخير بسيط لتحديث المحادثات
     setTimeout(() => {
-        renderChats();
-        renderContactsList();
-        renderStories();
-        updateStats();
+        if (typeof renderChats === 'function') renderChats();
+        if (typeof renderContactsList === 'function') renderContactsList();
+        if (typeof renderStories === 'function') renderStories();
+        if (typeof updateStats === 'function') updateStats();
     }, 300);
     console.log('✅ تم دخول التطبيق بنجاح');
 }
@@ -309,7 +377,9 @@ function showScreen(id) {
     if (target) target.classList.add('active');
     const noNav = ['chatScreen','profileScreen','settingsScreen'];
     const bottomNav = $('#bottomNav');
-    if (bottomNav) bottomNav.style.display = noNav.includes(id+'Screen') || noNav.includes(id) ? 'none' : 'flex';
+    if (bottomNav) {
+        bottomNav.style.display = noNav.includes(id+'Screen') || noNav.includes(id) ? 'none' : 'flex';
+    }
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
     if (id === 'chats') renderChats();
     else if (id === 'contacts') renderContactsList();
@@ -993,7 +1063,7 @@ $('#searchChannelsInput')?.addEventListener('input', function(e) {
     searchChannels(e.target.value);
 });
 
-// ==================== فتح محادثة ====================
+// ==================== فتح محادثة (محسن) ====================
 function openChat(chatId) {
     currentChatId = chatId;
     const chats = DB_getChats();
@@ -1013,7 +1083,12 @@ function openChat(chatId) {
     renderMessages();
     updateSendBtn();
     showScreen('chat');
-    subscribeToCurrentChat();
+    // استدعاء subscribeToCurrentChat بأمان
+    if (typeof subscribeToCurrentChat === 'function') {
+        subscribeToCurrentChat();
+    } else {
+        console.warn('⚠️ subscribeToCurrentChat غير معرفة');
+    }
     const msgs = DB_getMessages(chatId);
     const unreadIds = msgs.filter(m => m.sender_id !== 'me' && m.status !== 'read').map(m => m.id);
     if (unreadIds.length > 0 && window.markMessagesAsRead) {
@@ -1669,23 +1744,30 @@ async function saveStory(storyData) {
     const user = DB_getCurrentUser();
     if (!user) { toast('⚠️ يجب تسجيل الدخول لإضافة قصة'); return; }
     const story = {
-        id: 's_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+        id: storyData.id || ('s_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
         user_id: user.id,
         name: user.name || 'مستخدم',
         avatar: user.avatar || '📷',
         type: storyData.type || 'image',
         content: storyData.content,
         caption: storyData.caption || '',
-        time: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        time: storyData.time || new Date().toISOString(),
+        expires_at: storyData.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         isViewed: false,
         color: '#' + Math.floor(Math.random() * 16777215).toString(16)
     };
     if (window.addStory) window.addStory(story);
     else DB_addStory(story);
     if (isOnline && window.addStoryToSupabase) {
-        try { await window.addStoryToSupabase(story); }
-        catch (e) { console.warn('⚠️ فشل مزامنة القصة مع الخادم', e); }
+        try {
+            // محاولة استخدام UUID متوافق مع Supabase
+            const storyForSupabase = { ...story };
+            // إذا كان المعرف لا يبدو كـ UUID، نستخدم معرفاً جديداً
+            if (!storyForSupabase.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+                storyForSupabase.id = crypto.randomUUID ? crypto.randomUUID() : 's_' + Date.now();
+            }
+            await window.addStoryToSupabase(storyForSupabase);
+        } catch (e) { console.warn('⚠️ فشل مزامنة القصة مع الخادم', e); }
     }
     toast('✅ تم نشر قصتك!');
     if (typeof renderStories === 'function') renderStories();
@@ -2068,5 +2150,5 @@ if (document.readyState === 'loading') {
     setTimeout(init, 100);
 }
 
-console.log('✅ common.js (الإصدار النهائي الكامل) جاهز');
-console.log('💬 RamzApp v4.0 - جميع الميزات مفعلة');
+console.log('✅ common.js (الإصدار النهائي المعدل) جاهز');
+console.log('💬 RamzApp v4.0 - جميع الميزات مفعلة مع إصلاحات الأخطاء');
