@@ -1,6 +1,6 @@
-// ==================== common.js - المنطق الكامل لتطبيق RamzApp ====================
+// ==================== common.js - المنطق الكامل لتطبيق RamzApp (نسخة حقيقية) ====================
 // يربط db.js + supabase.js + media.js + sync.js مع واجهة index.html
-// يدعم: Offline-First، مزامنة تلقائية، جميع ميزات المراسلة
+// يدعم: Offline-First، مزامنة تلقائية، جميع ميزات المراسلة الحقيقية
 // مع نظام تشفير حقيقي من طرف إلى طرف (E2E)
 
 // ==================== نظام تحميل الأيقونات ====================
@@ -85,7 +85,7 @@ function toast(message, duration = 2000) {
 // ==================== تأثير صوتي للإشعارات ====================
 let audioCtx = null;
 function playNotificationSound() {
-    const settings = window.getSettings ? window.getSettings() : { notifications: true };
+    const settings = DB_getSettings ? DB_getSettings() : { notifications: true };
     if (!settings.notifications) return;
     try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -139,12 +139,14 @@ window.addEventListener('online', () => {
     toast('🟢 تم الاتصال بالإنترنت - جاري المزامنة...');
     if (window.syncAllPendingMessages) window.syncAllPendingMessages();
     if (currentChatId) subscribeToCurrentChat();
+    if (window.setUserOnlineStatus) window.setUserOnlineStatus(true);
 });
 
 window.addEventListener('offline', () => {
     isOnline = false;
     updateConnectionIndicator();
     toast('🔴 أنت غير متصل بالإنترنت');
+    if (window.setUserOnlineStatus) window.setUserOnlineStatus(false);
 });
 
 // ==================== دوال التفاف حول db.js ====================
@@ -254,7 +256,7 @@ function DB_getPendingMessages() {
     return [];
 }
 
-// ==================== نظام التشفير من طرف إلى طرف ====================
+// ==================== نظام التشفير من طرف إلى طرف (E2E) ====================
 const E2E_KEY_STORE = 'ramzapp_e2e_keys';
 let currentUserKeyPair = null;
 let peerPublicKeys = {};
@@ -490,14 +492,18 @@ function showScreen(id) {
 
 $$('.nav-item').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.nav)));
 
+// ==================== تحديث الإحصائيات (بيانات حقيقية) ====================
 function updateStats() {
-    const allMessages = Object.values(window.inMemoryDB?.messages || {}).flat().length || 0;
+    const allMessages = Object.values(window.inMemoryDB?.messages || {}).reduce((acc, msgs) => acc + msgs.length, 0);
+    const chatsCount = DB_getChats().length;
+    const catalogCount = DB_getCatalog().length;
+    
     const $sv = $('#statViews');
     const $sc = $('#statCatalog');
     const $sch = $('#statChats');
-    if ($sv) $sv.textContent = allMessages + Math.floor(Math.random() * 100);
-    if ($sc) $sc.textContent = DB_getCatalog().length + Math.floor(Math.random() * 20);
-    if ($sch) $sch.textContent = DB_getChats().length;
+    if ($sv) $sv.textContent = allMessages;
+    if ($sc) $sc.textContent = catalogCount;
+    if ($sch) $sch.textContent = chatsCount;
 }
 
 // ==================== شاشة الدردشات ====================
@@ -668,6 +674,24 @@ function subscribeToCurrentChat() {
                 renderChats();
                 playNotificationSound();
             }
+        }, (senderId, isTyping) => {
+            // استقبال حالة "يكتب الآن..." الحقيقية من supabase.js
+            const chat = DB_getChats().find(c => c.id === currentChatId);
+            if (chat && senderId !== DB_getCurrentUser()?.id) {
+                chat._typing = isTyping ? Date.now() : null;
+                const st = $('#chatStatusDisp');
+                if (st) {
+                    if (isTyping) {
+                        st.textContent = 'يكتب الآن...';
+                        st.className = 'chat-header-status typing';
+                    } else {
+                        st.textContent = chat.online ? 'متصل الآن' : (chat.last_seen || '');
+                        st.className = 'chat-header-status' + (chat.online ? ' online' : '');
+                    }
+                }
+                DB_saveChat(chat);
+                if (currentScreen === 'chats') renderChats();
+            }
         });
     }
 }
@@ -701,6 +725,14 @@ function openChat(chatId) {
     showScreen('chat');
 
     subscribeToCurrentChat();
+
+    // تعليم الرسائل كمقروءة فوراً
+    const msgs = DB_getMessages(chatId);
+    const unreadIds = msgs.filter(m => m.sender_id !== 'me' && m.status !== 'read').map(m => m.id);
+    if (unreadIds.length > 0 && window.markMessagesAsRead) {
+        window.markMessagesAsRead(chatId, unreadIds);
+        unreadIds.forEach(id => DB_updateMessage(id, { status: 'read' }));
+    }
 
     setTimeout(() => $('#msgInput')?.focus(), 300);
 }
@@ -766,7 +798,7 @@ function renderMessages() {
         <div class="msg-row ${isMe ? 'own' : 'other'} ${syncClass}" id="msg-${m.id}">
             <div class="msg-bubble">
                 ${m.reply_to ? `<div class="reply-preview" onclick="scrollToMsg('${m.reply_to}')"><i class="fas fa-reply"></i> رد على رسالة</div>` : ''}
-                ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${m.voice_blob}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><div class="voice-wave">${Array.from({length:8},(_,i)=>`<div class="voice-wave-bar" style="height:${8+Math.random()*16}px;animation-delay:${i*0.08}s"></div>`).join('')}</div><span style="font-size:10px;color:var(--text3);">${m.voice_duration||'0:00'}</span></div>` : ''}
+                ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${m.voice_blob}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><div class="voice-wave">${Array.from({length:8},(_,i)=>`<div class="voice-wave-bar" style="height:12px;width:3px;background:var(--accent);border-radius:2px;"></div>`).join('')}</div><span style="font-size:10px;color:var(--text3);">${m.voice_duration||'0:00'}</span></div>` : ''}
                 ${hasImg ? `<img src="${m.img}" class="attachment-img" onclick="openImageViewer('${m.img}')" loading="lazy">` : ''}
                 <div class="msg-text" data-id="${m.id}" data-encrypted="${m.encrypted ? 'true' : 'false'}" data-payload='${m.encrypted ? JSON.stringify(m.encryptedPayload).replace(/'/g, "&#39;") : ''}'>
                     ${m.encrypted ? '<i class="fas fa-lock" style="font-size:10px; color:#25D366;"></i> 🔒 فك التشفير...' : esc(m.text||'')}
@@ -908,31 +940,6 @@ function updateLastMsg() {
     }
 }
 
-function simulateTyping() {
-    if (!currentChatId) return;
-    const chats = DB_getChats();
-    const c = chats.find(x => x.id === currentChatId);
-    if (c && Math.random() > 0.6) {
-        c._typing = Date.now();
-        const st = $('#chatStatusDisp');
-        if (st) {
-            st.textContent = 'يكتب الآن...';
-            st.className = 'chat-header-status typing';
-        }
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            c._typing = null;
-            if (st) {
-                st.textContent = c.online ? 'متصل الآن' : (c.last_seen || '');
-                st.className = 'chat-header-status' + (c.online ? ' online' : '');
-            }
-            if (currentScreen === 'chats') renderChats();
-        }, 2000 + Math.random() * 2000);
-        DB_saveChat(c);
-        if (currentScreen === 'chats') renderChats();
-    }
-}
-
 // ==================== إرسال الرسائل المشفرة ====================
 async function sendMessage() {
     if (!currentChatId) return;
@@ -991,27 +998,11 @@ async function sendMessage() {
     $('#replyBar').style.display = 'none';
     updateSendBtn();
 
-    simulateTyping();
-    if (Math.random() > 0.45) setTimeout(() => autoReply(), 1500 + Math.random() * 3000);
-    playNotificationSound();
-}
-
-function autoReply() {
-    if (!currentChatId) return;
-    const reps = ['👍 تم', 'شكراً!', '😊 حاضر', 'أوكي', 'جميل', 'سأراجع', '😂', 'ممتاز', '👌', 'تمام'];
-    const m = {
-        id: window.generateId ? window.generateId() : 'id_' + Date.now(),
-        chat_id: currentChatId,
-        sender_id: currentChatId,
-        text: reps[Math.floor(Math.random() * reps.length)],
-        time: new Date().toISOString(),
-        likes: 0, liked: false, reply_to: null, img: null,
-        voice_blob: null, voice_duration: null,
-        status: 'delivered', sync_status: 'delivered'
-    };
-    DB_addMessage(m);
-    updateLastMsg();
-    renderMessages();
+    // إرسال إشارة توقف الكتابة
+    if (window.sendTypingEvent) {
+        window.sendTypingEvent(currentChatId, false);
+    }
+    
     playNotificationSound();
 }
 
@@ -1019,7 +1010,13 @@ $('#sendMsgBtn')?.addEventListener('click', sendMessage);
 $('#msgInput')?.addEventListener('keypress', e => {
     if (e.key === 'Enter') sendMessage();
 });
-$('#msgInput')?.addEventListener('input', updateSendBtn);
+$('#msgInput')?.addEventListener('input', function() {
+    updateSendBtn();
+    // إرسال إشارة "يكتب الآن..." الحقيقية
+    if (currentChatId && window.sendTypingEvent) {
+        window.sendTypingEvent(currentChatId, this.value.trim().length > 0);
+    }
+});
 
 function updateSendBtn() {
     const inp = $('#msgInput');
@@ -1339,7 +1336,7 @@ function renderCalls() {
     `).join('');
 }
 
-// ==================== جهات الاتصال ====================
+// ==================== جهات الاتصال (حقيقية) ====================
 function renderContactsList() {
     const container = $('#contactsList');
     if (!container) return;
@@ -1404,42 +1401,38 @@ async function syncContacts() {
         if ('contacts' in navigator && 'ContactsManager' in window) {
             try {
                 contacts = await navigator.contacts.select(['name', 'tel'], { multiple: true });
-            } catch (e) {}
+            } catch (e) {
+                toast('⚠️ لم يتم منح صلاحية الوصول لجهات الاتصال');
+                return;
+            }
+        } else {
+            toast('⚠️ المتصفح لا يدعم مزامنة جهات الاتصال');
+            return;
         }
 
         if (!contacts || contacts.length === 0) {
-            const demoPhones = ['+967715303132', '+966512345678', '+971501234567'];
-            for (const phone of demoPhones) {
+            toast('⚠️ لا توجد جهات اتصال في هاتفك');
+            return;
+        }
+
+        for (const contact of contacts) {
+            if (contact.tel && contact.tel.length > 0) {
+                const phone = contact.tel[0].replace(/[\s\-\(\)]/g, '');
+                const name = contact.name || '';
                 const existingContact = DB_getContacts().find(c => c.phone === phone);
                 if (!existingContact) {
                     DB_saveContact({
                         id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
                         phone: phone,
-                        name: phone,
+                        name: name || phone,
                         registered: 0,
                         invite_code: null
                     });
                 }
             }
-        } else {
-            for (const contact of contacts) {
-                if (contact.tel && contact.tel.length > 0) {
-                    const phone = contact.tel[0].replace(/[\s\-\(\)]/g, '');
-                    const name = contact.name || '';
-                    const existingContact = DB_getContacts().find(c => c.phone === phone);
-                    if (!existingContact) {
-                        DB_saveContact({
-                            id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                            phone: phone,
-                            name: name || phone,
-                            registered: 0,
-                            invite_code: null
-                        });
-                    }
-                }
-            }
         }
 
+        // التحقق من الأرقام المسجلة في Supabase
         if (window.checkRegisteredPhones) {
             const allPhones = DB_getContacts().map(c => c.phone);
             if (allPhones.length > 0) {
@@ -1448,7 +1441,11 @@ async function syncContacts() {
                     result.registered.forEach(reg => {
                         const contact = DB_getContacts().find(c => c.phone === reg.phone);
                         if (contact) {
-                            DB_saveContact({ ...contact, registered: 1 });
+                            DB_saveContact({ 
+                                ...contact, 
+                                registered: 1,
+                                id: reg.id || contact.id // تحديث المعرف إذا كان موجوداً
+                            });
                         }
                     });
                 }
@@ -1459,21 +1456,7 @@ async function syncContacts() {
         toast('✅ تمت مزامنة جهات الاتصال');
     } catch (e) {
         console.error('❌ فشل مزامنة جهات الاتصال', e);
-        const demoPhones = ['+967715303132', '+966512345678', '+971501234567'];
-        for (const phone of demoPhones) {
-            const existingContact = DB_getContacts().find(c => c.phone === phone);
-            if (!existingContact) {
-                DB_saveContact({
-                    id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-                    phone: phone,
-                    name: phone,
-                    registered: 0,
-                    invite_code: null
-                });
-            }
-        }
-        renderContactsList();
-        toast('⚠️ فشلت المزامنة، تم تحميل بيانات تجريبية');
+        toast('⚠️ فشلت المزامنة');
     }
 }
 
@@ -1487,27 +1470,22 @@ async function inviteContact(phone) {
     if (inviteCode && window.createInviteLink) {
         inviteLink = window.createInviteLink(inviteCode);
     } else {
-        inviteLink = window.location.origin + '/login.html';
+        inviteLink = 'https://appramz.vercel.app/';
     }
 
-    const message = `🚀 انضم إلي في RamzApp - تطبيق المراسلة المتكامل!\n\nرابط الدعوة: ${inviteLink}\n\nحمّل التطبيق وتواصل معي!`;
+    const message = `هيّا نبدأ الدردشة على RamzApp! إنه تطبيق سريع، وبسيط، وآمن لإرسال الرسائل وإجراء المكالمات مجانًا.\n\nرابط التطبيق: ${inviteLink}`;
 
     if (navigator.share) {
         try {
-            await navigator.share({ title: 'انضم إلى RamzApp', text: message });
+            await navigator.share({ title: 'RamzApp - دعوة', text: message });
             toast('✅ تم فتح المشاركة');
         } catch (e) {
-            try {
-                await navigator.clipboard.writeText(message);
-                toast('📋 تم نسخ رابط الدعوة');
-            } catch (e2) {
-                toast('📋 رابط الدعوة: ' + inviteLink);
-            }
+            // إذا أغلق المستخدم نافذة المشاركة، لا نفعل شيئاً
         }
     } else {
         try {
             await navigator.clipboard.writeText(message);
-            toast('📋 تم نسخ رابط الدعوة');
+            toast('📋 تم نسخ نص الدعوة');
         } catch (e) {
             toast('📋 رابط الدعوة: ' + inviteLink);
         }
@@ -1735,7 +1713,11 @@ function clearAllData() {
 
 function logout() {
     if (confirm('تسجيل الخروج؟')) {
-        localStorage.removeItem('ramzapp_user');
+        if (window.signOut) {
+            window.signOut();
+        } else {
+            localStorage.removeItem('ramzapp_user');
+        }
         window.location.href = 'login.html';
     }
 }
@@ -1835,47 +1817,63 @@ window.importData = importData;
 window.clearAllData = clearAllData;
 window.logout = logout;
 
-// ==================== بيانات تجريبية احتياطية ====================
-function createFallbackSeedData() {
-    const now = Date.now();
-    const sampleChats = [
-        { id: 'c1', name: 'محمد الأحمدي', avatar: 'م', online: true, last_seen: 'الآن', unread: 2, pinned: true, bio: 'مطور ومصمم 🚀', last_msg: 'تمام، شاهدت منشورك الجديد!', last_time: new Date(now - 1800000).toISOString() },
-        { id: 'c2', name: 'سارة العمري', avatar: 'س', online: false, last_seen: 'آخر ظهور 10:30', unread: 0, pinned: false, bio: 'مهندسة برمجيات 💻', last_msg: 'شكراً!', last_time: new Date(now - 7200000).toISOString() },
-        { id: 'c3', name: 'فريق Ramz', avatar: 'ف', online: false, last_seen: 'أمس', unread: 5, pinned: true, bio: 'قناة تعليمية 📚', last_msg: 'تحديث جديد', last_time: new Date(now - 86400000).toISOString() },
-    ];
-
-    for (const c of sampleChats) {
-        DB_saveChat(c);
-        const msgs = [
-            { id: 'm' + Date.now() + Math.random(), chat_id: c.id, sender_id: c.id, text: 'مرحباً! كيف الحال؟', time: new Date(now - 3600000).toISOString(), likes: 1, liked: false, status: 'read', sync_status: 'sent' },
-            { id: 'm' + Date.now() + Math.random(), chat_id: c.id, sender_id: 'me', text: 'الحمد لله، بخير 😊', time: new Date(now - 1800000).toISOString(), likes: 0, liked: false, status: 'read', sync_status: 'sent' },
-        ];
-        msgs.forEach(m => DB_addMessage(m));
-    }
-}
-
-// ==================== التهيئة ====================
+// ==================== التهيئة الرئيسية (بدون بيانات وهمية) ====================
 async function init() {
     if (window.initDB) {
         await window.initDB();
     }
 
     const user = DB_getCurrentUser();
-
     if (!user) {
         window.location.href = 'login.html';
         return;
     }
 
+    // ====== جلب البيانات الحقيقية من Supabase ======
+    if (isOnline && window.fetchUserChats) {
+        try {
+            // جلب المحادثات
+            const chats = await window.fetchUserChats(user.id);
+            if (chats && chats.length > 0) {
+                chats.forEach(chat => {
+                    const existing = DB_getChats().find(c => c.id === chat.id);
+                    if (!existing) DB_saveChat(chat);
+                });
+            }
+
+            // جلب جهات الاتصال
+            if (window.fetchContacts) {
+                const contacts = await window.fetchContacts(user.id);
+                if (contacts && contacts.length > 0) {
+                    contacts.forEach(contact => {
+                        const existing = DB_getContacts().find(c => c.id === contact.id);
+                        if (!existing) DB_saveContact(contact);
+                    });
+                }
+            }
+
+            // جلب جميع المستخدمين المسجلين (للمزامنة مع جهات الاتصال)
+            if (window.fetchAllRegisteredUsers) {
+                const allUsers = await window.fetchAllRegisteredUsers();
+                if (allUsers && allUsers.length > 0) {
+                    // تحديث جهات الاتصال المحلية بحالة التسجيل
+                    const localContacts = DB_getContacts();
+                    for (const contact of localContacts) {
+                        const found = allUsers.find(u => u.phone === contact.phone || u.id === contact.id);
+                        if (found && !contact.registered) {
+                            DB_saveContact({ ...contact, registered: 1, id: found.id || contact.id });
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ فشل جلب البيانات من Supabase', e);
+        }
+    }
+
     const chats = DB_getChats();
     if (chats.length === 0) {
-        console.log('⚠️ لا توجد محادثات – جاري إنشاء بيانات تجريبية...');
-        if (window.seedInitialData) {
-            await window.seedInitialData();
-        } else {
-            createFallbackSeedData();
-        }
-        if (window.persistAllData) await window.persistAllData();
+        console.log('📭 لا توجد محادثات – انتظر حتى يبدأ الآخرون بالمراسلة أو أضف جهات اتصال');
     }
 
     enterApp();
@@ -1887,6 +1885,7 @@ async function init() {
         window.setUserOnlineStatus(true);
     }
 
+    // تحديث حالة الاتصال كل 30 ثانية
     setInterval(() => {
         const chats = DB_getChats();
         chats.forEach(c => {
@@ -1898,9 +1897,8 @@ async function init() {
         if (currentScreen === 'chats' && !currentChatId) renderChats();
     }, 25000);
 
-    console.log('💬 RamzApp v3.0 | Offline-First مع SQLite + Supabase + E2E Encryption');
-    console.log('✅ جميع الميزات: محادثات، مكالمات، قصص، جهات اتصال، كتالوج، إعدادات');
-    console.log('✅ وضع الطيران كامل | مزامنة تلقائية عند الاتصال');
+    console.log('💬 RamzApp v4.0 | Offline-First مع SQLite + Supabase + E2E Encryption');
+    console.log('✅ جميع الميزات تعمل ببيانات حقيقية | لا توجد محاكاة');
     console.log('🔒 التشفير من طرف إلى طرف نشط');
 }
 
@@ -1909,4 +1907,4 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
-                }
+}
