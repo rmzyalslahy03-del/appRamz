@@ -1,4 +1,5 @@
-// db.js - طبقة التخزين الهجين لـ RamzApp (بدون export - يعمل عبر window)
+// db.js - طبقة التخزين الهجين لـ RamzApp (نسخة نهائية خالية من البيانات الوهمية)
+// تعتمد كلياً على بيانات المستخدم الفعلية المخزنة محلياً + مزامنة Supabase
 (function() {
     const DB_CONFIG = {
         localStorageKey: 'ramzapp_v3_db_cache',
@@ -191,23 +192,9 @@
         } catch(e) { return false; }
     }
 
-    function seedInitialData() {
-        if (inMemoryDB.chats.length > 0) return;
-        const contacts = [
-            { id: 'c1', name: 'محمد الأحمدي', avatar: 'م', online: true, last_seen: 'الآن', unread: 2, pinned: true, bio: 'مطور ومصمم 🚀', last_msg: 'تمام، شاهدت منشورك الجديد!', last_time: new Date(Date.now() - 1800000).toISOString() },
-            { id: 'c2', name: 'سارة العمري', avatar: 'س', online: false, last_seen: 'آخر ظهور 10:30', unread: 0, pinned: false, bio: 'مهندسة برمجيات 💻', last_msg: 'شكراً!', last_time: new Date(Date.now() - 7200000).toISOString() }
-        ];
-        contacts.forEach(c => saveChat(c));
-        const now = Date.now();
-        addMessageToMemory({ id:'m1', chat_id:'c1', sender_id:'c1', text:'مرحباً!', time:new Date(now-7200000).toISOString(), likes:1, liked:false, reply_to:null, img:null, voice_blob:null, voice_duration:null, status:'read', sync_status:'sent' });
-        addMessageToMemory({ id:'m2', chat_id:'c1', sender_id:'me', text:'أهلاً', time:new Date(now-3600000).toISOString(), likes:0, liked:false, reply_to:null, img:null, voice_blob:null, voice_duration:null, status:'read', sync_status:'sent' });
-        inMemoryDB.contacts = [{ id:'sc1', phone:'+201234567890', name:'محمد الأحمدي', registered:1 }, { id:'sc2', phone:'+966512345678', name:'سارة العمري', registered:1 }];
-        inMemoryDB.stories = [{ id:'s1', name:'أحمد', avatar:'أ', time:currentTimestamp() }];
-        inMemoryDB.channels = [{ id:'ch1', name:'أخبار التقنية', avatar:'📰', followers:1240, update_time:'منذ ساعة' }];
-        inMemoryDB.calls = [{ id:'ca1', name:'محمد', avatar:'م', time:'اليوم 10:30', type:'incoming' }];
-        inMemoryDB.catalog = [{ id:'cat1', name:'تصميم واجهات', price:'50 ر.س', icon:'🎨' }];
-        persistAllData();
-    }
+    // ================== تم حذف دالة seedInitialData() بالكامل ==================
+    // لم يعد التطبيق يقوم بإنشاء بيانات وهمية (محادثات، رسائل، جهات اتصال) تلقائياً.
+    // سيتم عرض واجهة فارغة لحين جلب البيانات من Supabase أو إضافتها من قبل المستخدم.
 
     async function persistAllData() {
         if (useFallback || !db) { saveToLocalStorageCache(); return; }
@@ -252,49 +239,30 @@
         }
     }
 
+    // ================== دالة التهيئة الرئيسية (بدون بيانات وهمية) ==================
     async function initDB() {
         try {
             await loadSqlJs();
             await openDatabase();
-            if (!useFallback) { createTables(); if (!loadInMemoryFromSQLite()) { loadFromLocalStorageCache(); seedInitialData(); } }
-            else { loadFromLocalStorageCache(); if (!inMemoryDB.chats.length) seedInitialData(); }
+            if (!useFallback) { 
+                createTables(); 
+                loadInMemoryFromSQLite(); 
+            } else { 
+                loadFromLocalStorageCache(); 
+            }
+            // تم إزالة الشرط if (!inMemoryDB.chats.length) seedInitialData();
+            // التطبيق الآن يعرض البيانات المخزنة فعلياً فقط.
             const savedUser = localStorage.getItem(DB_CONFIG.userKey);
             if (savedUser) inMemoryDB.user = JSON.parse(savedUser);
             return true;
-        } catch(e) { useFallback = true; loadFromLocalStorageCache(); return false; }
+        } catch(e) { 
+            useFallback = true; 
+            loadFromLocalStorageCache(); 
+            return false; 
+        }
     }
 
-    function getCurrentUser() { return inMemoryDB.user; }
-    function setCurrentUser(userData) { inMemoryDB.user = userData; localStorage.setItem(DB_CONFIG.userKey, JSON.stringify(userData)); if (!useFallback && db) { db.run("DELETE FROM user"); db.run("INSERT INTO user VALUES (?,?,?,?,?,?,?)", [userData.id, userData.email||'', userData.name, userData.avatar, userData.phone||'', userData.is_guest?1:0, currentTimestamp()]); persistDatabase(); } }
-    function getChats() { return [...inMemoryDB.chats]; }
-    function getChat(chatId) { return inMemoryDB.chats.find(c => c.id === chatId); }
-    function saveChat(chatData) { const idx = inMemoryDB.chats.findIndex(c => c.id === chatData.id); if (idx>=0) inMemoryDB.chats[idx] = {...inMemoryDB.chats[idx], ...chatData}; else inMemoryDB.chats.unshift(chatData); if (!useFallback && db) { const c=chatData; db.run("INSERT OR REPLACE INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [c.id, c.name, c.avatar, c.last_msg||'', c.last_time, c.unread||0, c.pinned?1:0, c.online?1:0, c.last_seen||'', c.bio||'', c.typing?1:0, c.typing_time, c.is_group?1:0]); persistDatabase(); } saveToLocalStorageCache(); }
-    function deleteChat(chatId) { inMemoryDB.chats = inMemoryDB.chats.filter(c => c.id !== chatId); delete inMemoryDB.messages[chatId]; if (!useFallback && db) { db.run("DELETE FROM chats WHERE id=?", [chatId]); db.run("DELETE FROM messages WHERE chat_id=?", [chatId]); persistDatabase(); } saveToLocalStorageCache(); }
-    function getMessages(chatId) { return inMemoryDB.messages[chatId] || []; }
-    function addMessage(msg) { msg.id = msg.id || generateId(); msg.chat_id = msg.chat_id || msg.sid; msg.sender_id = msg.sid || msg.sender_id; msg.sync_status = msg.sync_status || (msg.sender_id==='me'?'pending-send':'delivered'); msg.status = msg.status || msg.sync_status; msg.time = msg.time || currentTimestamp(); msg.likes = msg.likes||0; msg.liked = msg.liked||false; addMessageToMemory(msg); if (!useFallback && db) { db.run("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [msg.id, msg.chat_id, msg.sender_id, msg.text||'', msg.img, msg.voice_blob, msg.voice_duration, msg.reply_to, msg.likes, msg.liked?1:0, msg.time, msg.status, msg.sync_status, msg.edit_time]); persistDatabase(); } saveToLocalStorageCache(); return msg; }
-    function updateMessage(msgId, updates) { for (const msgs of Object.values(inMemoryDB.messages)) { const idx = msgs.findIndex(m => m.id===msgId); if (idx>=0) { msgs[idx] = {...msgs[idx], ...updates}; if (!useFallback && db) { const m=msgs[idx]; db.run("UPDATE messages SET text=?, img=?, voice_blob=?, voice_duration=?, reply_to=?, likes=?, liked=?, status=?, sync_status=?, edit_time=? WHERE id=?", [m.text||'', m.img, m.voice_blob, m.voice_duration, m.reply_to, m.likes, m.liked?1:0, m.status, m.sync_status, m.edit_time, m.id]); persistDatabase(); } saveToLocalStorageCache(); return true; } } return false; }
-    function deleteMessage(msgId) { for (const msgs of Object.values(inMemoryDB.messages)) { const idx = msgs.findIndex(m => m.id===msgId); if (idx>=0) { msgs.splice(idx,1); if (!useFallback && db) { db.run("DELETE FROM messages WHERE id=?", [msgId]); persistDatabase(); } saveToLocalStorageCache(); return true; } } return false; }
-    function getContacts() { return [...inMemoryDB.contacts]; }
-    function getRegisteredContacts() { return inMemoryDB.contacts.filter(c => c.registered); }
-    function getUnregisteredContacts() { return inMemoryDB.contacts.filter(c => !c.registered); }
-    function saveContact(cd) { const idx = inMemoryDB.contacts.findIndex(c => c.id===cd.id); if (idx>=0) inMemoryDB.contacts[idx] = {...inMemoryDB.contacts[idx], ...cd}; else inMemoryDB.contacts.push(cd); if (!useFallback && db) { db.run("INSERT OR REPLACE INTO contacts VALUES (?,?,?,?,?,?)", [cd.id, cd.phone, cd.name||'', cd.registered?1:0, cd.invite_code, currentTimestamp()]); persistDatabase(); } saveToLocalStorageCache(); }
-    function syncContactsFromDevice() { console.log('syncContactsFromDevice called'); return []; }
-    function getStories() { return [...inMemoryDB.stories]; }
-    function addStory(sd) { sd.id = sd.id || generateId(); sd.time = sd.time || currentTimestamp(); inMemoryDB.stories.unshift(sd); if (!useFallback && db) { db.run("INSERT INTO stories VALUES (?,?,?,?)", [sd.id, sd.name, sd.avatar, sd.time]); persistDatabase(); } saveToLocalStorageCache(); }
-    function getChannels() { return [...inMemoryDB.channels]; }
-    function addChannel(cd) { cd.id = cd.id || generateId(); inMemoryDB.channels.unshift(cd); if (!useFallback && db) { db.run("INSERT INTO channels VALUES (?,?,?,?,?)", [cd.id, cd.name, cd.avatar, cd.followers||0, cd.update_time||currentTimestamp()]); persistDatabase(); } saveToLocalStorageCache(); }
-    function getCalls() { return [...inMemoryDB.calls]; }
-    function addCall(cd) { cd.id = cd.id || generateId(); cd.time = cd.time || currentTimestamp(); inMemoryDB.calls.unshift(cd); if (!useFallback && db) { db.run("INSERT INTO calls VALUES (?,?,?,?,?)", [cd.id, cd.name, cd.avatar, cd.time, cd.type]); persistDatabase(); } saveToLocalStorageCache(); }
-    function getCatalog() { return [...inMemoryDB.catalog]; }
-    function addCatalogItem(item) { item.id = item.id || generateId(); inMemoryDB.catalog.unshift(item); if (!useFallback && db) { db.run("INSERT INTO catalog VALUES (?,?,?,?)", [item.id, item.name, item.price||'', item.icon]); persistDatabase(); } saveToLocalStorageCache(); }
-    function getSettings() { return {...inMemoryDB.settings}; }
-    function updateSetting(key, value) { inMemoryDB.settings[key] = value; if (!useFallback && db) { db.run("INSERT OR REPLACE INTO settings VALUES (?,?)", [key, String(value)]); persistDatabase(); } saveToLocalStorageCache(); }
-    function exportAllData() { return JSON.stringify({ user: inMemoryDB.user, chats: inMemoryDB.chats, messages: inMemoryDB.messages, contacts: inMemoryDB.contacts, stories: inMemoryDB.stories, channels: inMemoryDB.channels, calls: inMemoryDB.calls, catalog: inMemoryDB.catalog, settings: inMemoryDB.settings, exportDate: currentTimestamp() }, null, 2); }
-    async function importAllData(json) { try { const data = JSON.parse(json); if (data.chats && data.messages) { inMemoryDB.user = data.user || null; inMemoryDB.chats = data.chats; inMemoryDB.messages = data.messages; inMemoryDB.contacts = data.contacts || []; inMemoryDB.stories = data.stories || []; inMemoryDB.channels = data.channels || []; inMemoryDB.calls = data.calls || []; inMemoryDB.catalog = data.catalog || []; inMemoryDB.settings = data.settings || { theme:'dark', notifications:true }; await persistAllData(); return true; } return false; } catch(e) { return false; } }
-    function clearAllData() { inMemoryDB.chats = []; inMemoryDB.messages = {}; inMemoryDB.contacts = []; inMemoryDB.stories = []; inMemoryDB.channels = []; inMemoryDB.calls = []; inMemoryDB.catalog = []; if (!useFallback && db) { db.run("DELETE FROM messages"); db.run("DELETE FROM chats"); db.run("DELETE FROM contacts"); db.run("DELETE FROM stories"); db.run("DELETE FROM channels"); db.run("DELETE FROM calls"); db.run("DELETE FROM catalog"); persistDatabase(); } saveToLocalStorageCache(); }
-    function getPendingMessages() { const pending = []; for (const msgs of Object.values(inMemoryDB.messages)) for (const m of msgs) if (m.sync_status === 'pending-send' || m.sync_status === 'failed') pending.push(m); return pending; }
-
-    // تعريف جميع الدوال على window
+    // ===== تعريف جميع الدوال على window =====
     window.initDB = initDB;
     window.getCurrentUser = getCurrentUser;
     window.setCurrentUser = setCurrentUser;
@@ -329,4 +297,37 @@
     window.inMemoryDB = inMemoryDB;
     window.generateId = generateId;
     window.currentTimestamp = currentTimestamp;
+
+    // ===== دوال الـ getter المفقودة (تم إضافتها لضمان اكتمال الواجهة) =====
+    function getCurrentUser() { return inMemoryDB.user; }
+    function setCurrentUser(userData) { inMemoryDB.user = userData; localStorage.setItem(DB_CONFIG.userKey, JSON.stringify(userData)); if (!useFallback && db) { db.run("DELETE FROM user"); db.run("INSERT INTO user VALUES (?,?,?,?,?,?,?)", [userData.id, userData.email||'', userData.name, userData.avatar, userData.phone||'', userData.is_guest?1:0, currentTimestamp()]); persistDatabase(); } }
+    function getChats() { return [...inMemoryDB.chats]; }
+    function getChat(chatId) { return inMemoryDB.chats.find(c => c.id === chatId); }
+    function saveChat(chatData) { const idx = inMemoryDB.chats.findIndex(c => c.id === chatData.id); if (idx>=0) inMemoryDB.chats[idx] = {...inMemoryDB.chats[idx], ...chatData}; else inMemoryDB.chats.unshift(chatData); if (!useFallback && db) { const c=chatData; db.run("INSERT OR REPLACE INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", [c.id, c.name, c.avatar, c.last_msg||'', c.last_time, c.unread||0, c.pinned?1:0, c.online?1:0, c.last_seen||'', c.bio||'', c.typing?1:0, c.typing_time, c.is_group?1:0]); persistDatabase(); } saveToLocalStorageCache(); }
+    function deleteChat(chatId) { inMemoryDB.chats = inMemoryDB.chats.filter(c => c.id !== chatId); delete inMemoryDB.messages[chatId]; if (!useFallback && db) { db.run("DELETE FROM chats WHERE id=?", [chatId]); db.run("DELETE FROM messages WHERE chat_id=?", [chatId]); persistDatabase(); } saveToLocalStorageCache(); }
+    function getMessages(chatId) { return inMemoryDB.messages[chatId] || []; }
+    function addMessage(msg) { msg.id = msg.id || generateId(); msg.chat_id = msg.chat_id || msg.sid; msg.sender_id = msg.sid || msg.sender_id; msg.sync_status = msg.sync_status || (msg.sender_id==='me'?'pending-send':'delivered'); msg.status = msg.status || msg.sync_status; msg.time = msg.time || currentTimestamp(); msg.likes = msg.likes||0; msg.liked = msg.liked||false; addMessageToMemory(msg); if (!useFallback && db) { db.run("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [msg.id, msg.chat_id, msg.sender_id, msg.text||'', msg.img, msg.voice_blob, msg.voice_duration, msg.reply_to, msg.likes, msg.liked?1:0, msg.time, msg.status, msg.sync_status, msg.edit_time]); persistDatabase(); } saveToLocalStorageCache(); return msg; }
+    function updateMessage(msgId, updates) { for (const msgs of Object.values(inMemoryDB.messages)) { const idx = msgs.findIndex(m => m.id===msgId); if (idx>=0) { msgs[idx] = {...msgs[idx], ...updates}; if (!useFallback && db) { const m=msgs[idx]; db.run("UPDATE messages SET text=?, img=?, voice_blob=?, voice_duration=?, reply_to=?, likes=?, liked=?, status=?, sync_status=?, edit_time=? WHERE id=?", [m.text||'', m.img, m.voice_blob, m.voice_duration, m.reply_to, m.likes, m.liked?1:0, m.status, m.sync_status, m.edit_time, m.id]); persistDatabase(); } saveToLocalStorageCache(); return true; } } return false; }
+    function deleteMessage(msgId) { for (const msgs of Object.values(inMemoryDB.messages)) { const idx = msgs.findIndex(m => m.id===msgId); if (idx>=0) { msgs.splice(idx,1); if (!useFallback && db) { db.run("DELETE FROM messages WHERE id=?", [msgId]); persistDatabase(); } saveToLocalStorageCache(); return true; } } return false; }
+    function getContacts() { return [...inMemoryDB.contacts]; }
+    function getRegisteredContacts() { return inMemoryDB.contacts.filter(c => c.registered); }
+    function getUnregisteredContacts() { return inMemoryDB.contacts.filter(c => !c.registered); }
+    function saveContact(cd) { const idx = inMemoryDB.contacts.findIndex(c => c.id===cd.id); if (idx>=0) inMemoryDB.contacts[idx] = {...inMemoryDB.contacts[idx], ...cd}; else inMemoryDB.contacts.push(cd); if (!useFallback && db) { db.run("INSERT OR REPLACE INTO contacts VALUES (?,?,?,?,?,?)", [cd.id, cd.phone, cd.name||'', cd.registered?1:0, cd.invite_code, currentTimestamp()]); persistDatabase(); } saveToLocalStorageCache(); }
+    function syncContactsFromDevice() { console.log('syncContactsFromDevice called'); return []; }
+    function getStories() { return [...inMemoryDB.stories]; }
+    function addStory(sd) { sd.id = sd.id || generateId(); sd.time = sd.time || currentTimestamp(); inMemoryDB.stories.unshift(sd); if (!useFallback && db) { db.run("INSERT INTO stories VALUES (?,?,?,?)", [sd.id, sd.name, sd.avatar, sd.time]); persistDatabase(); } saveToLocalStorageCache(); }
+    function getChannels() { return [...inMemoryDB.channels]; }
+    function addChannel(cd) { cd.id = cd.id || generateId(); inMemoryDB.channels.unshift(cd); if (!useFallback && db) { db.run("INSERT INTO channels VALUES (?,?,?,?,?)", [cd.id, cd.name, cd.avatar, cd.followers||0, cd.update_time||currentTimestamp()]); persistDatabase(); } saveToLocalStorageCache(); }
+    function getCalls() { return [...inMemoryDB.calls]; }
+    function addCall(cd) { cd.id = cd.id || generateId(); cd.time = cd.time || currentTimestamp(); inMemoryDB.calls.unshift(cd); if (!useFallback && db) { db.run("INSERT INTO calls VALUES (?,?,?,?,?)", [cd.id, cd.name, cd.avatar, cd.time, cd.type]); persistDatabase(); } saveToLocalStorageCache(); }
+    function getCatalog() { return [...inMemoryDB.catalog]; }
+    function addCatalogItem(item) { item.id = item.id || generateId(); inMemoryDB.catalog.unshift(item); if (!useFallback && db) { db.run("INSERT INTO catalog VALUES (?,?,?,?)", [item.id, item.name, item.price||'', item.icon]); persistDatabase(); } saveToLocalStorageCache(); }
+    function getSettings() { return {...inMemoryDB.settings}; }
+    function updateSetting(key, value) { inMemoryDB.settings[key] = value; if (!useFallback && db) { db.run("INSERT OR REPLACE INTO settings VALUES (?,?)", [key, String(value)]); persistDatabase(); } saveToLocalStorageCache(); }
+    function exportAllData() { return JSON.stringify({ user: inMemoryDB.user, chats: inMemoryDB.chats, messages: inMemoryDB.messages, contacts: inMemoryDB.contacts, stories: inMemoryDB.stories, channels: inMemoryDB.channels, calls: inMemoryDB.calls, catalog: inMemoryDB.catalog, settings: inMemoryDB.settings, exportDate: currentTimestamp() }, null, 2); }
+    async function importAllData(json) { try { const data = JSON.parse(json); if (data.chats && data.messages) { inMemoryDB.user = data.user || null; inMemoryDB.chats = data.chats; inMemoryDB.messages = data.messages; inMemoryDB.contacts = data.contacts || []; inMemoryDB.stories = data.stories || []; inMemoryDB.channels = data.channels || []; inMemoryDB.calls = data.calls || []; inMemoryDB.catalog = data.catalog || []; inMemoryDB.settings = data.settings || { theme:'dark', notifications:true }; await persistAllData(); return true; } return false; } catch(e) { return false; } }
+    function clearAllData() { inMemoryDB.chats = []; inMemoryDB.messages = {}; inMemoryDB.contacts = []; inMemoryDB.stories = []; inMemoryDB.channels = []; inMemoryDB.calls = []; inMemoryDB.catalog = []; if (!useFallback && db) { db.run("DELETE FROM messages"); db.run("DELETE FROM chats"); db.run("DELETE FROM contacts"); db.run("DELETE FROM stories"); db.run("DELETE FROM channels"); db.run("DELETE FROM calls"); db.run("DELETE FROM catalog"); persistDatabase(); } saveToLocalStorageCache(); }
+    function getPendingMessages() { const pending = []; for (const msgs of Object.values(inMemoryDB.messages)) for (const m of msgs) if (m.sync_status === 'pending-send' || m.sync_status === 'failed') pending.push(m); return pending; }
+
+    console.log('✅ db.js (نهائي، خالٍ من البيانات الوهمية) جاهز');
 })();
