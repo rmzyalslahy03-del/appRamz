@@ -265,7 +265,7 @@
         }
         .voice-play-btn:hover { transform: scale(1.1); }
         .voice-wave { flex: 1; height: 24px; display: flex; align-items: center; gap: 2px; }
-        .voice-wave-bar { width: 3px; background: var(--accent); border-radius: 2px; animation: waveAnim 0.6s ease-in-out infinite alternate; }
+        .voice-wave-bar { width: 3px; background: var(--accent); border-radius: 2px; }
         .reply-bar { background: var(--surface); padding: 8px 14px; font-size: 12px; border-top: 1px solid var(--border); display: none; align-items: center; justify-content: space-between; gap: 8px; }
         .input-bar { background: var(--surface); padding: 8px 10px; display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--border); }
         .input-bar input { flex: 1; background: var(--surface3); border: none; border-radius: 25px; padding: 10px 16px; color: var(--text); font-family: inherit; font-size: 14px; outline: none; min-width: 0; }
@@ -541,7 +541,7 @@
         <div class="screen" id="toolsScreen">
             <div class="app-header"><h2>🛠 الأدوات</h2></div>
             <div class="tools-grid">
-                <div class="stat-card"><div style="color:var(--text3);font-size:12px;margin-bottom:12px;">📊 الأداء في آخر 7 أيام</div><div class="stat-row"><div class="stat-box"><div class="stat-num" id="statViews">158</div><div class="stat-label">مشاهدات</div></div><div class="stat-box"><div class="stat-num" id="statCatalog">42</div><div class="stat-label">الكتالوج</div></div><div class="stat-box"><div class="stat-num" id="statChats">7</div><div class="stat-label">محادثات</div></div></div></div>
+                <div class="stat-card"><div style="color:var(--text3);font-size:12px;margin-bottom:12px;">📊 الأداء في آخر 7 أيام</div><div class="stat-row"><div class="stat-box"><div class="stat-num" id="statViews">0</div><div class="stat-label">مشاهدات</div></div><div class="stat-box"><div class="stat-num" id="statCatalog">0</div><div class="stat-label">الكتالوج</div></div><div class="stat-box"><div class="stat-num" id="statChats">0</div><div class="stat-label">محادثات</div></div></div></div>
                 <div class="promo-card"><h4>🌟 أنشئ أول إعلان لك</h4><p>يمكنك الوصول إلى عملاء جدد من خلال إعلانات Ramz-App.</p><button class="promo-btn" id="startAdBtn">بدء الاستخدام</button></div>
                 <div class="tool-row" id="catalogBtn"><div class="tool-icon"><i class="fas fa-boxes"></i></div><div class="tool-info"><div class="tool-name">الكتالوج</div><div class="tool-desc">عرض المنتجات والخدمات</div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
                 <div class="tool-row" id="broadcastBtn"><div class="tool-icon"><i class="fas fa-bullhorn"></i></div><div class="tool-info"><div class="tool-name">الرسائل الجماعية</div><div class="tool-desc">تواصل مع عملائك دفعة واحدة</div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
@@ -569,7 +569,7 @@
                 <div class="setting-item" onclick="importData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>استيراد النسخة الاحتياطية</span></div><i class="fas fa-chevron-left"></i></div>
                 <div class="setting-item" onclick="clearAllData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt"></i></div><span>حذف جميع المحادثات</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
                 <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span>تسجيل الخروج</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v3.0 | جميع الحقوق محفوظة © 2026</p>
+                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v4.0 | جميع الحقوق محفوظة © 2026</p>
             </div>
         </div>
     </div>
@@ -628,7 +628,7 @@
         <button class="nav-item" data-nav="tools"><i class="fas fa-tools"></i><span>الأدوات</span></button>
     </div>
 
-    <!-- ========== تحميل المكتبات والطبقات ========== -->
+    <!-- ========== تحميل المكتبات والطبقات (بالترتيب الصحيح) ========== -->
     <script src="db.js"></script>
     <script src="supabase.js"></script>
     <script src="media.js"></script>
