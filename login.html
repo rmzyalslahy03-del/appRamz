@@ -2,33 +2,49 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>RamzApp - تسجيل الدخول</title>
+    <!-- تحميل Supabase أولاً (مهم لوجود الدوال) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <style>
+        /* ======================================================================
+                   الأنماط الأساسية – متوافقة مع تطبيق RamzApp
+                   ====================================================================== */
         :root {
             --bg: #0d0d0d;
             --surface: #1a1a1a;
             --surface2: #222;
             --text: #fff;
+            --text2: #ddd;
             --text3: #999;
             --border: #2c2c2c;
             --accent: #ff0050;
             --accent2: #ff6b8a;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            --radius: 20px;
+            --font: 'Cairo', 'Segoe UI', 'Arial', sans-serif;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
         body {
             background: var(--bg);
-            font-family: 'Cairo', sans-serif;
+            font-family: var(--font);
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 16px;
             color: var(--text);
-            animation: fadeIn 0.6s ease;
             padding: 20px;
+            animation: fadeIn 0.6s ease;
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -203,8 +219,8 @@
             opacity: 0;
             transition: opacity 0.3s;
             white-space: nowrap;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            font-family: 'Cairo', sans-serif;
+            box-shadow: var(--shadow);
+            font-family: var(--font);
         }
         .toast-msg.show {
             opacity: 1;
@@ -325,8 +341,8 @@
         <div class="toast-msg" id="toastMsg"></div>
     </div>
 
-    <!-- ========== تحميل supabase.js ========== -->
-    <script src="supabase.js?v=4"></script>
+    <!-- تحميل supabase.js (يجب أن يكون في نفس المجلد) -->
+    <script src="supabase.js"></script>
 
     <script>
         // ============================================================
@@ -352,7 +368,7 @@
                     const user = JSON.parse(savedUser);
                     if (user && user.id) {
                         console.log('👤 مستخدم موجود، التوجيه إلى index.html');
-                        setTimeout(() => window.location.href = 'index.html', 200);
+                        window.location.href = 'index.html';
                         return;
                     }
                 } catch (e) {
@@ -365,13 +381,14 @@
         })();
 
         // ============================================================
-        // انتظار تحميل supabase.js
+        // انتظار تحميل supabase.js (الدوال ستكون متاحة عبر window)
         // ============================================================
         function waitForSupabase() {
             return new Promise((resolve) => {
                 let attempts = 0;
                 const check = () => {
                     attempts++;
+                    // نتحقق من وجود دوال المصادقة في window (من supabase.js)
                     if (typeof window.signInWithEmail === 'function' &&
                         typeof window.signUpWithEmail === 'function' &&
                         typeof window.signInWithPhone === 'function' &&
@@ -462,7 +479,6 @@
             const signupFields = document.getElementById('signupFields');
             const emailBtnText = document.getElementById('emailBtnText');
             const emailHint = document.getElementById('emailToggleHint');
-            const emailLoginBtn = document.getElementById('emailLoginBtn');
 
             function setAuthMode(mode) {
                 if (mode === 'login') {
@@ -471,7 +487,6 @@
                     signupFields.classList.remove('show');
                     emailBtnText.textContent = '🚀 دخول';
                     emailHint.textContent = '🔑 سجل دخولك باستخدام بريدك الإلكتروني';
-                    // تغيير لون الزر إذا أردت
                 } else {
                     loginToggle.classList.remove('active');
                     signupToggle.classList.add('active');
@@ -485,6 +500,7 @@
             signupToggle.addEventListener('click', () => setAuthMode('signup'));
 
             // ====== معالج زر البريد الإلكتروني (دخول / تسجيل) ======
+            const emailLoginBtn = document.getElementById('emailLoginBtn');
             emailLoginBtn.addEventListener('click', async () => {
                 const email = document.getElementById('emailInput').value.trim();
                 const password = document.getElementById('passwordInput').value;
@@ -495,7 +511,6 @@
                     return;
                 }
 
-                // إذا كان تسجيل، تحقق من تطابق كلمة المرور
                 if (isSignup) {
                     const confirm = document.getElementById('confirmPasswordInput').value;
                     if (password !== confirm) {
@@ -513,14 +528,12 @@
                     return;
                 }
 
-                // تعطيل الزر أثناء المعالجة
                 const originalText = emailBtnText.textContent;
                 setLoading('emailLoginBtn', 'emailBtnText', true, originalText);
 
                 try {
                     let user;
                     if (isSignup) {
-                        // إنشاء حساب جديد
                         const name = document.getElementById('nameInput').value.trim() || 'مستخدم';
                         if (typeof window.signUpWithEmail !== 'function') {
                             throw new Error('خدمة التسجيل غير متاحة');
@@ -528,7 +541,6 @@
                         user = await window.signUpWithEmail(email, password, name);
                         showToast('✅ تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
                     } else {
-                        // تسجيل الدخول
                         if (typeof window.signInWithEmail !== 'function') {
                             throw new Error('خدمة تسجيل الدخول غير متاحة');
                         }
@@ -536,7 +548,7 @@
                         showToast('✅ مرحباً بعودتك!');
                     }
 
-                    // جلب بيانات المستخدم الإضافية
+                    // جلب بيانات المستخدم الإضافية من جدول users (إن وجدت)
                     let userData = {
                         id: user.id,
                         email: user.email,
@@ -559,7 +571,7 @@
                         } catch (e) {}
                     }
                     localStorage.setItem('ramzapp_user', JSON.stringify(userData));
-                    setTimeout(() => window.location.href = 'index.html', 500);
+                    window.location.href = 'index.html';
                 } catch (err) {
                     showError('emailError', err.message || 'فشل العملية');
                     setLoading('emailLoginBtn', 'emailBtnText', false, originalText);
@@ -596,7 +608,7 @@
                     };
                     localStorage.setItem('ramzapp_user', JSON.stringify(userData));
                     showToast('✅ تم الدخول بنجاح');
-                    setTimeout(() => window.location.href = 'index.html', 500);
+                    window.location.href = 'index.html';
                 } catch (err) {
                     showError('phoneError', err.message || 'فشل تسجيل الدخول');
                     setLoading('phoneLoginBtn', 'phoneBtnText', false, '📱 متابعة');
@@ -625,7 +637,7 @@
                     };
                     localStorage.setItem('ramzapp_user', JSON.stringify(userData));
                     showToast('✅ تم إنشاء حساب ضيف');
-                    setTimeout(() => window.location.href = 'index.html', 500);
+                    window.location.href = 'index.html';
                 } catch (err) {
                     showToast('❌ فشل إنشاء حساب الضيف: ' + err.message);
                     setLoading('guestBtn', 'guestBtnText', false, '👤 الدخول كضيف');
@@ -644,7 +656,7 @@
                 }
             });
 
-            console.log('✅ login.html (نسخة نهائية مع إنشاء حساب) جاهز');
+            console.log('✅ login.html (نسخة نهائية) جاهز');
         });
     </script>
 </body>
