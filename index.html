@@ -16,6 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
+        /* ========== الأنماط الأساسية (نفس الإصدار السابق مع تحديثات طفيفة) ========== */
         :root {
             --bg: #0d0d0d;
             --surface: #1a1a1a;
@@ -50,7 +51,7 @@
             --unread: #ff0050;
         }
 
-        /* نظام الأيقونات الاحتياطي */
+        /* نظام الأيقونات الاحتياطي (نفسه) */
         body.no-fontawesome .fa, body.no-fontawesome .fas, body.no-fontawesome .far, body.no-fontawesome .fab {
             font-family: 'Cairo', 'Segoe UI', 'Arial', sans-serif !important;
             font-weight: normal !important; font-style: normal !important;
@@ -322,15 +323,115 @@
         .call-mute { background: rgba(255,255,255,0.2); }
         .call-speaker { background: rgba(255,255,255,0.2); }
 
-        .story-viewer { position: fixed; inset: 0; background: #000; z-index: 3500; display: none; flex-direction: column; }
-        .story-viewer.active { display: flex; }
-        .story-progress { display: flex; gap: 4px; padding: 10px 16px; position: absolute; top: 10px; left: 16px; right: 16px; z-index: 3502; }
-        .story-progress-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden; }
-        .story-progress-fill { height: 100%; background: #fff; width: 0%; transition: width 0.1s linear; }
-        .story-content { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; background: linear-gradient(135deg, #1a1a2e, #16213e, #1a1a2e); }
-        .story-avatar-view { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 800; margin-bottom: 12px; background: var(--accent); color: #fff; }
-        .story-text { font-size: 20px; color: #fff; text-align: center; padding: 20px; max-width: 320px; }
-        .story-close { position: absolute; top: 20px; right: 16px; z-index: 3503; background: rgba(0,0,0,0.5); border: none; color: #fff; font-size: 20px; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; }
+        .story-viewer-active {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        .story-viewer-active .progress-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            gap: 4px;
+            z-index: 10000;
+        }
+        .story-viewer-active .progress-segment {
+            flex: 1;
+            height: 3px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .story-viewer-active .progress-segment .fill {
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+        .story-viewer-active .user-info {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+        }
+        .story-viewer-active .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .story-viewer-active .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .story-viewer-active .content {
+            max-width: 400px;
+            max-height: 80vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .story-viewer-active .content img,
+        .story-viewer-active .content video {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 12px;
+            object-fit: contain;
+        }
+        .story-viewer-active .content .text-story {
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 16px;
+            color: #fff;
+            font-size: 24px;
+            text-align: center;
+            max-width: 90%;
+            word-wrap: break-word;
+        }
+        .story-viewer-active .caption {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+            text-align: center;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            max-width: 80%;
+        }
 
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(6px); z-index: 2000; display: none; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
@@ -357,15 +458,122 @@
 
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text3); }
         .empty-state i { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
-        .story-bar { padding: 12px 14px; border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; display: flex; gap: 12px; background: var(--surface); }
+
+        /* ========== شريط القصص (Stories Bar) ========== */
+        .story-bar {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            white-space: nowrap;
+            display: flex;
+            gap: 12px;
+            background: var(--surface);
+        }
         .story-bar::-webkit-scrollbar { height: 0; }
-        .story-item { display: inline-flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; min-width: 65px; transition: 0.2s; }
+        .story-item {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            min-width: 65px;
+            transition: 0.2s;
+        }
         .story-item:active { transform: scale(0.95); }
-        .story-ring { width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #ff0050, #ff7b00); display: flex; align-items: center; justify-content: center; padding: 3px; }
-        .story-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-weight: 700; border: 2px solid var(--bg); color: var(--text); }
+        .story-ring {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0050, #ff7b00);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px;
+        }
+        .story-ring.viewed {
+            background: var(--surface3);
+        }
+        .story-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--surface3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border: 2px solid var(--bg);
+            color: var(--text);
+        }
         .story-add .story-ring { background: var(--surface3); border: 2px dashed var(--accent); }
         .story-add span { font-size: 28px; color: var(--accent); }
-        .story-name { font-size: 10px; color: var(--text3); max-width: 65px; overflow: hidden; text-overflow: ellipsis; }
+        .story-name {
+            font-size: 10px;
+            color: var(--text3);
+            max-width: 65px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ========== قسم القصص في شاشة التحديثات ========== */
+        .stories-actions {
+            padding: 8px 16px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .stories-actions .promo-btn {
+            flex: 1;
+            min-width: 100px;
+        }
+        #storiesList {
+            padding: 8px 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .story-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            width: calc(50% - 6px);
+            min-width: 140px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .story-card:hover { border-color: var(--accent); }
+        .story-card .story-preview {
+            width: 100%;
+            height: 80px;
+            border-radius: 12px;
+            background: var(--surface3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        .story-card .story-preview img,
+        .story-card .story-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+        .story-card .story-meta {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text3);
+        }
+
+        /* ========== باقي الأنماط ========== */
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px 6px; }
         .section-header h3 { font-size: 15px; font-weight: 700; }
         .channel-item, .call-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.15s; }
@@ -375,6 +583,7 @@
         .item-info { flex: 1; min-width: 0; }
         .item-title { font-weight: 600; font-size: 14px; }
         .item-sub { font-size: 12px; color: var(--text3); }
+
         .tools-grid { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
         .stat-card { background: var(--surface); border-radius: 18px; padding: 18px; border: 1px solid var(--border); }
         .stat-row { display: flex; gap: 10px; }
@@ -392,10 +601,12 @@
         .tool-info { flex: 1; }
         .tool-name { font-weight: 700; font-size: 14px; }
         .tool-desc { font-size: 11px; color: var(--text3); }
+
         .profile-section { text-align: center; padding: 30px 20px; }
         .profile-avatar-lg { width: 100px; height: 100px; border-radius: 50%; background: var(--surface3); display: flex; align-items: center; justify-content: center; font-size: 42px; font-weight: 800; margin: 0 auto 14px; border: 3px solid var(--accent); }
         .profile-name-lg { font-size: 24px; font-weight: 800; }
         .profile-bio-lg { color: var(--text3); margin: 6px 0 16px; }
+
         .settings-list { padding: 16px; }
         .setting-item { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--surface); border-radius: 14px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; border: 1px solid var(--border); }
         .setting-item:hover { background: var(--surface2); }
@@ -414,9 +625,16 @@
         .nav-item { background: none; border: none; color: var(--text3); display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; font-family: inherit; padding: 4px 8px; border-radius: 12px; transition: 0.2s; font-size: 10px; font-weight: 600; min-width: 55px; }
         .nav-item i { font-size: 20px; }
         .nav-item.active { color: var(--accent); }
+
         .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 10px 20px; border-radius: 25px; font-size: 13px; z-index: 5000; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; box-shadow: var(--shadow); font-family: inherit; }
         .toast.show { opacity: 1; }
-        @media (max-width: 380px) { .chat-name { font-size: 14px; } .msg-bubble { font-size: 12.5px; } .nav-item { font-size: 9px; } }
+
+        @media (max-width: 380px) {
+            .chat-name { font-size: 14px; }
+            .msg-bubble { font-size: 12.5px; }
+            .nav-item { font-size: 9px; }
+        }
+
         .catalog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding: 16px; }
         .catalog-card { background: var(--surface); border-radius: 16px; overflow: hidden; border: 1px solid var(--border); cursor: pointer; transition: 0.2s; }
         .catalog-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
@@ -442,7 +660,7 @@
     <div class="connection-indicator" id="connectionIndicator">📡 أنت غير متصل بالإنترنت</div>
 
     <div class="app-container" id="appContainer">
-        <!-- شاشة الدردشات -->
+        <!-- ===== شاشة الدردشات ===== -->
         <div class="screen active" id="chatsScreen">
             <div class="app-header">
                 <button class="header-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
@@ -458,7 +676,7 @@
             <div class="chats-list" id="chatsList"></div>
         </div>
 
-        <!-- شاشة المحادثة -->
+        <!-- ===== شاشة المحادثة ===== -->
         <div class="screen no-nav" id="chatScreen">
             <div class="chat-header-bar">
                 <button class="header-btn" id="backBtn"><i class="fas fa-arrow-right"></i></button>
@@ -478,7 +696,6 @@
                 <button class="header-btn" id="closeInChatSearch">&times;</button>
             </div>
             <div class="search-results" id="searchResults" style="display:none;"></div>
-            <!-- شريط التشفير -->
             <div class="encryption-banner">
                 <i class="fas fa-lock" style="color: #25D366;"></i>
                 <span>الرسائل والمكالمات مشفرة تمامًا بين الطرفين. ولا يمكن لأي شخص آخر قراءتها.</span>
@@ -510,7 +727,7 @@
             </div>
         </div>
 
-        <!-- شاشة جهات الاتصال -->
+        <!-- ===== شاشة جهات الاتصال ===== -->
         <div class="screen" id="contactsScreen">
             <div class="app-header">
                 <button class="header-btn" id="backFromContactsBtn"><i class="fas fa-arrow-right"></i></button>
@@ -523,21 +740,26 @@
             <div class="contacts-list" id="contactsList"></div>
         </div>
 
-        <!-- شاشة المكالمات -->
+        <!-- ===== شاشة المكالمات ===== -->
         <div class="screen" id="callsScreen">
             <div class="app-header"><h2>📞 المكالمات</h2></div>
             <div class="chats-list" id="callsList"></div>
         </div>
 
-        <!-- شاشة التحديثات -->
+        <!-- ===== شاشة التحديثات (مع القصص) ===== -->
         <div class="screen" id="updatesScreen">
             <div class="app-header"><h2>🔄 التحديثات</h2></div>
             <div class="story-bar" id="storyBar"></div>
+            <div class="stories-actions">
+                <button class="promo-btn" id="addStoryBtn" style="background:var(--accent);color:#fff;">📸 إضافة قصة</button>
+                <button class="promo-btn" id="addTextStoryBtn" style="background:var(--surface3);color:var(--text);">✏️ قصة نصية</button>
+            </div>
+            <div id="storiesList"></div>
             <div class="section-header"><h3>القنوات</h3><button class="header-btn" id="createChannelBtn"><i class="fas fa-plus-circle"></i></button></div>
             <div id="channelsList" style="flex:1;overflow-y:auto;"></div>
         </div>
 
-        <!-- شاشة الأدوات -->
+        <!-- ===== شاشة الأدوات ===== -->
         <div class="screen" id="toolsScreen">
             <div class="app-header"><h2>🛠 الأدوات</h2></div>
             <div class="tools-grid">
@@ -548,7 +770,7 @@
             </div>
         </div>
 
-        <!-- شاشة الملف الشخصي -->
+        <!-- ===== شاشة الملف الشخصي ===== -->
         <div class="screen no-nav" id="profileScreen">
             <div class="app-header"><button class="header-btn" id="backFromProfileBtn"><i class="fas fa-arrow-right"></i></button><h2>الملف الشخصي</h2></div>
             <div class="profile-section">
@@ -559,7 +781,7 @@
             </div>
         </div>
 
-        <!-- شاشة الإعدادات -->
+        <!-- ===== شاشة الإعدادات ===== -->
         <div class="screen no-nav" id="settingsScreen">
             <div class="app-header"><button class="header-btn" id="closeSettingsBtn"><i class="fas fa-arrow-right"></i></button><h2>⚙️ الإعدادات</h2></div>
             <div class="settings-list">
@@ -574,7 +796,7 @@
         </div>
     </div>
 
-    <!-- النوافذ المنبثقة -->
+    <!-- ===== النوافذ المنبثقة ===== -->
     <div class="modal-overlay" id="userModal">
         <button class="modal-close" id="closeModalBtn">&times;</button>
         <div class="modal-card">
@@ -594,13 +816,13 @@
     </div>
     <div class="toast" id="toast"></div>
 
-    <!-- عارض الصور -->
+    <!-- ===== عارض الصور ===== -->
     <div class="image-viewer" id="imageViewer">
         <button class="image-viewer-close" id="closeImageViewer">&times;</button>
         <img src="" alt="صورة" id="viewerImage">
     </div>
 
-    <!-- شاشة المكالمات -->
+    <!-- ===== شاشة المكالمات ===== -->
     <div class="call-screen-overlay" id="callScreen">
         <div class="call-avatar-lg" id="callAvatar">م</div>
         <div class="call-status" id="callStatusText">جاري الاتصال...</div>
@@ -612,14 +834,7 @@
         </div>
     </div>
 
-    <!-- عارض القصص -->
-    <div class="story-viewer" id="storyViewer">
-        <button class="story-close" id="closeStoryViewer">&times;</button>
-        <div class="story-progress" id="storyProgress"></div>
-        <div class="story-content" id="storyContent"></div>
-    </div>
-
-    <!-- الشريط السفلي -->
+    <!-- ===== الشريط السفلي ===== -->
     <div class="bottom-nav" id="bottomNav">
         <button class="nav-item active" data-nav="chats"><i class="fas fa-comment-dots"></i><span>الدردشات</span></button>
         <button class="nav-item" data-nav="contacts"><i class="fas fa-address-book"></i><span>جهات الاتصال</span></button>
@@ -629,10 +844,12 @@
     </div>
 
     <!-- ========== تحميل المكتبات والطبقات (بالترتيب الصحيح) ========== -->
-    <script src="db.js"></script>
-    <script src="supabase.js"></script>
-    <script src="media.js"></script>
-    <script src="sync.js"></script>
-    <script src="common.js"></script>
+    <script src="db.js?v=4"></script>
+    <script src="supabase.js?v=4"></script>
+    <script src="media.js?v=4"></script>
+    <script src="sync.js?v=4"></script>
+    <script src="common.js?v=4"></script>
+    <!-- أداة الفحص (للتصحيح) -->
+    <script src="test.js?v=4"></script>
 </body>
 </html>
