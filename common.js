@@ -1,7 +1,6 @@
-// ==================== common.js - المنطق الكامل لتطبيق RamzApp (نسخة حقيقية) ====================
+// ==================== common.js - الإصدار النهائي مع سجلات تشخيصية ====================
+// يعالج: حلقة إعادة التوجيه، التهيئة المتكررة، مع سجلات مفصلة لتحديد مكان الخلل
 // يربط db.js + supabase.js + media.js + sync.js مع واجهة index.html
-// يدعم: Offline-First، مزامنة تلقائية، جميع ميزات المراسلة الحقيقية
-// مع نظام تشفير حقيقي من طرف إلى طرف (E2E)
 
 // ==================== نظام تحميل الأيقونات ====================
 let fontAwesomeLoaded = false;
@@ -102,7 +101,7 @@ function playNotificationSound() {
     } catch (e) { /* تجاهل */ }
 }
 
-// ==================== متغيرات الحالة ====================
+// ==================== متغيرات الحالة الأساسية ====================
 let currentChatId = null;
 let replyTarget = null;
 let pendingImg = null;
@@ -119,6 +118,10 @@ let storyIndex = 0;
 let typingTimeout = null;
 let editingMsgId = null;
 let isOnline = navigator.onLine;
+
+// ==================== متغيرات منع التهيئة المتكررة ====================
+let initRun = false;
+let appReady = false;
 
 // ==================== مؤشر الاتصال ====================
 function updateConnectionIndicator() {
@@ -184,7 +187,15 @@ function DB_deleteChat(chatId) {
 function DB_getCurrentUser() {
     if (window.getCurrentUser) return window.getCurrentUser();
     const saved = localStorage.getItem('ramzapp_user');
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+        try {
+            return JSON.parse(saved);
+        } catch (e) {
+            console.warn('⚠️ بيانات المستخدم في localStorage فاسدة:', e);
+            return null;
+        }
+    }
+    return null;
 }
 
 function DB_getContacts() {
@@ -256,7 +267,7 @@ function DB_getPendingMessages() {
     return [];
 }
 
-// ==================== نظام التشفير من طرف إلى طرف (E2E) ====================
+// ==================== نظام التشفير (E2E) ====================
 const E2E_KEY_STORE = 'ramzapp_e2e_keys';
 let currentUserKeyPair = null;
 let peerPublicKeys = {};
@@ -452,12 +463,19 @@ async function decryptMessage(encryptedPayload) {
 
 // ==================== دخول التطبيق ====================
 function enterApp() {
+    if (appReady) {
+        console.warn('⚠️ enterApp() تم استدعاؤها أكثر من مرة');
+        return;
+    }
+    appReady = true;
+    console.log('📌 enterApp() - عرض واجهة التطبيق');
     document.getElementById('appContainer').style.display = 'flex';
     document.getElementById('bottomNav').style.display = 'flex';
     showScreen('chats');
     updateStats();
     applyTheme();
     updateConnectionIndicator();
+    console.log('✅ تم دخول التطبيق بنجاح');
 }
 
 // ==================== التنقل بين الشاشات ====================
@@ -492,7 +510,7 @@ function showScreen(id) {
 
 $$('.nav-item').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.nav)));
 
-// ==================== تحديث الإحصائيات (بيانات حقيقية) ====================
+// ==================== تحديث الإحصائيات ====================
 function updateStats() {
     const allMessages = Object.values(window.inMemoryDB?.messages || {}).reduce((acc, msgs) => acc + msgs.length, 0);
     const chatsCount = DB_getChats().length;
@@ -675,7 +693,6 @@ function subscribeToCurrentChat() {
                 playNotificationSound();
             }
         }, (senderId, isTyping) => {
-            // استقبال حالة "يكتب الآن..." الحقيقية من supabase.js
             const chat = DB_getChats().find(c => c.id === currentChatId);
             if (chat && senderId !== DB_getCurrentUser()?.id) {
                 chat._typing = isTyping ? Date.now() : null;
@@ -726,7 +743,6 @@ function openChat(chatId) {
 
     subscribeToCurrentChat();
 
-    // تعليم الرسائل كمقروءة فوراً
     const msgs = DB_getMessages(chatId);
     const unreadIds = msgs.filter(m => m.sender_id !== 'me' && m.status !== 'read').map(m => m.id);
     if (unreadIds.length > 0 && window.markMessagesAsRead) {
@@ -754,7 +770,7 @@ $('#chatHeaderInfo')?.addEventListener('click', () => {
     if (c) openUserModal(c);
 });
 
-// ==================== عرض الرسائل مع فك التشفير ====================
+// ==================== عرض الرسائل ====================
 function renderMessages() {
     if (!currentChatId) return;
     const area = $('#messagesArea');
@@ -814,7 +830,6 @@ function renderMessages() {
         </div>`;
     });
 
-    // فك تشفير الرسائل المشفرة عند عرضها
     area.querySelectorAll('.msg-text[data-encrypted="true"]').forEach(async (el) => {
         try {
             const payload = JSON.parse(el.dataset.payload);
@@ -940,7 +955,7 @@ function updateLastMsg() {
     }
 }
 
-// ==================== إرسال الرسائل المشفرة ====================
+// ==================== إرسال الرسائل ====================
 async function sendMessage() {
     if (!currentChatId) return;
     const inp = $('#msgInput');
@@ -998,7 +1013,6 @@ async function sendMessage() {
     $('#replyBar').style.display = 'none';
     updateSendBtn();
 
-    // إرسال إشارة توقف الكتابة
     if (window.sendTypingEvent) {
         window.sendTypingEvent(currentChatId, false);
     }
@@ -1012,7 +1026,6 @@ $('#msgInput')?.addEventListener('keypress', e => {
 });
 $('#msgInput')?.addEventListener('input', function() {
     updateSendBtn();
-    // إرسال إشارة "يكتب الآن..." الحقيقية
     if (currentChatId && window.sendTypingEvent) {
         window.sendTypingEvent(currentChatId, this.value.trim().length > 0);
     }
@@ -1336,7 +1349,7 @@ function renderCalls() {
     `).join('');
 }
 
-// ==================== جهات الاتصال (حقيقية) ====================
+// ==================== جهات الاتصال ====================
 function renderContactsList() {
     const container = $('#contactsList');
     if (!container) return;
@@ -1432,7 +1445,6 @@ async function syncContacts() {
             }
         }
 
-        // التحقق من الأرقام المسجلة في Supabase
         if (window.checkRegisteredPhones) {
             const allPhones = DB_getContacts().map(c => c.phone);
             if (allPhones.length > 0) {
@@ -1444,7 +1456,7 @@ async function syncContacts() {
                             DB_saveContact({ 
                                 ...contact, 
                                 registered: 1,
-                                id: reg.id || contact.id // تحديث المعرف إذا كان موجوداً
+                                id: reg.id || contact.id
                             });
                         }
                     });
@@ -1479,9 +1491,7 @@ async function inviteContact(phone) {
         try {
             await navigator.share({ title: 'RamzApp - دعوة', text: message });
             toast('✅ تم فتح المشاركة');
-        } catch (e) {
-            // إذا أغلق المستخدم نافذة المشاركة، لا نفعل شيئاً
-        }
+        } catch (e) {}
     } else {
         try {
             await navigator.clipboard.writeText(message);
@@ -1718,7 +1728,9 @@ function logout() {
         } else {
             localStorage.removeItem('ramzapp_user');
         }
-        window.location.href = 'login.html';
+        if (!window.location.pathname.includes('login.html')) {
+            window.location.href = 'login.html';
+        }
     }
 }
 
@@ -1817,94 +1829,124 @@ window.importData = importData;
 window.clearAllData = clearAllData;
 window.logout = logout;
 
-// ==================== التهيئة الرئيسية (بدون بيانات وهمية) ====================
+// ==================== التهيئة الرئيسية ====================
 async function init() {
-    if (window.initDB) {
-        await window.initDB();
-    }
-
-    const user = DB_getCurrentUser();
-    if (!user) {
-        window.location.href = 'login.html';
+    // منع التهيئة المتكررة
+    if (initRun) {
+        console.warn('⚠️ تم استدعاء init() أكثر من مرة - تم تجاهل التكرار');
         return;
     }
+    initRun = true;
 
-    // ====== جلب البيانات الحقيقية من Supabase ======
-    if (isOnline && window.fetchUserChats) {
-        try {
-            // جلب المحادثات
-            const chats = await window.fetchUserChats(user.id);
-            if (chats && chats.length > 0) {
-                chats.forEach(chat => {
-                    const existing = DB_getChats().find(c => c.id === chat.id);
-                    if (!existing) DB_saveChat(chat);
-                });
+    console.log('🚀 بدء تهيئة RamzApp v4.0 ...');
+
+    try {
+        console.log('📌 [1] بدء تهيئة قاعدة البيانات...');
+        if (window.initDB) {
+            await window.initDB();
+            console.log('📌 [2] تمت تهيئة قاعدة البيانات بنجاح ✅');
+        } else {
+            console.warn('📌 [2] window.initDB غير موجود');
+        }
+
+        console.log('📌 [3] جلب المستخدم الحالي...');
+        const user = DB_getCurrentUser();
+        console.log('📌 [4] المستخدم:', user);
+
+        if (!user || !user.id) {
+            console.log('📌 [5] لا يوجد مستخدم - التوجيه إلى login.html');
+            if (!window.location.pathname.includes('login.html')) {
+                window.location.href = 'login.html';
             }
+            return;
+        }
 
-            // جلب جهات الاتصال
-            if (window.fetchContacts) {
-                const contacts = await window.fetchContacts(user.id);
-                if (contacts && contacts.length > 0) {
-                    contacts.forEach(contact => {
-                        const existing = DB_getContacts().find(c => c.id === contact.id);
-                        if (!existing) DB_saveContact(contact);
-                    });
+        console.log('📌 [6] المستخدم موجود:', user.name || user.email || user.id);
+
+        // ====== جلب البيانات من Supabase ======
+        if (isOnline) {
+            console.log('📌 [7] جلب البيانات من Supabase...');
+            try {
+                if (window.fetchUserChats) {
+                    const chats = await window.fetchUserChats(user.id);
+                    console.log(`📌 [8] تم جلب ${chats?.length || 0} محادثة`);
+                    if (chats && chats.length > 0) {
+                        chats.forEach(chat => {
+                            const existing = DB_getChats().find(c => c.id === chat.id);
+                            if (!existing) DB_saveChat(chat);
+                        });
+                    }
                 }
-            }
 
-            // جلب جميع المستخدمين المسجلين (للمزامنة مع جهات الاتصال)
-            if (window.fetchAllRegisteredUsers) {
-                const allUsers = await window.fetchAllRegisteredUsers();
-                if (allUsers && allUsers.length > 0) {
-                    // تحديث جهات الاتصال المحلية بحالة التسجيل
-                    const localContacts = DB_getContacts();
-                    for (const contact of localContacts) {
-                        const found = allUsers.find(u => u.phone === contact.phone || u.id === contact.id);
-                        if (found && !contact.registered) {
-                            DB_saveContact({ ...contact, registered: 1, id: found.id || contact.id });
+                if (window.fetchContacts) {
+                    const contacts = await window.fetchContacts(user.id);
+                    console.log(`📌 [9] تم جلب ${contacts?.length || 0} جهة اتصال`);
+                    if (contacts && contacts.length > 0) {
+                        contacts.forEach(contact => {
+                            const existing = DB_getContacts().find(c => c.id === contact.id);
+                            if (!existing) DB_saveContact(contact);
+                        });
+                    }
+                }
+
+                if (window.fetchAllRegisteredUsers) {
+                    const allUsers = await window.fetchAllRegisteredUsers();
+                    console.log(`📌 [10] تم جلب ${allUsers?.length || 0} مستخدم مسجل`);
+                    if (allUsers && allUsers.length > 0) {
+                        const localContacts = DB_getContacts();
+                        for (const contact of localContacts) {
+                            const found = allUsers.find(u => u.phone === contact.phone || u.id === contact.id);
+                            if (found && !contact.registered) {
+                                DB_saveContact({ ...contact, registered: 1, id: found.id || contact.id });
+                            }
                         }
                     }
                 }
+                console.log('📌 [11] تم جلب جميع البيانات من Supabase ✅');
+            } catch (e) {
+                console.warn('⚠️ فشل جلب البيانات من Supabase:', e);
             }
-        } catch (e) {
-            console.warn('⚠️ فشل جلب البيانات من Supabase', e);
+        } else {
+            console.log('📌 [7] غير متصل بالإنترنت - العمل بالبيانات المحلية فقط');
         }
-    }
 
-    const chats = DB_getChats();
-    if (chats.length === 0) {
-        console.log('📭 لا توجد محادثات – انتظر حتى يبدأ الآخرون بالمراسلة أو أضف جهات اتصال');
-    }
+        console.log('📌 [12] دخول التطبيق (enterApp)...');
+        enterApp();
 
-    enterApp();
-    await initEncryption();
+        console.log('📌 [13] تهيئة التشفير (initEncryption)...');
+        await initEncryption();
+        console.log('📌 [14] تم تهيئة التشفير ✅');
 
-    detectFontAwesome();
+        console.log('📌 [15] كشف أيقونات FontAwesome...');
+        detectFontAwesome();
 
-    if (isOnline && window.setUserOnlineStatus) {
-        window.setUserOnlineStatus(true);
-    }
+        if (isOnline && window.setUserOnlineStatus) {
+            window.setUserOnlineStatus(true);
+            console.log('📌 [16] تم تحديث حالة الاتصال إلى متصل');
+        }
 
-    // تحديث حالة الاتصال كل 30 ثانية
-    setInterval(() => {
-        const chats = DB_getChats();
-        chats.forEach(c => {
-            if (Math.random() > 0.7 && !c._typing) {
-                c.online = !c.online;
-                if (!c.online) c.last_seen = 'آخر ظهور ' + fmtTime(new Date().toISOString());
+        if (isOnline && window.syncAllPendingMessages) {
+            console.log('📌 [17] بدء المزامنة التلقائية...');
+            setTimeout(() => window.syncAllPendingMessages(), 1500);
+        }
+
+        console.log('✅ تم تهيئة RamzApp بنجاح');
+        console.log('💬 الإصدار 4.0 | Offline-First + E2E Encryption');
+
+    } catch (err) {
+        console.error('❌ خطأ في تهيئة التطبيق:', err);
+        toast('⚠️ حدث خطأ أثناء تهيئة التطبيق');
+        setTimeout(() => {
+            if (!window.location.pathname.includes('login.html')) {
+                window.location.href = 'login.html';
             }
-        });
-        if (currentScreen === 'chats' && !currentChatId) renderChats();
-    }, 25000);
-
-    console.log('💬 RamzApp v4.0 | Offline-First مع SQLite + Supabase + E2E Encryption');
-    console.log('✅ جميع الميزات تعمل ببيانات حقيقية | لا توجد محاكاة');
-    console.log('🔒 التشفير من طرف إلى طرف نشط');
+        }, 3000);
+    }
 }
 
-// بدء التطبيق
+// ==================== بدء التطبيق ====================
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
-    init();
+    setTimeout(init, 100);
 }
