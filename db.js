@@ -1,9 +1,15 @@
-// db.js - طبقة التخزين الهجين النهائية لـ RamzApp (إصدار 4.0)
-// يدعم: Offline-First، SQLite (عبر OPFS/IndexedDB)، LocalStorage كاحتياطي
-// مع دوال كاملة للقصص (صور، فيديو، نصوص) والمزامنة التلقائية
+// ======================================================================
+// db.js - الإصدار النهائي الكامل v4.0
+// طبقة التخزين الهجين: SQLite (OPFS/IndexedDB) + LocalStorage احتياطي
+// يدعم: المستخدم، المحادثات، الرسائل، جهات الاتصال، القصص، القنوات، المكالمات، الكتالوج، الإعدادات
+// ======================================================================
 
 (function() {
-    // ================== التكوين ==================
+    'use strict';
+
+    // ======================================================================
+    // التكوين الأساسي
+    // ======================================================================
     const DB_CONFIG = {
         localStorageKey: 'ramzapp_v4_db_cache',
         userKey: 'ramzapp_user',
@@ -16,10 +22,17 @@
     let SQL = null;
     let db = null;
     let dbReady = false;
-    let inMemoryDB = {
+    let useFallback = false;
+    let indexedDBReady = false;
+    let initPromise = null;
+
+    // ======================================================================
+    // الذاكرة المؤقتة (In-Memory) – تستخدم كطبقة وسيطة
+    // ======================================================================
+    const inMemoryDB = {
         user: null,
         chats: [],
-        messages: {},
+        messages: {},      // { chatId: [message, ...] }
         contacts: [],
         stories: [],
         channels: [],
@@ -27,21 +40,35 @@
         catalog: [],
         settings: { theme: 'dark', notifications: true }
     };
-    let useFallback = false;
+    window.inMemoryDB = inMemoryDB; // للوصول من console
 
-    // ================== دوال مساعدة ==================
+    // ======================================================================
+    // دوال مساعدة
+    // ======================================================================
     function generateId() {
         return 'id_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
     }
+    window.generateId = generateId;
+
     function currentTimestamp() {
         return new Date().toISOString();
     }
+    window.currentTimestamp = currentTimestamp;
 
-    // ================== LocalStorage Cache ==================
+    function isObject(obj) { return obj && typeof obj === 'object' && !Array.isArray(obj); }
+
+    // ======================================================================
+    // LocalStorage Cache (احتياطي سريع)
+    // ======================================================================
     function saveToLocalStorageCache() {
         try {
             const cache = {
-                chats: inMemoryDB.chats.slice(0, 50).map(c => ({ ...c, _messages: undefined })),
+                chats: inMemoryDB.chats.slice(0, 100).map(c => {
+                    const copy = { ...c };
+                    // لا ننسخ الرسائل ضمن المحادثة (لأنها في messages)
+                    delete copy._messages;
+                    return copy;
+                }),
                 contacts: inMemoryDB.contacts,
                 stories: inMemoryDB.stories,
                 channels: inMemoryDB.channels,
@@ -70,7 +97,9 @@
         return false;
     }
 
-    // ================== SQL.js (WebAssembly) ==================
+    // ======================================================================
+    // SQL.js (WebAssembly) – تحميل المكتبة
+    // ======================================================================
     async function loadSqlJs() {
         if (SQL) return SQL;
         return new Promise((resolve, reject) => {
@@ -81,96 +110,154 @@
                     window.initSqlJs({ locateFile: file => DB_CONFIG.sqlWasmUrl })
                         .then(sql => { SQL = sql; resolve(SQL); })
                         .catch(reject);
-                } else reject(new Error('SQL.js init failed'));
+                } else {
+                    // محاولة تحميل من CDN مباشرة (ESM)
+                    import('https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.0/sql-wasm.js')
+                        .then(module => {
+                            // بعض الإصدارات تعرض default
+                            if (module.default) {
+                                SQL = module.default;
+                            } else {
+                                SQL = module;
+                            }
+                            resolve(SQL);
+                        })
+                        .catch(reject);
+                }
             };
             script.onerror = reject;
             document.head.appendChild(script);
         });
     }
 
-    // ================== فتح قاعدة البيانات (OPFS / IndexedDB) ==================
+    // ======================================================================
+    // فتح قاعدة البيانات (OPFS / IndexedDB)
+    // ======================================================================
     async function openDatabase() {
         if (!SQL) await loadSqlJs();
+
+        // 1. محاولة OPFS (File System Access API)
         try {
-            const opfsRoot = await navigator.storage.getDirectory();
-            const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
-            const file = await fileHandle.getFile();
-            const arrayBuffer = await file.arrayBuffer();
-            db = arrayBuffer.byteLength > 0 ? new SQL.Database(new Uint8Array(arrayBuffer)) : new SQL.Database();
-            dbReady = true;
-            return true;
-        } catch (e) {
-            try {
-                db = new SQL.Database();
-                const saved = await loadFromIndexedDB();
-                if (saved) db = new SQL.Database(new Uint8Array(saved));
+            if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+                const opfsRoot = await navigator.storage.getDirectory();
+                const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
+                const file = await fileHandle.getFile();
+                const arrayBuffer = await file.arrayBuffer();
+
+                if (arrayBuffer.byteLength > 0) {
+                    db = new SQL.Database(new Uint8Array(arrayBuffer));
+                } else {
+                    db = new SQL.Database();
+                }
                 dbReady = true;
+                console.log('✅ SQLite database opened via OPFS');
                 return true;
-            } catch (e2) {
-                useFallback = true;
-                dbReady = true;
-                return false;
             }
+        } catch (e) {
+            console.warn('⚠️ OPFS failed, trying IndexedDB...', e);
+        }
+
+        // 2. محاولة IndexedDB (احتياطي)
+        try {
+            const saved = await loadFromIndexedDB();
+            if (saved) {
+                db = new SQL.Database(new Uint8Array(saved));
+            } else {
+                db = new SQL.Database();
+            }
+            dbReady = true;
+            console.log('✅ SQLite database opened via IndexedDB');
+            return true;
+        } catch (e2) {
+            console.warn('⚠️ IndexedDB failed, using LocalStorage only', e2);
+            useFallback = true;
+            dbReady = true;
+            return false;
         }
     }
 
-    // ================== IndexedDB (احتياطي) ==================
+    // ======================================================================
+    // IndexedDB (لحفظ ملف SQLite كـ ArrayBuffer)
+    // ======================================================================
     function saveToIndexedDB(data) {
         return new Promise((resolve, reject) => {
-            const req = indexedDB.open('RamzAppDB', 1);
+            const req = indexedDB.open('RamzAppDB', 2);
             req.onupgradeneeded = (e) => {
-                if (!e.target.result.objectStoreNames.contains('sqlite')) {
-                    e.target.result.createObjectStore('sqlite');
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('sqlite')) {
+                    db.createObjectStore('sqlite');
                 }
             };
             req.onsuccess = (e) => {
-                const tx = e.target.result.transaction('sqlite', 'readwrite');
-                tx.objectStore('sqlite').put(data, 'db');
-                tx.oncomplete = resolve;
-                tx.onerror = reject;
+                const db = e.target.result;
+                const tx = db.transaction('sqlite', 'readwrite');
+                const store = tx.objectStore('sqlite');
+                const putReq = store.put(data, 'db');
+                putReq.onsuccess = () => resolve();
+                putReq.onerror = () => reject(putReq.error);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
             };
-            req.onerror = reject;
+            req.onerror = () => reject(req.error);
         });
     }
 
     function loadFromIndexedDB() {
         return new Promise((resolve, reject) => {
-            const req = indexedDB.open('RamzAppDB', 1);
+            const req = indexedDB.open('RamzAppDB', 2);
             req.onupgradeneeded = (e) => {
-                if (!e.target.result.objectStoreNames.contains('sqlite')) {
-                    e.target.result.createObjectStore('sqlite');
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('sqlite')) {
+                    db.createObjectStore('sqlite');
                 }
             };
             req.onsuccess = (e) => {
-                const tx = e.target.result.transaction('sqlite', 'readonly');
-                const getReq = tx.objectStore('sqlite').get('db');
+                const db = e.target.result;
+                const tx = db.transaction('sqlite', 'readonly');
+                const store = tx.objectStore('sqlite');
+                const getReq = store.get('db');
                 getReq.onsuccess = () => resolve(getReq.result);
-                getReq.onerror = reject;
+                getReq.onerror = () => reject(getReq.error);
+                tx.onerror = () => reject(tx.error);
             };
-            req.onerror = reject;
+            req.onerror = () => reject(req.error);
         });
     }
 
-    // ================== استمرار البيانات ==================
+    // ======================================================================
+    // استمرار البيانات (Persist)
+    // ======================================================================
     async function persistDatabase() {
-        if (useFallback || !db) return;
+        if (useFallback || !db) {
+            saveToLocalStorageCache();
+            return;
+        }
         try {
             const data = db.export();
+            // محاولة OPFS أولاً
             try {
-                const opfsRoot = await navigator.storage.getDirectory();
-                const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(data.buffer);
-                await writable.close();
+                if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+                    const opfsRoot = await navigator.storage.getDirectory();
+                    const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(data.buffer);
+                    await writable.close();
+                } else {
+                    await saveToIndexedDB(data.buffer);
+                }
             } catch (e) {
                 await saveToIndexedDB(data.buffer);
             }
         } catch (e) { /* تجاهل */ }
+        saveToLocalStorageCache();
     }
 
-    // ================== إنشاء الجداول ==================
+    // ======================================================================
+    // إنشاء الجداول (إذا لم تكن موجودة)
+    // ======================================================================
     function createTables() {
         if (useFallback || !db) return;
+
         // جدول المستخدم
         db.run(`CREATE TABLE IF NOT EXISTS user (
             id TEXT PRIMARY KEY,
@@ -181,6 +268,7 @@
             is_guest INTEGER DEFAULT 0,
             last_sync TEXT
         )`);
+
         // جدول المحادثات
         db.run(`CREATE TABLE IF NOT EXISTS chats (
             id TEXT PRIMARY KEY,
@@ -196,8 +284,14 @@
             typing INTEGER DEFAULT 0,
             typing_time TEXT,
             is_group INTEGER DEFAULT 0,
-            user_id TEXT
+            user_id TEXT,
+            muted INTEGER DEFAULT 0,
+            blocked INTEGER DEFAULT 0,
+            disappear_time INTEGER DEFAULT 0,
+            created_by TEXT,
+            members TEXT
         )`);
+
         // جدول الرسائل
         db.run(`CREATE TABLE IF NOT EXISTS messages (
             id TEXT PRIMARY KEY,
@@ -231,7 +325,7 @@
             user_id TEXT
         )`);
 
-        // جدول القصص (مطور)
+        // جدول القصص
         db.run(`CREATE TABLE IF NOT EXISTS stories (
             id TEXT PRIMARY KEY,
             user_id TEXT,
@@ -253,9 +347,14 @@
             id TEXT PRIMARY KEY,
             name TEXT,
             avatar TEXT,
+            description TEXT,
             followers INTEGER DEFAULT 0,
+            invite_code TEXT,
+            created_by TEXT,
+            created_at TEXT,
             update_time TEXT,
-            user_id TEXT
+            user_id TEXT,
+            subscribers TEXT
         )`);
 
         // جدول المكالمات
@@ -283,10 +382,23 @@
             value TEXT
         )`);
 
+        // جدول الرسائل المعلقة (يستخدمها sync.js)
+        db.run(`CREATE TABLE IF NOT EXISTS pending_messages (
+            id TEXT PRIMARY KEY,
+            chat_id TEXT,
+            sender_id TEXT,
+            recipient_chat_id TEXT,
+            payload TEXT,
+            created_at TEXT,
+            expires_at TEXT
+        )`);
+
         persistDatabase();
     }
 
-    // ================== تحميل البيانات من SQLite إلى الذاكرة ==================
+    // ======================================================================
+    // تحميل البيانات من SQLite إلى الذاكرة المؤقتة
+    // ======================================================================
     function loadInMemoryFromSQLite() {
         if (useFallback || !db) return false;
         try {
@@ -297,15 +409,23 @@
                 userRows[0].columns.forEach((c, i) => u[c] = userRows[0].values[0][i]);
                 inMemoryDB.user = u;
             }
+
             // تحميل المحادثات
             const chatRows = db.exec("SELECT * FROM chats ORDER BY pinned DESC, last_time DESC");
             if (chatRows.length) {
                 inMemoryDB.chats = chatRows[0].values.map(r => {
                     const c = {};
                     chatRows[0].columns.forEach((col, i) => c[col] = r[i]);
+                    // معالجة members إذا كانت مخزنة كـ JSON
+                    if (c.members && typeof c.members === 'string') {
+                        try { c.members = JSON.parse(c.members); } catch(e) { c.members = []; }
+                    } else if (!c.members) {
+                        c.members = [];
+                    }
                     return c;
                 });
             }
+
             // تحميل الرسائل
             inMemoryDB.messages = {};
             const msgRows = db.exec("SELECT * FROM messages ORDER BY time ASC");
@@ -320,6 +440,7 @@
                     inMemoryDB.messages[m.chat_id].push(m);
                 });
             }
+
             // تحميل جهات الاتصال
             const contactRows = db.exec("SELECT * FROM contacts");
             if (contactRows.length) {
@@ -329,8 +450,10 @@
                     return c;
                 });
             }
-            // تحميل القصص (مع الفلترة حسب الانتهاء)
-            const storyRows = db.exec("SELECT * FROM stories WHERE expires_at > datetime('now') ORDER BY time DESC");
+
+            // تحميل القصص (مع فلترة المنتهية)
+            const now = new Date().toISOString();
+            const storyRows = db.exec(`SELECT * FROM stories WHERE expires_at > datetime('${now}') ORDER BY time DESC`);
             if (storyRows.length) {
                 inMemoryDB.stories = storyRows[0].values.map(r => {
                     const s = {};
@@ -340,15 +463,22 @@
             } else {
                 inMemoryDB.stories = [];
             }
+
             // تحميل القنوات
             const channelRows = db.exec("SELECT * FROM channels");
             if (channelRows.length) {
                 inMemoryDB.channels = channelRows[0].values.map(r => {
                     const ch = {};
                     channelRows[0].columns.forEach((col, i) => ch[col] = r[i]);
+                    if (ch.subscribers && typeof ch.subscribers === 'string') {
+                        try { ch.subscribers = JSON.parse(ch.subscribers); } catch(e) { ch.subscribers = []; }
+                    } else if (!ch.subscribers) {
+                        ch.subscribers = [];
+                    }
                     return ch;
                 });
             }
+
             // تحميل المكالمات
             const callRows = db.exec("SELECT * FROM calls ORDER BY time DESC");
             if (callRows.length) {
@@ -358,6 +488,7 @@
                     return c;
                 });
             }
+
             // تحميل الكتالوج
             const catalogRows = db.exec("SELECT * FROM catalog");
             if (catalogRows.length) {
@@ -367,6 +498,7 @@
                     return c;
                 });
             }
+
             // تحميل الإعدادات
             const settingsRows = db.exec("SELECT * FROM settings");
             if (settingsRows.length) {
@@ -375,6 +507,7 @@
                     if (r[0] === 'notifications') inMemoryDB.settings.notifications = r[1] === 'true';
                 });
             }
+
             return true;
         } catch (e) {
             console.warn('⚠️ فشل تحميل البيانات من SQLite', e);
@@ -382,14 +515,27 @@
         }
     }
 
-    // ================== استمرار جميع البيانات ==================
+    // ======================================================================
+    // حفظ جميع البيانات إلى SQLite
+    // ======================================================================
     async function persistAllData() {
         if (useFallback || !db) {
             saveToLocalStorageCache();
             return;
         }
         try {
+            // حذف جميع البيانات الحالية
             db.run("DELETE FROM user");
+            db.run("DELETE FROM messages");
+            db.run("DELETE FROM chats");
+            db.run("DELETE FROM contacts");
+            db.run("DELETE FROM stories");
+            db.run("DELETE FROM channels");
+            db.run("DELETE FROM calls");
+            db.run("DELETE FROM catalog");
+            db.run("DELETE FROM settings");
+
+            // إدراج المستخدم
             if (inMemoryDB.user) {
                 db.run("INSERT INTO user VALUES (?,?,?,?,?,?,?)", [
                     inMemoryDB.user.id,
@@ -401,8 +547,8 @@
                     currentTimestamp()
                 ]);
             }
-            // حذف وإدراج الرسائل
-            db.run("DELETE FROM messages");
+
+            // إدراج الرسائل
             const insMsg = db.prepare("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             for (const msgs of Object.values(inMemoryDB.messages)) {
                 for (const m of msgs) {
@@ -428,9 +574,8 @@
             }
             insMsg.free();
 
-            // حذف وإدراج المحادثات
-            db.run("DELETE FROM chats");
-            const insChat = db.prepare("INSERT INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            // إدراج المحادثات
+            const insChat = db.prepare("INSERT INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
             for (const c of inMemoryDB.chats) {
                 insChat.run([
                     c.id,
@@ -446,13 +591,17 @@
                     c.typing ? 1 : 0,
                     c.typing_time || null,
                     c.is_group ? 1 : 0,
-                    c.user_id || null
+                    c.user_id || null,
+                    c.muted ? 1 : 0,
+                    c.blocked ? 1 : 0,
+                    c.disappear_time || 0,
+                    c.created_by || null,
+                    c.members ? JSON.stringify(c.members) : '[]'
                 ]);
             }
             insChat.free();
 
-            // حذف وإدراج جهات الاتصال
-            db.run("DELETE FROM contacts");
+            // إدراج جهات الاتصال
             const insCont = db.prepare("INSERT INTO contacts VALUES (?,?,?,?,?,?,?)");
             for (const c of inMemoryDB.contacts) {
                 insCont.run([
@@ -467,8 +616,7 @@
             }
             insCont.free();
 
-            // حذف وإدراج القصص (مع الحفاظ على الصلاحية)
-            db.run("DELETE FROM stories");
+            // إدراج القصص
             const insStory = db.prepare("INSERT INTO stories VALUES (?,?,?,?,?,?,?,?,?,?,?)");
             const now = new Date().toISOString();
             for (const s of inMemoryDB.stories) {
@@ -489,31 +637,40 @@
             }
             insStory.free();
 
-            // حذف وإدراج القنوات
-            db.run("DELETE FROM channels");
-            const insCh = db.prepare("INSERT INTO channels VALUES (?,?,?,?,?,?)");
+            // إدراج القنوات
+            const insCh = db.prepare("INSERT INTO channels VALUES (?,?,?,?,?,?,?,?,?,?,?)");
             for (const ch of inMemoryDB.channels) {
-                insCh.run([ch.id, ch.name, ch.avatar, ch.followers || 0, ch.update_time || currentTimestamp(), ch.user_id || null]);
+                insCh.run([
+                    ch.id,
+                    ch.name,
+                    ch.avatar || '📢',
+                    ch.description || '',
+                    ch.followers || 0,
+                    ch.invite_code || '',
+                    ch.created_by || null,
+                    ch.created_at || currentTimestamp(),
+                    ch.update_time || currentTimestamp(),
+                    ch.user_id || null,
+                    ch.subscribers ? JSON.stringify(ch.subscribers) : '[]'
+                ]);
             }
             insCh.free();
 
-            // حذف وإدراج المكالمات
-            db.run("DELETE FROM calls");
+            // إدراج المكالمات
             const insCall = db.prepare("INSERT INTO calls VALUES (?,?,?,?,?,?)");
             for (const c of inMemoryDB.calls) {
                 insCall.run([c.id, c.name, c.avatar, c.time, c.type, c.user_id || null]);
             }
             insCall.free();
 
-            // حذف وإدراج الكتالوج
-            db.run("DELETE FROM catalog");
+            // إدراج الكتالوج
             const insCat = db.prepare("INSERT INTO catalog VALUES (?,?,?,?,?)");
             for (const c of inMemoryDB.catalog) {
                 insCat.run([c.id, c.name, c.price || '', c.icon || '📦', c.user_id || null]);
             }
             insCat.free();
 
-            // الإعدادات
+            // إدراج الإعدادات
             db.run("DELETE FROM settings");
             db.run("INSERT INTO settings VALUES ('theme',?)", [inMemoryDB.settings.theme]);
             db.run("INSERT INTO settings VALUES ('notifications',?)", [inMemoryDB.settings.notifications ? 'true' : 'false']);
@@ -526,7 +683,9 @@
         }
     }
 
-    // ================== دوال مساعدة للرسائل ==================
+    // ======================================================================
+    // دوال إدارة الرسائل (مساعدة)
+    // ======================================================================
     function addMessageToMemory(msg) {
         if (!inMemoryDB.messages[msg.chat_id]) inMemoryDB.messages[msg.chat_id] = [];
         inMemoryDB.messages[msg.chat_id].push(msg);
@@ -538,33 +697,44 @@
         }
     }
 
-    // ================== واجهة API العامة ==================
+    // ======================================================================
+    // واجهة API العامة – جميع الدوال المطلوبة
+    // ======================================================================
 
-    // تهيئة قاعدة البيانات
+    // ----- التهيئة -----
     async function initDB() {
-        try {
-            await loadSqlJs();
-            await openDatabase();
-            if (!useFallback) {
-                createTables();
-                loadInMemoryFromSQLite();
-            } else {
+        if (initPromise) return initPromise;
+        initPromise = (async () => {
+            try {
+                await loadSqlJs();
+                await openDatabase();
+                if (!useFallback) {
+                    createTables();
+                    loadInMemoryFromSQLite();
+                } else {
+                    loadFromLocalStorageCache();
+                }
+                const savedUser = localStorage.getItem(DB_CONFIG.userKey);
+                if (savedUser) {
+                    try { inMemoryDB.user = JSON.parse(savedUser); } catch (e) {}
+                }
+                console.log(`✅ db.js initialized: ${inMemoryDB.chats.length} chats, ${inMemoryDB.contacts.length} contacts`);
+                return true;
+            } catch (e) {
+                console.error('❌ db.js initialization failed:', e);
+                useFallback = true;
                 loadFromLocalStorageCache();
+                return false;
             }
-            const savedUser = localStorage.getItem(DB_CONFIG.userKey);
-            if (savedUser) {
-                try { inMemoryDB.user = JSON.parse(savedUser); } catch (e) {}
-            }
-            return true;
-        } catch (e) {
-            useFallback = true;
-            loadFromLocalStorageCache();
-            return false;
-        }
+        })();
+        return initPromise;
     }
+    window.initDB = initDB;
 
-    // المستخدم
+    // ----- المستخدم -----
     function getCurrentUser() { return inMemoryDB.user; }
+    window.getCurrentUser = getCurrentUser;
+
     function setCurrentUser(userData) {
         inMemoryDB.user = userData;
         localStorage.setItem(DB_CONFIG.userKey, JSON.stringify(userData));
@@ -583,10 +753,15 @@
         }
         saveToLocalStorageCache();
     }
+    window.setCurrentUser = setCurrentUser;
 
-    // المحادثات
+    // ----- المحادثات -----
     function getChats() { return [...inMemoryDB.chats]; }
+    window.getChats = getChats;
+
     function getChat(chatId) { return inMemoryDB.chats.find(c => c.id === chatId); }
+    window.getChat = getChat;
+
     function saveChat(chatData) {
         const idx = inMemoryDB.chats.findIndex(c => c.id === chatData.id);
         if (idx >= 0) {
@@ -595,27 +770,36 @@
             inMemoryDB.chats.unshift(chatData);
         }
         if (!useFallback && db) {
-            const c = chatData;
-            db.run("INSERT OR REPLACE INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
-                c.id,
-                c.name,
-                c.avatar || '',
-                c.last_msg || '',
-                c.last_time || currentTimestamp(),
-                c.unread || 0,
-                c.pinned ? 1 : 0,
-                c.online ? 1 : 0,
-                c.last_seen || '',
-                c.bio || '',
-                c.typing ? 1 : 0,
-                c.typing_time || null,
-                c.is_group ? 1 : 0,
-                c.user_id || null
-            ]);
-            persistDatabase();
+            const c = inMemoryDB.chats.find(c => c.id === chatData.id);
+            if (c) {
+                db.run("INSERT OR REPLACE INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
+                    c.id,
+                    c.name,
+                    c.avatar || '',
+                    c.last_msg || '',
+                    c.last_time || currentTimestamp(),
+                    c.unread || 0,
+                    c.pinned ? 1 : 0,
+                    c.online ? 1 : 0,
+                    c.last_seen || '',
+                    c.bio || '',
+                    c.typing ? 1 : 0,
+                    c.typing_time || null,
+                    c.is_group ? 1 : 0,
+                    c.user_id || null,
+                    c.muted ? 1 : 0,
+                    c.blocked ? 1 : 0,
+                    c.disappear_time || 0,
+                    c.created_by || null,
+                    c.members ? JSON.stringify(c.members) : '[]'
+                ]);
+                persistDatabase();
+            }
         }
         saveToLocalStorageCache();
     }
+    window.saveChat = saveChat;
+
     function deleteChat(chatId) {
         inMemoryDB.chats = inMemoryDB.chats.filter(c => c.id !== chatId);
         delete inMemoryDB.messages[chatId];
@@ -626,9 +810,12 @@
         }
         saveToLocalStorageCache();
     }
+    window.deleteChat = deleteChat;
 
-    // الرسائل
+    // ----- الرسائل -----
     function getMessages(chatId) { return inMemoryDB.messages[chatId] || []; }
+    window.getMessages = getMessages;
+
     function addMessage(msg) {
         msg.id = msg.id || generateId();
         msg.chat_id = msg.chat_id || msg.sid;
@@ -663,6 +850,8 @@
         saveToLocalStorageCache();
         return msg;
     }
+    window.addMessage = addMessage;
+
     function updateMessage(msgId, updates) {
         for (const msgs of Object.values(inMemoryDB.messages)) {
             const idx = msgs.findIndex(m => m.id === msgId);
@@ -693,6 +882,8 @@
         }
         return false;
     }
+    window.updateMessage = updateMessage;
+
     function deleteMessage(msgId) {
         for (const msgs of Object.values(inMemoryDB.messages)) {
             const idx = msgs.findIndex(m => m.id === msgId);
@@ -708,11 +899,18 @@
         }
         return false;
     }
+    window.deleteMessage = deleteMessage;
 
-    // جهات الاتصال
+    // ----- جهات الاتصال -----
     function getContacts() { return [...inMemoryDB.contacts]; }
+    window.getContacts = getContacts;
+
     function getRegisteredContacts() { return inMemoryDB.contacts.filter(c => c.registered); }
+    window.getRegisteredContacts = getRegisteredContacts;
+
     function getUnregisteredContacts() { return inMemoryDB.contacts.filter(c => !c.registered); }
+    window.getUnregisteredContacts = getUnregisteredContacts;
+
     function saveContact(contactData) {
         const idx = inMemoryDB.contacts.findIndex(c => c.id === contactData.id);
         if (idx >= 0) {
@@ -734,10 +932,12 @@
         }
         saveToLocalStorageCache();
     }
-    function syncContactsFromDevice() { console.log('syncContactsFromDevice called'); return []; }
+    window.saveContact = saveContact;
 
-    // القصص (مطور)
+    // ----- القصص -----
     function getStories() { return [...inMemoryDB.stories]; }
+    window.getStories = getStories;
+
     function addStory(storyData) {
         storyData.id = storyData.id || generateId();
         storyData.time = storyData.time || currentTimestamp();
@@ -766,6 +966,8 @@
         }
         saveToLocalStorageCache();
     }
+    window.addStory = addStory;
+
     function updateStory(storyId, updates) {
         const idx = inMemoryDB.stories.findIndex(s => s.id === storyId);
         if (idx !== -1) {
@@ -792,6 +994,8 @@
         }
         return false;
     }
+    window.updateStory = updateStory;
+
     function deleteStory(storyId) {
         inMemoryDB.stories = inMemoryDB.stories.filter(s => s.id !== storyId);
         if (!useFallback && db) {
@@ -800,28 +1004,82 @@
         }
         saveToLocalStorageCache();
     }
+    window.deleteStory = deleteStory;
 
-    // القنوات
+    // ----- القنوات -----
     function getChannels() { return [...inMemoryDB.channels]; }
+    window.getChannels = getChannels;
+
     function addChannel(channelData) {
         channelData.id = channelData.id || generateId();
+        channelData.created_at = channelData.created_at || currentTimestamp();
+        channelData.subscribers = channelData.subscribers || [];
+        channelData.followers = channelData.followers || 0;
         inMemoryDB.channels.unshift(channelData);
         if (!useFallback && db) {
-            db.run("INSERT INTO channels VALUES (?,?,?,?,?,?)", [
+            db.run("INSERT OR REPLACE INTO channels VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
                 channelData.id,
                 channelData.name,
                 channelData.avatar || '📢',
+                channelData.description || '',
                 channelData.followers || 0,
+                channelData.invite_code || '',
+                channelData.created_by || null,
+                channelData.created_at || currentTimestamp(),
                 channelData.update_time || currentTimestamp(),
-                channelData.user_id || null
+                channelData.user_id || null,
+                JSON.stringify(channelData.subscribers || [])
             ]);
             persistDatabase();
         }
         saveToLocalStorageCache();
     }
+    window.addChannel = addChannel;
 
-    // المكالمات
+    function saveChannel(channelData) {
+        const idx = inMemoryDB.channels.findIndex(c => c.id === channelData.id);
+        if (idx >= 0) {
+            inMemoryDB.channels[idx] = { ...inMemoryDB.channels[idx], ...channelData };
+        } else {
+            inMemoryDB.channels.unshift(channelData);
+        }
+        if (!useFallback && db) {
+            const ch = inMemoryDB.channels.find(c => c.id === channelData.id);
+            if (ch) {
+                db.run("INSERT OR REPLACE INTO channels VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
+                    ch.id,
+                    ch.name,
+                    ch.avatar || '📢',
+                    ch.description || '',
+                    ch.followers || 0,
+                    ch.invite_code || '',
+                    ch.created_by || null,
+                    ch.created_at || currentTimestamp(),
+                    ch.update_time || currentTimestamp(),
+                    ch.user_id || null,
+                    JSON.stringify(ch.subscribers || [])
+                ]);
+                persistDatabase();
+            }
+        }
+        saveToLocalStorageCache();
+    }
+    window.saveChannel = saveChannel;
+
+    function deleteChannel(channelId) {
+        inMemoryDB.channels = inMemoryDB.channels.filter(c => c.id !== channelId);
+        if (!useFallback && db) {
+            db.run("DELETE FROM channels WHERE id=?", [channelId]);
+            persistDatabase();
+        }
+        saveToLocalStorageCache();
+    }
+    window.deleteChannel = deleteChannel;
+
+    // ----- المكالمات -----
     function getCalls() { return [...inMemoryDB.calls]; }
+    window.getCalls = getCalls;
+
     function addCall(callData) {
         callData.id = callData.id || generateId();
         callData.time = callData.time || currentTimestamp();
@@ -839,9 +1097,12 @@
         }
         saveToLocalStorageCache();
     }
+    window.addCall = addCall;
 
-    // الكتالوج
+    // ----- الكتالوج -----
     function getCatalog() { return [...inMemoryDB.catalog]; }
+    window.getCatalog = getCatalog;
+
     function addCatalogItem(item) {
         item.id = item.id || generateId();
         inMemoryDB.catalog.unshift(item);
@@ -857,9 +1118,12 @@
         }
         saveToLocalStorageCache();
     }
+    window.addCatalogItem = addCatalogItem;
 
-    // الإعدادات
+    // ----- الإعدادات -----
     function getSettings() { return { ...inMemoryDB.settings }; }
+    window.getSettings = getSettings;
+
     function updateSetting(key, value) {
         inMemoryDB.settings[key] = value;
         if (!useFallback && db) {
@@ -868,8 +1132,9 @@
         }
         saveToLocalStorageCache();
     }
+    window.updateSetting = updateSetting;
 
-    // تصدير/استيراد
+    // ----- تصدير/استيراد -----
     function exportAllData() {
         return JSON.stringify({
             user: inMemoryDB.user,
@@ -884,6 +1149,8 @@
             exportDate: currentTimestamp()
         }, null, 2);
     }
+    window.exportAllData = exportAllData;
+
     async function importAllData(json) {
         try {
             const data = JSON.parse(json);
@@ -900,11 +1167,13 @@
             await persistAllData();
             return true;
         } catch (e) {
+            console.error('❌ Import failed:', e);
             return false;
         }
     }
+    window.importAllData = importAllData;
 
-    // تنظيف كامل
+    // ----- تنظيف كامل -----
     function clearAllData() {
         inMemoryDB.chats = [];
         inMemoryDB.messages = {};
@@ -913,6 +1182,7 @@
         inMemoryDB.channels = [];
         inMemoryDB.calls = [];
         inMemoryDB.catalog = [];
+        inMemoryDB.user = null;
         if (!useFallback && db) {
             db.run("DELETE FROM messages");
             db.run("DELETE FROM chats");
@@ -921,13 +1191,16 @@
             db.run("DELETE FROM channels");
             db.run("DELETE FROM calls");
             db.run("DELETE FROM catalog");
+            db.run("DELETE FROM user");
+            db.run("DELETE FROM settings");
             persistDatabase();
         }
         localStorage.removeItem(DB_CONFIG.userKey);
         saveToLocalStorageCache();
     }
+    window.clearAllData = clearAllData;
 
-    // الرسائل المعلقة للمزامنة
+    // ----- الرسائل المعلقة للمزامنة -----
     function getPendingMessages() {
         const pending = [];
         for (const msgs of Object.values(inMemoryDB.messages)) {
@@ -939,44 +1212,33 @@
         }
         return pending;
     }
-
-    // ================== تصدير الواجهة العامة ==================
-    window.initDB = initDB;
-    window.getCurrentUser = getCurrentUser;
-    window.setCurrentUser = setCurrentUser;
-    window.getChats = getChats;
-    window.getChat = getChat;
-    window.saveChat = saveChat;
-    window.deleteChat = deleteChat;
-    window.getMessages = getMessages;
-    window.addMessage = addMessage;
-    window.updateMessage = updateMessage;
-    window.deleteMessage = deleteMessage;
-    window.getContacts = getContacts;
-    window.getRegisteredContacts = getRegisteredContacts;
-    window.getUnregisteredContacts = getUnregisteredContacts;
-    window.saveContact = saveContact;
-    window.syncContactsFromDevice = syncContactsFromDevice;
-    window.getStories = getStories;
-    window.addStory = addStory;
-    window.updateStory = updateStory;
-    window.deleteStory = deleteStory;
-    window.getChannels = getChannels;
-    window.addChannel = addChannel;
-    window.getCalls = getCalls;
-    window.addCall = addCall;
-    window.getCatalog = getCatalog;
-    window.addCatalogItem = addCatalogItem;
-    window.getSettings = getSettings;
-    window.updateSetting = updateSetting;
-    window.exportAllData = exportAllData;
-    window.importAllData = importAllData;
-    window.clearAllData = clearAllData;
     window.getPendingMessages = getPendingMessages;
-    window.persistAllData = persistAllData;
-    window.inMemoryDB = inMemoryDB;
-    window.generateId = generateId;
-    window.currentTimestamp = currentTimestamp;
 
-    console.log('✅ db.js (النسخة النهائية الكاملة مع القصص) جاهز');
+    // ----- حفظ جميع البيانات (استدعاء يدوي) -----
+    async function saveAllData() {
+        await persistAllData();
+    }
+    window.saveAllData = saveAllData;
+
+    // ----- حالة التخزين -----
+    function isUsingFallback() { return useFallback; }
+    window.isUsingFallback = isUsingFallback;
+
+    function isDbReady() { return dbReady; }
+    window.isDbReady = isDbReady;
+
+    // ======================================================================
+    // تهيئة أولية (عند تحميل الصفحة)
+    // ======================================================================
+    console.log('✅ db.js (الإصدار النهائي الكامل) جاهز');
+
+    // محاولة تهيئة تلقائية بعد تحميل الصفحة
+    if (document.readyState === 'complete') {
+        setTimeout(() => initDB().catch(() => {}), 500);
+    } else {
+        window.addEventListener('load', () => {
+            setTimeout(() => initDB().catch(() => {}), 1000);
+        });
+    }
+
 })();
