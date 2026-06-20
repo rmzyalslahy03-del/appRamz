@@ -1,7 +1,7 @@
 // ======================================================================
 // common.js - الإصدار النهائي الكامل v4.0
 // جميع الميزات: القوائم، المجموعات، القنوات، القصص (أفقي - 24 ساعة)، الإشعارات، التشفير، المزامنة
-// مع إصلاحات شاملة لجميع الأخطاء
+// مع إصلاحات شاملة لجميع الأخطاء ودعم PWA
 // ======================================================================
 
 // ==================== نظام تحميل الأيقونات ====================
@@ -147,6 +147,7 @@ let storyInterval = null;
 let isOnline = navigator.onLine;
 let initRun = false;
 let appReady = false;
+let deferredPrompt = null;
 
 // ==================== دوال التفاف db.js ====================
 function DB_getChats() { return window.getChats ? window.getChats() : []; }
@@ -345,6 +346,33 @@ function subscribeToCurrentChat() {
         });
     }
 }
+
+// ==================== PWA – تثبيت التطبيق ====================
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const btn = document.getElementById('installAppBtn');
+    if (btn) {
+        btn.style.display = 'flex';
+        btn.addEventListener('click', () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ تم تثبيت التطبيق');
+                        toast('✅ تم تثبيت RamzApp على جهازك');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+    }
+});
+
+window.addEventListener('appinstalled', () => {
+    console.log('✅ RamzApp installed successfully');
+    toast('🎉 شكراً لتثبيت RamzApp!');
+});
 
 // ==================== دخول التطبيق ====================
 function enterApp() {
@@ -905,7 +933,6 @@ function renderChannels(filter = '') {
 }
 
 function openChannelDetails(channelId) {
-    // الانتقال إلى صفحة القناة الداخلية
     window.location.href = `channel-feed.html?id=${channelId}`;
 }
 
@@ -959,7 +986,6 @@ function openChannelManagement(channelId) {
     if (!channel) { toast('⚠️ القناة غير موجودة'); return; }
     const currentUser = DB_getCurrentUser();
     if (channel.created_by !== currentUser?.id) { toast('⚠️ فقط منشئ القناة يمكنه إدارتها'); return; }
-    // الانتقال إلى صفحة إدارة القناة
     window.location.href = `edit-channel.html?id=${channelId}`;
 }
 
