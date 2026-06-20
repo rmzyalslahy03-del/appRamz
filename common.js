@@ -1,10 +1,10 @@
 // ======================================================================
-// common.js - الإصدار النهائي المعدل v4.0
-// جميع الميزات: القوائم، المجموعات، القنوات، الإشعارات، التشفير، المزامنة
-// مع إصلاحات: updateConnectionIndicator, subscribeToCurrentChat, bottomNav, الأخطاء العامة
+// common.js - الإصدار النهائي الكامل v4.0
+// جميع الميزات: القوائم، المجموعات، القنوات، القصص (24 ساعة)، الإشعارات، التشفير، المزامنة
+// مع إصلاحات: عرض المحادثات، catch is not a function، القصص المنتهية، الشريط الأفقي
 // ======================================================================
 
-// ==================== نظام تحميل الأيقونات (بدون احتياطي إيموجي) ====================
+// ==================== نظام تحميل الأيقونات ====================
 (function() {
     const FONTAWESOME_SOURCES = [
         'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
@@ -148,65 +148,6 @@ let isOnline = navigator.onLine;
 let initRun = false;
 let appReady = false;
 
-// ==================== مؤشر الاتصال (مع تحسين) ====================
-function updateConnectionIndicator() {
-    const indicator = document.getElementById('connectionIndicator');
-    if (!indicator) {
-        console.warn('⚠️ عنصر connectionIndicator غير موجود');
-        return;
-    }
-    if (!isOnline) {
-        indicator.textContent = '📡 أنت غير متصل بالإنترنت - التطبيق يعمل محلياً';
-        indicator.classList.add('offline');
-    } else {
-        indicator.classList.remove('offline');
-        setTimeout(() => {
-            if (isOnline) indicator.classList.remove('offline');
-        }, 2000);
-    }
-}
-
-// ==================== الاشتراك في المحادثة الحالية ====================
-function subscribeToCurrentChat() {
-    if (!currentChatId || !isOnline) {
-        console.warn('⚠️ لا توجد محادثة حالية أو غير متصل');
-        return;
-    }
-    if (typeof window.subscribeToChat === 'function') {
-        window.subscribeToChat(currentChatId, (msg) => {
-            const existingMsgs = DB_getMessages(currentChatId);
-            if (!existingMsgs.find(m => m.id === msg.id)) {
-                msg.sync_status = 'delivered'; msg.status = 'delivered';
-                DB_addMessage(msg);
-                const chat = DB_getChats().find(c => c.id === currentChatId);
-                if (chat) {
-                    chat.last_msg = msg.text || (msg.img ? '📷 صورة' : msg.voice_blob ? '🎤 رسالة صوتية' : '📎');
-                    chat.last_time = msg.time;
-                    if (!chat.online && msg.sender_id !== 'me') chat.unread = (chat.unread || 0) + 1;
-                    DB_saveChat(chat);
-                }
-                renderMessages();
-                renderChats();
-                playNotificationSound();
-            }
-        }, (senderId, isTyping) => {
-            const chat = DB_getChats().find(c => c.id === currentChatId);
-            if (chat && senderId !== DB_getCurrentUser()?.id) {
-                chat._typing = isTyping ? Date.now() : null;
-                const st = $('#chatStatusDisp');
-                if (st) {
-                    if (isTyping) { st.textContent = 'يكتب الآن...'; st.className = 'chat-header-status typing'; }
-                    else { st.textContent = chat.online ? 'متصل الآن' : (chat.last_seen || ''); st.className = 'chat-header-status' + (chat.online ? ' online' : ''); }
-                }
-                DB_saveChat(chat);
-                if (currentScreen === 'chats') renderChats();
-            }
-        });
-    } else {
-        console.warn('⚠️ window.subscribeToChat غير معرف');
-    }
-}
-
 // ==================== دوال التفاف db.js ====================
 function DB_getChats() { return window.getChats ? window.getChats() : []; }
 function DB_getMessages(chatId) { return window.getMessages ? window.getMessages(chatId) : []; }
@@ -219,6 +160,7 @@ function DB_getContacts() { return window.getContacts ? window.getContacts() : [
 function DB_saveContact(c) { if (window.saveContact) window.saveContact(c); }
 function DB_getStories() { return window.getStories ? window.getStories() : []; }
 function DB_addStory(s) { if (window.addStory) window.addStory(s); }
+function DB_deleteStory(id) { if (window.deleteStory) window.deleteStory(id); }
 function DB_getChannels() { return window.getChannels ? window.getChannels() : []; }
 function DB_addChannel(ch) { if (window.addChannel) window.addChannel(ch); }
 function DB_getCalls() { return window.getCalls ? window.getCalls() : []; }
@@ -334,7 +276,77 @@ async function decryptMessage(payload) {
     return new TextDecoder().decode(decryptedData);
 }
 
-// ==================== دخول التطبيق (محسن) ====================
+// ==================== مؤشر الاتصال ====================
+function updateConnectionIndicator() {
+    try {
+        const indicator = document.getElementById('connectionIndicator');
+        if (!indicator) return;
+        if (!isOnline) {
+            indicator.textContent = '📡 أنت غير متصل بالإنترنت - التطبيق يعمل محلياً';
+            indicator.classList.add('offline');
+        } else {
+            indicator.classList.remove('offline');
+            setTimeout(() => { if (isOnline) indicator.classList.remove('offline'); }, 2000);
+        }
+    } catch(e) {}
+}
+
+// ==================== الاشتراك في المحادثة الحالية ====================
+function subscribeToCurrentChat() {
+    if (!currentChatId || !isOnline) return;
+    if (typeof window.subscribeToChat === 'function') {
+        window.subscribeToChat(currentChatId, (msg) => {
+            const existing = DB_getMessages(currentChatId);
+            if (!existing.find(m => m.id === msg.id)) {
+                msg.sync_status = 'delivered'; msg.status = 'delivered';
+                DB_addMessage(msg);
+                const chat = DB_getChats().find(c => c.id === currentChatId);
+                if (chat) {
+                    chat.last_msg = msg.text || (msg.img ? '📷' : msg.voice_blob ? '🎤' : '📎');
+                    chat.last_time = msg.time;
+                    if (!chat.online && msg.sender_id !== 'me') chat.unread = (chat.unread || 0) + 1;
+                    DB_saveChat(chat);
+                }
+                renderMessages();
+                renderChats();
+                playNotificationSound();
+            }
+        }, (senderId, isTyping) => {
+            const chat = DB_getChats().find(c => c.id === currentChatId);
+            if (chat && senderId !== DB_getCurrentUser()?.id) {
+                chat._typing = isTyping ? Date.now() : null;
+                const st = $('#chatStatusDisp');
+                if (st) {
+                    if (isTyping) { st.textContent = 'يكتب الآن...'; st.className = 'chat-header-status typing'; }
+                    else { st.textContent = chat.online ? 'متصل الآن' : (chat.last_seen || ''); st.className = 'chat-header-status' + (chat.online ? ' online' : ''); }
+                }
+                DB_saveChat(chat);
+                if (currentScreen === 'chats') renderChats();
+            }
+        });
+    }
+}
+
+// ==================== دالة آمنة لتحديث حالة الاتصال (لحل مشكلة .catch) ====================
+function safeSetUserOnlineStatus(status) {
+    if (!window.supabaseClient) {
+        console.warn('⚠️ Supabase غير متاح، لا يمكن تحديث الحالة');
+        return Promise.resolve();
+    }
+    const userId = DB_getCurrentUser()?.id;
+    if (!userId) return Promise.resolve();
+    return window.supabaseClient
+        .from('users')
+        .update({ is_online: status, last_seen: new Date().toISOString() })
+        .eq('id', userId)
+        .then(() => {})
+        .catch((err) => {
+            console.warn('⚠️ فشل تحديث حالة الاتصال:', err);
+        });
+}
+window.setUserOnlineStatus = safeSetUserOnlineStatus;
+
+// ==================== دخول التطبيق ====================
 function enterApp() {
     if (appReady) { console.warn('⚠️ enterApp() تم استدعاؤها أكثر من مرة'); return; }
     appReady = true;
@@ -349,22 +361,14 @@ function enterApp() {
     showScreen('chats');
     updateStats();
     applyTheme();
-    // استدعاء updateConnectionIndicator بأمان
-    if (typeof updateConnectionIndicator === 'function') {
-        updateConnectionIndicator();
-    } else {
-        console.warn('⚠️ updateConnectionIndicator غير معرفة');
-    }
-    if (typeof bindCustomMenuButtons === 'function') {
-        bindCustomMenuButtons();
-    }
-    // تأخير بسيط لتحديث المحادثات
+    if (typeof updateConnectionIndicator === 'function') updateConnectionIndicator();
+    if (typeof bindCustomMenuButtons === 'function') bindCustomMenuButtons();
     setTimeout(() => {
         if (typeof renderChats === 'function') renderChats();
         if (typeof renderContactsList === 'function') renderContactsList();
         if (typeof renderStories === 'function') renderStories();
         if (typeof updateStats === 'function') updateStats();
-    }, 300);
+    }, 400);
     console.log('✅ تم دخول التطبيق بنجاح');
 }
 
@@ -377,9 +381,7 @@ function showScreen(id) {
     if (target) target.classList.add('active');
     const noNav = ['chatScreen','profileScreen','settingsScreen'];
     const bottomNav = $('#bottomNav');
-    if (bottomNav) {
-        bottomNav.style.display = noNav.includes(id+'Screen') || noNav.includes(id) ? 'none' : 'flex';
-    }
+    if (bottomNav) bottomNav.style.display = noNav.includes(id+'Screen') || noNav.includes(id) ? 'none' : 'flex';
     $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
     if (id === 'chats') renderChats();
     else if (id === 'contacts') renderContactsList();
@@ -403,10 +405,13 @@ function updateStats() {
     const $sch = $('#statChats'); if ($sch) $sch.textContent = chatsCount;
 }
 
-// ==================== عرض المحادثات ====================
+// ==================== عرض المحادثات (محسّن) ====================
 function renderChats(filter = '') {
-    const container = $('#chatsList');
-    if (!container) return;
+    const container = document.getElementById('chatsList');
+    if (!container) {
+        console.error('❌ عنصر chatsList غير موجود');
+        return;
+    }
     if (!window.inMemoryDB?.user) {
         const user = DB_getCurrentUser();
         if (user && window.inMemoryDB) window.inMemoryDB.user = user;
@@ -423,29 +428,38 @@ function renderChats(filter = '') {
         container.innerHTML = `<div class="empty-state"><i class="fas fa-comments"></i><p>لا توجد محادثات${filter ? ' مطابقة' : ' بعد'}</p></div>`;
         return;
     }
-    container.innerHTML = '';
+    let html = '';
     chats.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'chat-item';
         const isTyping = c._typing && (Date.now() - c._typing < 5000);
-        div.innerHTML = `
-            <div class="chat-avatar" data-id="${c.id}">${c.avatar || '?'}${c.online ? '<span class="online-dot"></span>' : ''}</div>
-            <div class="chat-info">
-                <div class="chat-name-row">
-                    <span class="chat-name">${c.pinned ? '<i class="fas fa-thumbtack pinned-icon"></i> ' : ''}${esc(c.name)}</span>
-                    <span class="chat-time">${c.last_time || c.lastTime ? timeAgo(c.last_time || c.lastTime) : ''}</span>
+        html += `
+            <div class="chat-item" data-id="${c.id}">
+                <div class="chat-avatar" data-id="${c.id}">${c.avatar || '?'}${c.online ? '<span class="online-dot"></span>' : ''}</div>
+                <div class="chat-info">
+                    <div class="chat-name-row">
+                        <span class="chat-name">${c.pinned ? '<i class="fas fa-thumbtack pinned-icon"></i> ' : ''}${esc(c.name)}</span>
+                        <span class="chat-time">${c.last_time || c.lastTime ? timeAgo(c.last_time || c.lastTime) : ''}</span>
+                    </div>
+                    <div class="chat-preview">
+                        <span class="last-msg">${isTyping ? '<span class="typing-indicator-chat">يكتب الآن...</span>' : (c.last_msg || c.lastMsg ? esc((c.last_msg||c.lastMsg).substring(0,35)) + ((c.last_msg||c.lastMsg).length>35?'...':'') : '👋 ابدأ المحادثة')}</span>
+                        ${c.unread > 0 ? `<span class="unread-badge">${c.unread}</span>` : '<span class="check-mark read"><i class="fas fa-check-double"></i></span>'}
+                    </div>
                 </div>
-                <div class="chat-preview">
-                    <span class="last-msg">${isTyping ? '<span class="typing-indicator-chat">يكتب الآن...</span>' : (c.last_msg || c.lastMsg ? esc((c.last_msg||c.lastMsg).substring(0,35)) + ((c.last_msg||c.lastMsg).length>35?'...':'') : '👋 ابدأ المحادثة')}</span>
-                    ${c.unread > 0 ? `<span class="unread-badge">${c.unread}</span>` : '<span class="check-mark read"><i class="fas fa-check-double"></i></span>'}
-                </div>
-            </div>`;
-        div.addEventListener('click', e => {
-            if (e.target.closest('.chat-avatar')) { openUserModal(c); }
-            else { openChat(c.id); }
-        });
-        container.appendChild(div);
+            </div>
+        `;
     });
+    container.innerHTML = html;
+    container.querySelectorAll('.chat-item').forEach(item => {
+        const id = item.dataset.id;
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.chat-avatar')) {
+                const chat = DB_getChats().find(c => c.id === id);
+                if (chat) openUserModal(chat);
+            } else {
+                openChat(id);
+            }
+        });
+    });
+    console.log(`✅ renderChats: تم عرض ${chats.length} محادثة`);
 }
 
 // ==================== البحث ====================
@@ -663,12 +677,9 @@ function createGroupUI() {
     const name = prompt('اسم المجموعة:');
     if (!name || !name.trim()) return;
     const contacts = DB_getContacts().filter(c => c.registered);
-    if (contacts.length === 0) {
-        toast('⚠️ لا توجد جهات اتصال مسجلة لإضافتها');
-        return;
-    }
+    if (contacts.length === 0) { toast('⚠️ لا توجد جهات اتصال مسجلة'); return; }
     const choices = contacts.map((c,i) => `${i+1}. ${c.name} (${c.phone})`).join('\n');
-    const selection = prompt(`اختر أرقام الأعضاء (مفصولة بفواصل):\n${choices}\n(اتركها فارغة إذا أردت فقط إنشاء المجموعة بدون أعضاء)`);
+    const selection = prompt(`اختر أرقام الأعضاء (مفصولة بفواصل):\n${choices}\n(اتركها فارغة)`);
     const selectedIds = [];
     if (selection && selection.trim()) {
         const indices = selection.split(',').map(s => parseInt(s.trim())-1).filter(i => !isNaN(i) && i>=0 && i<contacts.length);
@@ -708,8 +719,7 @@ function getGroupMembers(chatId) {
     return chat?.is_group ? chat.members || [] : [];
 }
 function getGroupAdmins(chatId) {
-    const members = getGroupMembers(chatId);
-    return members.filter(m => m.role === 'admin');
+    return getGroupMembers(chatId).filter(m => m.role === 'admin');
 }
 function isGroupAdmin(chatId, userId) {
     return getGroupAdmins(chatId).some(a => a.id === userId);
@@ -771,13 +781,8 @@ function leaveGroup(chatId) {
     const currentUser = DB_getCurrentUser();
     if (currentUser.id === chat.created_by) { toast('⚠️ لا يمكن لمنشئ المجموعة مغادرتها'); return false; }
     chat.members = chat.members.filter(m => m.id !== currentUser.id);
-    if (chat.members.length === 0) {
-        DB_deleteChat(chatId);
-        toast('🗑️ تم حذف المجموعة لأنها أصبحت فارغة');
-    } else {
-        DB_saveChat(chat);
-        toast('✅ تمت مغادرة المجموعة');
-    }
+    if (chat.members.length === 0) { DB_deleteChat(chatId); toast('🗑️ تم حذف المجموعة'); }
+    else { DB_saveChat(chat); toast('✅ تمت مغادرة المجموعة'); }
     if (currentChatId === chatId) { currentChatId = null; showScreen('chats'); }
     renderChats();
     return true;
@@ -812,7 +817,7 @@ function renderGroupManagement(chatId) {
     const currentUser = DB_getCurrentUser();
     const isAdmin = isGroupAdmin(chatId, currentUser.id);
     const members = chat.members || [];
-    let html = `<div style="padding:8px 0;"><h3 style="margin-bottom:8px;">${esc(chat.name)}</h3><p style="color:var(--text3);font-size:13px;">${members.length} عضو</p><hr style="border-color:var(--border);margin:12px 0;"><div style="max-height:300px;overflow-y:auto;">`;
+    let html = `<div style="padding:8px 0;"><h3>${esc(chat.name)}</h3><p style="color:var(--text3);font-size:13px;">${members.length} عضو</p><hr style="border-color:var(--border);margin:12px 0;"><div style="max-height:300px;overflow-y:auto;">`;
     members.forEach(m => {
         const isAdminUser = m.role === 'admin';
         const isCreator = m.id === chat.created_by;
@@ -838,7 +843,7 @@ function showAddMemberUI(chatId) {
     if (!chat) return;
     const currentMembers = chat.members.map(m => m.id);
     const available = DB_getContacts().filter(c => c.registered && !currentMembers.includes(c.id) && c.id !== chat.created_by);
-    if (!available.length) { toast('⚠️ لا توجد جهات اتصال متاحة للإضافة'); return; }
+    if (!available.length) { toast('⚠️ لا توجد جهات اتصال متاحة'); return; }
     const choices = available.map((c,i) => `${i+1}. ${c.name} (${c.phone})`).join('\n');
     const selection = prompt(`اختر رقم العضو لإضافته:\n${choices}`);
     if (selection === null) return;
@@ -853,8 +858,8 @@ function showAddMemberUI(chatId) {
 function createChannelUI() {
     const name = prompt('📢 اسم القناة:');
     if (!name || !name.trim()) return;
-    const description = prompt('📝 وصف القناة (اختياري):');
-    const avatar = prompt('اختر إيموجي للقناة (اضغط Enter لاستخدام 📢)', '📢') || '📢';
+    const description = prompt('📝 وصف القناة:');
+    const avatar = prompt('اختر إيموجي (اضغط Enter لاستخدام 📢)', '📢') || '📢';
     const inviteCode = Math.random().toString(36).substring(2,10).toUpperCase();
     const channelData = {
         id: 'ch_' + Date.now() + '_' + Math.random().toString(36).substr(2,4),
@@ -867,7 +872,7 @@ function createChannelUI() {
     };
     DB_addChannel(channelData);
     if (isOnline && window.createChannel) {
-        window.createChannel(channelData).catch(() => console.warn('⚠️ فشل المزامنة مع Supabase'));
+        window.createChannel(channelData).catch(() => console.warn('⚠️ فشل المزامنة'));
     }
     renderChannels();
     toast(`✅ تم إنشاء القناة "${name.trim()}"`);
@@ -883,7 +888,7 @@ function renderChannels(filter = '') {
     }
     channels.sort((a,b) => (b.followers||0) - (a.followers||0));
     if (!channels.length) {
-        container.innerHTML = `<div class="empty-state"><i class="fas fa-bullhorn"></i><p>${filter ? 'لا توجد قنوات مطابقة' : 'لا توجد قنوات بعد. أنشئ أول قناة!'}</p></div>`;
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-bullhorn"></i><p>${filter ? 'لا توجد قنوات مطابقة' : 'لا توجد قنوات بعد'}</p></div>`;
         return;
     }
     container.innerHTML = channels.map(ch => `
@@ -893,12 +898,8 @@ function renderChannels(filter = '') {
                 <div class="item-title">${esc(ch.name)}</div>
                 <div class="item-sub">${ch.followers||0} متابع${ch.description ? ` • ${esc(ch.description.substring(0,30))}${ch.description.length>30?'...':''}` : ''}</div>
             </div>
-            <button class="header-btn" onclick="event.stopPropagation(); shareChannelLink('${ch.id}')" title="مشاركة الرابط">
-                <i class="fas fa-share-alt" style="color:var(--accent);"></i>
-            </button>
-            <button class="header-btn" onclick="event.stopPropagation(); openChannelManagement('${ch.id}')" title="إدارة القناة">
-                <i class="fas fa-ellipsis-v"></i>
-            </button>
+            <button class="header-btn" onclick="event.stopPropagation(); shareChannelLink('${ch.id}')" title="مشاركة"><i class="fas fa-share-alt" style="color:var(--accent);"></i></button>
+            <button class="header-btn" onclick="event.stopPropagation(); openChannelManagement('${ch.id}')" title="إدارة"><i class="fas fa-ellipsis-v"></i></button>
         </div>
     `).join('');
 }
@@ -914,15 +915,15 @@ function openChannelDetails(channelId) {
     document.getElementById('channelDetailsContent').innerHTML = `
         <div style="text-align:center;padding:12px 0;">
             <div style="font-size:48px;margin-bottom:8px;">${channel.avatar || '📢'}</div>
-            <h3 style="font-size:20px;font-weight:700;">${esc(channel.name)}</h3>
-            ${channel.description ? `<p style="color:var(--text3);font-size:13px;margin:4px 0;">${esc(channel.description)}</p>` : ''}
+            <h3>${esc(channel.name)}</h3>
+            ${channel.description ? `<p style="color:var(--text3);font-size:13px;">${esc(channel.description)}</p>` : ''}
             <p style="color:var(--text3);font-size:12px;">${channel.followers||0} متابع</p>
             <p style="color:var(--text3);font-size:11px;margin-top:4px;">الرابط: <span style="color:var(--accent);cursor:pointer;" onclick="shareChannelLink('${channel.id}')">${window.location.origin}/channel.html?code=${channel.invite_code || channel.id}</span></p>
             <hr style="border-color:var(--border);margin:12px 0;">
-            ${!isSubscribed ? `<button class="promo-btn" onclick="subscribeToChannel('${channel.id}')" style="background:var(--accent);color:#fff;width:100%;"><i class="fas fa-plus-circle"></i> انضمام إلى القناة</button>` :
-            `<button class="promo-btn" onclick="unsubscribeFromChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;"><i class="fas fa-times-circle"></i> مغادرة القناة</button>`}
-            ${isAdmin ? `<button class="promo-btn" onclick="openChannelManagement('${channel.id}')" style="background:#00a884;color:#fff;width:100%;margin-top:8px;"><i class="fas fa-cog"></i> إدارة القناة</button>` : ''}
-            ${isAdmin ? `<button class="promo-btn" onclick="deleteChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;margin-top:8px;"><i class="fas fa-trash-alt"></i> حذف القناة</button>` : ''}
+            ${!isSubscribed ? `<button class="promo-btn" onclick="subscribeToChannel('${channel.id}')" style="background:var(--accent);color:#fff;width:100%;"><i class="fas fa-plus-circle"></i> انضمام</button>` :
+            `<button class="promo-btn" onclick="unsubscribeFromChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;"><i class="fas fa-times-circle"></i> مغادرة</button>`}
+            ${isAdmin ? `<button class="promo-btn" onclick="openChannelManagement('${channel.id}')" style="background:#00a884;color:#fff;width:100%;margin-top:8px;"><i class="fas fa-cog"></i> إدارة</button>` : ''}
+            ${isAdmin ? `<button class="promo-btn" onclick="deleteChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;margin-top:8px;"><i class="fas fa-trash-alt"></i> حذف</button>` : ''}
         </div>
     `;
     modal.classList.add('active');
@@ -949,10 +950,10 @@ async function subscribeToChannel(channelId) {
 
 async function unsubscribeFromChannel(channelId) {
     if (!isOnline) { toast('📡 يجب الاتصال بالإنترنت'); return; }
-    if (!confirm('⚠️ هل تريد مغادرة هذه القناة؟')) return;
+    if (!confirm('⚠️ هل تريد مغادرة القناة؟')) return;
     try {
         await window.leaveChannel(channelId);
-        toast('✅ تمت مغادرة القناة');
+        toast('✅ تمت المغادرة');
         const channel = DB_getChannels().find(c => c.id === channelId);
         if (channel) {
             channel.subscribers = (channel.subscribers||[]).filter(id => id !== DB_getCurrentUser()?.id);
@@ -969,9 +970,9 @@ function shareChannelLink(channelId) {
     if (!channel) { toast('⚠️ القناة غير موجودة'); return; }
     const link = `${window.location.origin}/channel.html?code=${channel.invite_code || channel.id}`;
     if (navigator.share) {
-        navigator.share({ title: `انضم إلى قناة ${channel.name} على RamzApp`, text: `انضم إلى قناة "${channel.name}" على RamzApp: ${link}`, url: link }).catch(()=>{});
+        navigator.share({ title: `انضم إلى قناة ${channel.name}`, text: `انضم إلى قناة "${channel.name}" على RamzApp: ${link}`, url: link }).catch(()=>{});
     } else {
-        navigator.clipboard.writeText(link).then(() => toast('📋 تم نسخ رابط القناة')).catch(() => prompt('📋 انسخ رابط القناة:', link));
+        navigator.clipboard.writeText(link).then(() => toast('📋 تم نسخ رابط القناة')).catch(() => prompt('📋 انسخ الرابط:', link));
     }
 }
 
@@ -984,22 +985,22 @@ function openChannelManagement(channelId) {
     if (!modal) { toast('⚠️ مودال إدارة القناة غير موجود'); return; }
     document.getElementById('channelManagementContent').innerHTML = `
         <div style="padding:8px 0;">
-            <h3 style="text-align:center;margin-bottom:12px;">إدارة القناة</h3>
+            <h3 style="text-align:center;">إدارة القناة</h3>
             <div style="text-align:center;margin-bottom:16px;">
                 <div style="font-size:48px;cursor:pointer;" onclick="changeChannelAvatar('${channel.id}')">${channel.avatar || '📢'}</div>
-                <p style="color:var(--text3);font-size:11px;">اضغط على الأيقونة لتغيير الصورة</p>
+                <p style="color:var(--text3);font-size:11px;">اضغط لتغيير الصورة</p>
             </div>
-            <div class="input-group" style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">اسم القناة</label>
-                <input type="text" id="channelNameInput" value="${esc(channel.name)}" style="width:100%;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;">
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-weight:600;font-size:13px;">اسم القناة</label>
+                <input type="text" id="channelNameInput" value="${esc(channel.name)}" style="width:100%;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);">
             </div>
-            <div class="input-group" style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;font-size:13px;margin-bottom:4px;">الوصف</label>
-                <textarea id="channelDescInput" style="width:100%;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;resize:vertical;min-height:60px;">${esc(channel.description || '')}</textarea>
+            <div style="margin-bottom:12px;">
+                <label style="display:block;font-weight:600;font-size:13px;">الوصف</label>
+                <textarea id="channelDescInput" style="width:100%;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);resize:vertical;min-height:60px;">${esc(channel.description || '')}</textarea>
             </div>
             <div style="display:flex;gap:8px;margin-bottom:12px;">
-                <button class="promo-btn" onclick="saveChannelSettings('${channel.id}')" style="background:var(--accent);color:#fff;flex:1;"><i class="fas fa-save"></i> حفظ التغييرات</button>
-                <button class="promo-btn" onclick="shareChannelLink('${channel.id}')" style="background:#00a884;color:#fff;flex:1;"><i class="fas fa-share-alt"></i> مشاركة الرابط</button>
+                <button class="promo-btn" onclick="saveChannelSettings('${channel.id}')" style="background:var(--accent);color:#fff;flex:1;"><i class="fas fa-save"></i> حفظ</button>
+                <button class="promo-btn" onclick="shareChannelLink('${channel.id}')" style="background:#00a884;color:#fff;flex:1;"><i class="fas fa-share-alt"></i> مشاركة</button>
             </div>
             <button class="promo-btn" onclick="deleteChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;"><i class="fas fa-trash-alt"></i> حذف القناة</button>
         </div>
@@ -1027,7 +1028,7 @@ async function saveChannelSettings(channelId) {
 
 function changeChannelAvatar(channelId) {
     const emojis = ['📢','📰','🎵','📺','🎬','💡','🌟','🔥','💎','🎯','🏆','⭐','🌈','🚀','💫','🎨','📸','🎥','📻','📱'];
-    const currentEmoji = prompt(`اختر إيموجي جديد للقناة:\n${emojis.join(' ')}\n\n(انسخ والصق الإيموجي المطلوب)`);
+    const currentEmoji = prompt(`اختر إيموجي جديد:\n${emojis.join(' ')}`);
     if (currentEmoji && currentEmoji.trim()) {
         const channel = DB_getChannels().find(c => c.id === channelId);
         if (channel) {
@@ -1042,7 +1043,7 @@ function changeChannelAvatar(channelId) {
 }
 
 async function deleteChannel(channelId) {
-    if (!confirm('⚠️ هل أنت متأكد من حذف هذه القناة نهائياً؟')) return;
+    if (!confirm('⚠️ هل أنت متأكد من حذف القناة نهائياً؟')) return;
     if (!isOnline) { toast('📡 يجب الاتصال بالإنترنت'); return; }
     try {
         await window.deleteChannel(channelId);
@@ -1057,13 +1058,9 @@ async function deleteChannel(channelId) {
 }
 
 function searchChannels(filter) { renderChannels(filter); }
+$('#searchChannelsInput')?.addEventListener('input', function(e) { searchChannels(e.target.value); });
 
-// ربط زر البحث في القنوات
-$('#searchChannelsInput')?.addEventListener('input', function(e) {
-    searchChannels(e.target.value);
-});
-
-// ==================== فتح محادثة (محسن) ====================
+// ==================== فتح محادثة ====================
 function openChat(chatId) {
     currentChatId = chatId;
     const chats = DB_getChats();
@@ -1083,12 +1080,7 @@ function openChat(chatId) {
     renderMessages();
     updateSendBtn();
     showScreen('chat');
-    // استدعاء subscribeToCurrentChat بأمان
-    if (typeof subscribeToCurrentChat === 'function') {
-        subscribeToCurrentChat();
-    } else {
-        console.warn('⚠️ subscribeToCurrentChat غير معرفة');
-    }
+    if (typeof subscribeToCurrentChat === 'function') subscribeToCurrentChat();
     const msgs = DB_getMessages(chatId);
     const unreadIds = msgs.filter(m => m.sender_id !== 'me' && m.status !== 'read').map(m => m.id);
     if (unreadIds.length > 0 && window.markMessagesAsRead) {
@@ -1134,7 +1126,7 @@ function renderMessages() {
         area.innerHTML += `
         <div class="msg-row ${isMe ? 'own' : 'other'} ${syncClass}" id="msg-${m.id}">
             <div class="msg-bubble">
-                ${m.reply_to ? `<div class="reply-preview" onclick="scrollToMsg('${m.reply_to}')"><i class="fas fa-reply"></i> رد على رسالة</div>` : ''}
+                ${m.reply_to ? `<div class="reply-preview" onclick="scrollToMsg('${m.reply_to}')"><i class="fas fa-reply"></i> رد</div>` : ''}
                 ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" data-audio="${m.voice_blob}" onclick="playVoice(this)"><i class="fas fa-play"></i></button><div class="voice-wave">${Array.from({length:8},(_,i)=>`<div class="voice-wave-bar" style="height:12px;width:3px;background:var(--accent);border-radius:2px;"></div>`).join('')}</div><span style="font-size:10px;color:var(--text3);">${m.voice_duration||'0:00'}</span></div>` : ''}
                 ${hasImg ? `<img src="${m.img}" class="attachment-img" onclick="openImageViewer('${m.img}')" loading="lazy">` : ''}
                 <div class="msg-text" data-id="${m.id}" data-encrypted="${m.encrypted ? 'true' : 'false'}" data-payload='${m.encrypted ? JSON.stringify(m.encryptedPayload).replace(/'/g, "&#39;") : ''}'>
@@ -1217,7 +1209,7 @@ function updateLastMsg() {
     const msgs = DB_getMessages(currentChatId);
     const chats = DB_getChats();
     const c = chats.find(x => x.id === currentChatId);
-    if (c && msgs.length) { const l = msgs[msgs.length - 1]; c.last_msg = l.text || (l.voice_blob ? '🎤 رسالة صوتية' : (l.img ? '📷 صورة' : '📎')); c.last_time = l.time; DB_saveChat(c); }
+    if (c && msgs.length) { const l = msgs[msgs.length - 1]; c.last_msg = l.text || (l.voice_blob ? '🎤' : (l.img ? '📷' : '📎')); c.last_time = l.time; DB_saveChat(c); }
 }
 
 // ==================== إرسال الرسائل المشفرة ====================
@@ -1508,40 +1500,38 @@ function renderContactsList() {
 }
 
 async function syncContacts() {
-    if (!isOnline) { toast('📡 يجب الاتصال بالإنترنت لمزامنة جهات الاتصال'); return; }
+    if (!isOnline) { toast('📡 يجب الاتصال بالإنترنت'); return; }
     toast('📱 جاري طلب الوصول إلى جهات الاتصال...');
-
     if (!('contacts' in navigator) || !('ContactsManager' in window)) {
-        toast('⚠️ متصفحك لا يدعم مزامنة جهات الاتصال التلقائية');
+        toast('⚠️ متصفحك لا يدعم المزامنة التلقائية');
         setTimeout(() => {
-            if (confirm('⚠️ متصفحك لا يدعم مزامنة جهات الاتصال.\nهل تريد إضافة جهات اتصال يدوياً؟')) {
-                const phone = prompt('📱 أدخل رقم الهاتف (مثال: +967712345678):');
+            if (confirm('⚠️ هل تريد إضافة جهة اتصال يدوياً؟')) {
+                const phone = prompt('📱 أدخل رقم الهاتف:');
                 if (phone && phone.trim()) {
-                    const name = prompt('👤 أدخل الاسم (اختياري):') || phone;
+                    const name = prompt('👤 أدخل الاسم:') || phone;
                     DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
                     renderContactsList();
-                    toast('✅ تمت إضافة جهة الاتصال');
+                    toast('✅ تمت الإضافة');
                 }
             }
         }, 1000);
         return;
     }
-
     try {
         let contacts = [];
         try {
             contacts = await navigator.contacts.select(['name', 'tel'], { multiple: true });
         } catch (err) {
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                toast('⚠️ لم يتم منح صلاحية الوصول لجهات الاتصال');
+                toast('⚠️ لم يتم منح صلاحية الوصول');
                 setTimeout(() => {
-                    if (confirm('❌ لم تمنح صلاحية الوصول لجهات الاتصال.\nهل تريد إضافة جهات اتصال يدوياً؟')) {
+                    if (confirm('❌ هل تريد إضافة جهة اتصال يدوياً؟')) {
                         const phone = prompt('📱 أدخل رقم الهاتف:');
                         if (phone && phone.trim()) {
-                            const name = prompt('👤 أدخل الاسم (اختياري):') || phone;
+                            const name = prompt('👤 أدخل الاسم:') || phone;
                             DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
                             renderContactsList();
-                            toast('✅ تمت إضافة جهة الاتصال');
+                            toast('✅ تمت الإضافة');
                         }
                     }
                 }, 1000);
@@ -1551,13 +1541,13 @@ async function syncContacts() {
         if (!contacts || contacts.length === 0) {
             toast('⚠️ لا توجد جهات اتصال في هاتفك');
             setTimeout(() => {
-                if (confirm('📭 لا توجد جهات اتصال في هاتفك.\nهل تريد إضافة جهات اتصال يدوياً؟')) {
+                if (confirm('📭 هل تريد إضافة جهة اتصال يدوياً؟')) {
                     const phone = prompt('📱 أدخل رقم الهاتف:');
                     if (phone && phone.trim()) {
-                        const name = prompt('👤 أدخل الاسم (اختياري):') || phone;
+                        const name = prompt('👤 أدخل الاسم:') || phone;
                         DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
                         renderContactsList();
-                        toast('✅ تمت إضافة جهة الاتصال');
+                        toast('✅ تمت الإضافة');
                     }
                 }
             }, 1000);
@@ -1568,8 +1558,7 @@ async function syncContacts() {
             if (contact.tel && contact.tel.length > 0) {
                 const phone = contact.tel[0].replace(/[\s\-\(\)]/g, '');
                 const name = contact.name || '';
-                const existingContact = DB_getContacts().find(c => c.phone === phone);
-                if (!existingContact) {
+                if (!DB_getContacts().find(c => c.phone === phone)) {
                     DB_saveContact({ id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4), phone: phone, name: name || phone, registered: 0, invite_code: null });
                 }
             }
@@ -1589,16 +1578,16 @@ async function syncContacts() {
         renderContactsList();
         toast(`✅ تمت مزامنة ${contacts.length} جهة اتصال`);
     } catch (err) {
-        console.error('❌ فشل مزامنة جهات الاتصال:', err);
+        console.error('❌ فشل المزامنة:', err);
         toast('⚠️ فشلت المزامنة');
         setTimeout(() => {
-            if (confirm('⚠️ فشلت المزامنة التلقائية.\nهل تريد إضافة جهات اتصال يدوياً؟')) {
+            if (confirm('⚠️ هل تريد إضافة جهة اتصال يدوياً؟')) {
                 const phone = prompt('📱 أدخل رقم الهاتف:');
                 if (phone && phone.trim()) {
-                    const name = prompt('👤 أدخل الاسم (اختياري):') || phone;
+                    const name = prompt('👤 أدخل الاسم:') || phone;
                     DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
                     renderContactsList();
-                    toast('✅ تمت إضافة جهة الاتصال');
+                    toast('✅ تمت الإضافة');
                 }
             }
         }, 1000);
@@ -1609,7 +1598,7 @@ async function inviteContact(phone) {
     let inviteCode = null;
     if (window.getInviteCode) inviteCode = await window.getInviteCode();
     let inviteLink = (inviteCode && window.createInviteLink) ? window.createInviteLink(inviteCode) : 'https://appramz.vercel.app/';
-    const message = `هيّا نبدأ الدردشة على RamzApp! إنه تطبيق سريع، وبسيط، وآمن لإرسال الرسائل وإجراء المكالمات مجانًا.\n\nرابط التطبيق: ${inviteLink}`;
+    const message = `انضم إلى RamzApp: ${inviteLink}`;
     if (navigator.share) {
         try { await navigator.share({ title: 'RamzApp - دعوة', text: message }); toast('✅ تم فتح المشاركة'); }
         catch (e) {}
@@ -1622,46 +1611,77 @@ $('#syncContactsBtn')?.addEventListener('click', syncContacts);
 $('#backFromContactsBtn')?.addEventListener('click', () => showScreen('chats'));
 $('#contactsMenuBtn')?.addEventListener('click', () => showScreenMenu('contacts'));
 
-// ==================== القصص ====================
+// ==================== القصص (مع 24 ساعة وشريط أفقي) ====================
+function cleanupExpiredStories() {
+    const now = new Date().toISOString();
+    const stories = DB_getStories();
+    let removed = 0;
+    stories.forEach(s => {
+        if (s.expires_at && s.expires_at < now) {
+            if (window.deleteStory) window.deleteStory(s.id);
+            else DB_deleteStory(s.id);
+            removed++;
+        }
+    });
+    if (removed > 0) {
+        console.log(`🧹 تم حذف ${removed} قصة منتهية`);
+        renderStories();
+    }
+}
+setInterval(cleanupExpiredStories, 300000);
+setTimeout(cleanupExpiredStories, 2000);
+
 function renderStories() {
     const bar = document.getElementById('storyBar');
     if (!bar) return;
-    const stories = DB_getStories().sort((a, b) => new Date(b.time) - new Date(a.time));
+    const now = new Date().toISOString();
+    const allStories = DB_getStories().filter(s => s.expires_at > now);
+    const stories = allStories.sort((a, b) => new Date(b.time) - new Date(a.time));
     if (stories.length === 0) {
-        bar.innerHTML = `<div class="story-item story-add" onclick="openStoryCamera()"><div class="story-ring"><span>+</span></div><div class="story-name">إضافة</div></div>`;
+        bar.style.display = 'none';
+        const list = document.getElementById('storiesList');
+        if (list) {
+            list.innerHTML = '<p style="color:var(--text3);padding:8px 16px;">لا توجد قصص حالياً. أضف قصتك الأولى!</p>';
+        }
         return;
     }
+    bar.style.display = 'flex';
+    bar.style.overflowX = 'auto';
+    bar.style.overflowY = 'hidden';
+    bar.style.scrollBehavior = 'smooth';
+    bar.style.gap = '12px';
+    bar.style.padding = '12px 16px';
+    let html = `<div class="story-item story-add" onclick="openStoryCamera()" style="flex-shrink:0;"><div class="story-ring"><span>+</span></div><div class="story-name">إضافة</div></div>`;
     const recentStories = stories.slice(0, 10);
-    bar.innerHTML = `
-        <div class="story-item story-add" onclick="openStoryCamera()"><div class="story-ring"><span>+</span></div><div class="story-name">إضافة</div></div>
-        ${recentStories.map((s, i) => `
-            <div class="story-item" onclick="openStoryViewer(${i})" data-story="${i}">
-                <div class="story-ring ${s.isViewed ? 'viewed' : ''}">
+    recentStories.forEach((s, i) => {
+        const isViewed = s.isViewed || false;
+        html += `
+            <div class="story-item" onclick="openStoryViewer(${i})" data-story="${i}" style="flex-shrink:0;">
+                <div class="story-ring ${isViewed ? 'viewed' : ''}">
                     <div class="story-avatar" style="background:${s.color || '#ff0050'};">${s.avatar || '📷'}</div>
                 </div>
                 <div class="story-name">${esc(s.name || 'قصة')}</div>
+                <div style="font-size:8px;color:var(--text3);text-align:center;">${timeAgo(s.time)}</div>
             </div>
-        `).join('')}
-    `;
+        `;
+    });
+    bar.innerHTML = html;
     const list = document.getElementById('storiesList');
     if (list) {
-        if (stories.length === 0) {
-            list.innerHTML = '<p style="color:var(--text3);padding:8px 16px;">لا توجد قصص. أضف قصتك الأولى!</p>';
-        } else {
-            list.innerHTML = stories.map(s => `
-                <div class="story-card" onclick="openStoryViewer(${stories.indexOf(s)})">
-                    <div class="story-preview">
-                        ${s.type === 'image' ? `<img src="${s.content}" alt="قصة">` :
-                        s.type === 'video' ? `<video src="${s.content}" muted></video>` :
-                        `<span style="font-size:40px;">📝</span>`}
-                    </div>
-                    <div class="story-meta">
-                        <span>${esc(s.name)}</span>
-                        <span>${timeAgo(s.time)}</span>
-                    </div>
+        list.innerHTML = stories.map(s => `
+            <div class="story-card" onclick="openStoryViewer(${stories.indexOf(s)})">
+                <div class="story-preview">
+                    ${s.type === 'image' ? `<img src="${s.content}" alt="قصة" loading="lazy">` :
+                    s.type === 'video' ? `<video src="${s.content}" muted></video>` :
+                    `<span style="font-size:40px;">📝</span>`}
+                    ${s.expires_at ? `<div style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;">${Math.ceil((new Date(s.expires_at) - new Date()) / 3600000)} ساعة</div>` : ''}
                 </div>
-            `).join('');
-        }
+                <div class="story-meta">
+                    <span>${esc(s.name)}</span>
+                    <span>${timeAgo(s.time)}</span>
+                </div>
+            </div>
+        `).join('');
     }
 }
 
@@ -1740,9 +1760,12 @@ function createTextStory() {
     const text = prompt('✏️ اكتب نص قصتك:');
     if (text && text.trim()) saveStory({ type: 'text', content: text.trim(), caption: '' });
 }
+
 async function saveStory(storyData) {
     const user = DB_getCurrentUser();
     if (!user) { toast('⚠️ يجب تسجيل الدخول لإضافة قصة'); return; }
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const story = {
         id: storyData.id || ('s_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
         user_id: user.id,
@@ -1751,8 +1774,8 @@ async function saveStory(storyData) {
         type: storyData.type || 'image',
         content: storyData.content,
         caption: storyData.caption || '',
-        time: storyData.time || new Date().toISOString(),
-        expires_at: storyData.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        time: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
         isViewed: false,
         color: '#' + Math.floor(Math.random() * 16777215).toString(16)
     };
@@ -1760,9 +1783,7 @@ async function saveStory(storyData) {
     else DB_addStory(story);
     if (isOnline && window.addStoryToSupabase) {
         try {
-            // محاولة استخدام UUID متوافق مع Supabase
             const storyForSupabase = { ...story };
-            // إذا كان المعرف لا يبدو كـ UUID، نستخدم معرفاً جديداً
             if (!storyForSupabase.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
                 storyForSupabase.id = crypto.randomUUID ? crypto.randomUUID() : 's_' + Date.now();
             }
@@ -1774,8 +1795,13 @@ async function saveStory(storyData) {
 }
 
 function openStoryViewer(index) {
-    const stories = DB_getStories().sort((a, b) => new Date(b.time) - new Date(a.time));
-    if (index >= stories.length) return;
+    const now = new Date().toISOString();
+    const stories = DB_getStories().filter(s => s.expires_at > now).sort((a, b) => new Date(b.time) - new Date(a.time));
+    if (index >= stories.length) {
+        toast('🎬 انتهت جميع القصص');
+        renderStories();
+        return;
+    }
     const story = stories[index];
     const viewer = document.createElement('div');
     viewer.className = 'story-viewer-active';
@@ -1787,7 +1813,9 @@ function openStoryViewer(index) {
         const seg = document.createElement('div');
         seg.className = 'progress-segment';
         seg.style.cssText = `flex:1;height:3px;background:${i <= index ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)'};border-radius:2px;overflow:hidden;`;
-        if (i === index) seg.innerHTML = `<div style="height:100%;background:#fff;border-radius:2px;width:0%;transition:width 0.1s linear;" id="storyProgressFill"></div>`;
+        if (i === index) {
+            seg.innerHTML = `<div style="height:100%;background:#fff;border-radius:2px;width:0%;transition:width 0.1s linear;" id="storyProgressFill"></div>`;
+        }
         progressBar.appendChild(seg);
     });
     viewer.appendChild(progressBar);
@@ -1796,7 +1824,8 @@ function openStoryViewer(index) {
     userInfo.style.cssText = 'position:absolute;top:60px;left:20px;z-index:10000;display:flex;align-items:center;gap:12px;color:#fff;';
     userInfo.innerHTML = `
         <div style="width:40px;height:40px;border-radius:50%;background:${story.color || '#ff0050'};display:flex;align-items:center;justify-content:center;font-size:20px;">${story.avatar || '📷'}</div>
-        <div><div style="font-weight:bold;">${esc(story.name || 'مستخدم')}</div><div style="font-size:11px;opacity:0.7;">${timeAgo(story.time)}</div></div>
+        <div><div style="font-weight:bold;">${esc(story.name || 'مستخدم')}</div>
+        <div style="font-size:11px;opacity:0.7;">${timeAgo(story.time)} • ${Math.ceil((new Date(story.expires_at) - new Date()) / 3600000)} ساعة متبقية</div></div>
     `;
     viewer.appendChild(userInfo);
     const closeBtn = document.createElement('button');
@@ -1812,6 +1841,7 @@ function openStoryViewer(index) {
         const img = document.createElement('img');
         img.src = story.content;
         img.style.cssText = 'max-width:100%;max-height:70vh;border-radius:12px;object-fit:contain;';
+        img.onerror = () => { img.src = 'https://via.placeholder.com/400x400?text=📷+صورة'; };
         contentDiv.appendChild(img);
     } else if (story.type === 'video') {
         const video = document.createElement('video');
@@ -1845,14 +1875,23 @@ function openStoryViewer(index) {
             if (fill) fill.style.width = progress + '%';
             if (progress >= 100) {
                 clearInterval(storyInterval);
-                if (index + 1 < stories.length) { setTimeout(() => { viewer.remove(); openStoryViewer(index + 1); }, 300); }
-                else { setTimeout(closeStoryViewer, 300); }
+                const storyToUpdate = DB_getStories().find(s => s.id === story.id);
+                if (storyToUpdate) {
+                    storyToUpdate.isViewed = true;
+                    if (window.updateStory) window.updateStory(story.id, { isViewed: true });
+                }
+                setTimeout(() => {
+                    viewer.remove();
+                    if (index + 1 < stories.length) {
+                        openStoryViewer(index + 1);
+                    } else {
+                        closeStoryViewer();
+                        toast('🎬 انتهت جميع القصص');
+                    }
+                }, 300);
             }
         }, 50);
     }
-    const storyToUpdate = DB_getStories().find(s => s.id === story.id);
-    if (storyToUpdate) { storyToUpdate.isViewed = true; if (window.updateStory) window.updateStory(story.id, { isViewed: true }); }
-    renderStories();
 }
 
 function closeStoryViewer() {
@@ -1862,8 +1901,6 @@ function closeStoryViewer() {
     storyInterval = null;
     renderStories();
 }
-
-// ==================== القنوات (تم تضمينها أعلاه) ====================
 
 // ==================== الأدوات ====================
 $('#startAdBtn')?.addEventListener('click', () => toast('🚀 إعلان قريباً'));
@@ -1975,7 +2012,6 @@ function logout() {
 
 // ==================== البحث داخل المحادثة ====================
 $('#chatMenuBtn')?.addEventListener('click', () => showScreenMenu('chat_main'));
-
 function openInChatSearch() {
     const inSearch = $('#inChatSearch');
     inSearch?.classList.add('active');
@@ -2035,9 +2071,9 @@ window.logout = logout;
 
 // ==================== التهيئة الرئيسية ====================
 async function init() {
-    if (initRun) { console.warn('⚠️ تم استدعاء init() أكثر من مرة - تم تجاهل التكرار'); return; }
+    if (initRun) { console.warn('⚠️ تم استدعاء init() أكثر من مرة'); return; }
     initRun = true;
-    console.log('🚀 بدء تهيئة RamzApp v4.0 (النسخة النهائية)...');
+    console.log('🚀 بدء تهيئة RamzApp v4.0...');
     try {
         const user = DB_getCurrentUser();
         if (!user || !user.id) {
@@ -2056,6 +2092,79 @@ async function init() {
         if (window.inMemoryDB) {
             window.inMemoryDB.user = user;
             console.log('✅ تم تعيين المستخدم في inMemoryDB');
+        }
+
+        // ============================================================
+        // إنشاء محادثة فريق RamzApp (مرة واحدة)
+        // ============================================================
+        const TEAM_USER_ID = 'ramzapp_team';
+        const TEAM_CHAT_ID = 'ramzapp_team';
+        const existingChat = DB_getChats().find(c => c.id === TEAM_CHAT_ID);
+        if (!existingChat) {
+            let teamUser = DB_getContacts().find(c => c.id === TEAM_USER_ID);
+            if (!teamUser) {
+                if (isOnline && window.supabaseClient) {
+                    try {
+                        const { data } = await window.supabaseClient
+                            .from('users')
+                            .select('*')
+                            .eq('id', TEAM_USER_ID)
+                            .single();
+                        if (data) {
+                            teamUser = {
+                                id: data.id,
+                                name: data.name || 'فريق RamzApp',
+                                avatar: data.avatar || '👥',
+                                phone: data.phone || '',
+                                registered: true
+                            };
+                            DB_saveContact(teamUser);
+                        }
+                    } catch (e) { console.warn('⚠️ تعذر جلب بيانات فريق RamzApp', e); }
+                }
+                if (!teamUser) {
+                    teamUser = {
+                        id: TEAM_USER_ID,
+                        name: 'فريق RamzApp',
+                        avatar: '👥',
+                        phone: '+967778562099',
+                        registered: true
+                    };
+                    DB_saveContact(teamUser);
+                }
+            }
+            const chat = {
+                id: TEAM_CHAT_ID,
+                name: 'فريق RamzApp',
+                avatar: '👥',
+                last_msg: 'مرحبا بكم في تطبيق RamzApp تواصل مع الجميع بكل ثقة وأمان وسرعة نتمنى لكم أوقاتا ممتعة.',
+                last_time: new Date().toISOString(),
+                unread: 1,
+                online: false,
+                pinned: false,
+                bio: 'البريد: ramzealsalhy@gmail.com | رقم: +967778562099',
+                is_group: false
+            };
+            DB_saveChat(chat);
+            const welcomeMsg = {
+                id: 'welcome_' + Date.now(),
+                chat_id: TEAM_CHAT_ID,
+                sender_id: TEAM_USER_ID,
+                text: 'مرحبا بكم في تطبيق RamzApp تواصل مع الجميع بكل ثقة وأمان وسرعة نتمنى لكم أوقاتا ممتعة.\n\nمع تحيات فريق RamzApp',
+                time: new Date().toISOString(),
+                likes: 0,
+                liked: false,
+                reply_to: null,
+                img: null,
+                voice_blob: null,
+                voice_duration: null,
+                status: 'sent',
+                sync_status: 'sent',
+                encrypted: false,
+                encryptedPayload: null
+            };
+            DB_addMessage(welcomeMsg);
+            console.log('✅ تم إنشاء محادثة فريق RamzApp');
         }
 
         if (isOnline && window.supabaseClient) {
@@ -2092,7 +2201,9 @@ async function init() {
                         console.log(`✅ تم جلب ${allUsers.length} مستخدم مسجل`);
                     }
                 }
-                if (window.syncStories) await window.syncStories();
+                if (window.syncStories) {
+                    try { await window.syncStories(); } catch(e) { console.warn('⚠️ فشل مزامنة القصص', e); }
+                }
             } catch (e) {
                 console.warn('⚠️ فشل جلب البيانات من Supabase (العمل محلياً)', e);
             }
@@ -2101,12 +2212,21 @@ async function init() {
         }
 
         console.log('📌 [3] دخول التطبيق...');
-        enterApp();
+        try {
+            enterApp();
+        } catch (e) {
+            console.error('❌ خطأ في enterApp:', e);
+            toast('⚠️ حدث خطأ أثناء تحميل التطبيق: ' + (e.message || 'غير معروف'));
+            throw e;
+        }
 
         console.log('📌 [4] تهيئة التشفير...');
-        await initEncryption();
+        try {
+            await initEncryption();
+        } catch (e) {
+            console.warn('⚠️ فشل تهيئة التشفير:', e);
+        }
 
-        // تأكيد تحميل الأيقونات
         if (typeof window.ensureFontAwesome === 'function') {
             window.ensureFontAwesome();
         }
@@ -2143,12 +2263,11 @@ async function init() {
     }
 }
 
-// ==================== بدء التطبيق ====================
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     setTimeout(init, 100);
 }
 
-console.log('✅ common.js (الإصدار النهائي المعدل) جاهز');
-console.log('💬 RamzApp v4.0 - جميع الميزات مفعلة مع إصلاحات الأخطاء');
+console.log('✅ common.js (الإصدار النهائي الكامل) جاهز');
+console.log('💬 RamzApp v4.0 - جميع الميزات مفعلة مع إصلاحات شاملة');
