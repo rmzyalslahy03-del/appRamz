@@ -905,28 +905,8 @@ function renderChannels(filter = '') {
 }
 
 function openChannelDetails(channelId) {
-    const channel = DB_getChannels().find(c => c.id === channelId);
-    if (!channel) { toast('⚠️ القناة غير موجودة'); return; }
-    const currentUser = DB_getCurrentUser();
-    const isAdmin = channel.created_by === currentUser?.id;
-    const isSubscribed = channel.subscribers?.includes(currentUser?.id);
-    const modal = document.getElementById('channelDetailsModal');
-    if (!modal) { toast('⚠️ مودال تفاصيل القناة غير موجود'); return; }
-    document.getElementById('channelDetailsContent').innerHTML = `
-        <div style="text-align:center;padding:12px 0;">
-            <div style="font-size:48px;margin-bottom:8px;">${channel.avatar || '📢'}</div>
-            <h3>${esc(channel.name)}</h3>
-            ${channel.description ? `<p style="color:var(--text3);font-size:13px;">${esc(channel.description)}</p>` : ''}
-            <p style="color:var(--text3);font-size:12px;">${channel.followers||0} متابع</p>
-            <p style="color:var(--text3);font-size:11px;margin-top:4px;">الرابط: <span style="color:var(--accent);cursor:pointer;" onclick="shareChannelLink('${channel.id}')">${window.location.origin}/channel.html?code=${channel.invite_code || channel.id}</span></p>
-            <hr style="border-color:var(--border);margin:12px 0;">
-            ${!isSubscribed ? `<button class="promo-btn" onclick="subscribeToChannel('${channel.id}')" style="background:var(--accent);color:#fff;width:100%;"><i class="fas fa-plus-circle"></i> انضمام</button>` :
-            `<button class="promo-btn" onclick="unsubscribeFromChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;"><i class="fas fa-times-circle"></i> مغادرة</button>`}
-            ${isAdmin ? `<button class="promo-btn" onclick="openChannelManagement('${channel.id}')" style="background:#00a884;color:#fff;width:100%;margin-top:8px;"><i class="fas fa-cog"></i> إدارة</button>` : ''}
-            ${isAdmin ? `<button class="promo-btn" onclick="deleteChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;margin-top:8px;"><i class="fas fa-trash-alt"></i> حذف</button>` : ''}
-        </div>
-    `;
-    modal.classList.add('active');
+    // الانتقال إلى صفحة القناة الداخلية
+    window.location.href = `channel-feed.html?id=${channelId}`;
 }
 
 async function subscribeToChannel(channelId) {
@@ -944,7 +924,6 @@ async function subscribeToChannel(channelId) {
             DB_addChannel(channel);
         }
         renderChannels();
-        document.getElementById('channelDetailsModal')?.classList.remove('active');
     } catch(err) { toast('⚠️ ' + (err.message || 'فشل الانضمام')); }
 }
 
@@ -961,7 +940,6 @@ async function unsubscribeFromChannel(channelId) {
             DB_addChannel(channel);
         }
         renderChannels();
-        document.getElementById('channelDetailsModal')?.classList.remove('active');
     } catch(err) { toast('⚠️ ' + (err.message || 'فشل المغادرة')); }
 }
 
@@ -981,49 +959,21 @@ function openChannelManagement(channelId) {
     if (!channel) { toast('⚠️ القناة غير موجودة'); return; }
     const currentUser = DB_getCurrentUser();
     if (channel.created_by !== currentUser?.id) { toast('⚠️ فقط منشئ القناة يمكنه إدارتها'); return; }
-    const modal = document.getElementById('channelManagementModal');
-    if (!modal) { toast('⚠️ مودال إدارة القناة غير موجود'); return; }
-    document.getElementById('channelManagementContent').innerHTML = `
-        <div style="padding:8px 0;">
-            <h3 style="text-align:center;">إدارة القناة</h3>
-            <div style="text-align:center;margin-bottom:16px;">
-                <div style="font-size:48px;cursor:pointer;" onclick="changeChannelAvatar('${channel.id}')">${channel.avatar || '📢'}</div>
-                <p style="color:var(--text3);font-size:11px;">اضغط لتغيير الصورة</p>
-            </div>
-            <div style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;font-size:13px;">اسم القناة</label>
-                <input type="text" id="channelNameInput" value="${esc(channel.name)}" style="width:100%;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);">
-            </div>
-            <div style="margin-bottom:12px;">
-                <label style="display:block;font-weight:600;font-size:13px;">الوصف</label>
-                <textarea id="channelDescInput" style="width:100%;padding:10px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);resize:vertical;min-height:60px;">${esc(channel.description || '')}</textarea>
-            </div>
-            <div style="display:flex;gap:8px;margin-bottom:12px;">
-                <button class="promo-btn" onclick="saveChannelSettings('${channel.id}')" style="background:var(--accent);color:#fff;flex:1;"><i class="fas fa-save"></i> حفظ</button>
-                <button class="promo-btn" onclick="shareChannelLink('${channel.id}')" style="background:#00a884;color:#fff;flex:1;"><i class="fas fa-share-alt"></i> مشاركة</button>
-            </div>
-            <button class="promo-btn" onclick="deleteChannel('${channel.id}')" style="background:#ff4444;color:#fff;width:100%;"><i class="fas fa-trash-alt"></i> حذف القناة</button>
-        </div>
-    `;
-    modal.classList.add('active');
+    // الانتقال إلى صفحة إدارة القناة
+    window.location.href = `edit-channel.html?id=${channelId}`;
 }
 
-async function saveChannelSettings(channelId) {
-    const nameInput = document.getElementById('channelNameInput');
-    const descInput = document.getElementById('channelDescInput');
-    if (!nameInput || !descInput) return;
-    const name = nameInput.value.trim();
-    const description = descInput.value.trim();
-    if (!name) { toast('⚠️ اسم القناة مطلوب'); return; }
-    if (!isOnline) { toast('📡 يجب الاتصال بالإنترنت'); return; }
-    try {
-        await window.updateChannel(channelId, { name, description });
-        toast('✅ تم تحديث القناة');
-        const channel = DB_getChannels().find(c => c.id === channelId);
-        if (channel) { channel.name = name; channel.description = description; DB_addChannel(channel); }
-        renderChannels();
-        document.getElementById('channelManagementModal')?.classList.remove('active');
-    } catch(err) { toast('⚠️ ' + (err.message || 'فشل التحديث')); }
+async function saveChannelSettings(channelId, name, description) {
+    const channel = DB_getChannels().find(c => c.id === channelId);
+    if (!channel) { toast('⚠️ القناة غير موجودة'); return; }
+    channel.name = name;
+    channel.description = description;
+    DB_addChannel(channel);
+    if (isOnline && window.updateChannel) {
+        window.updateChannel(channelId, { name, description }).catch(()=>{});
+    }
+    renderChannels();
+    toast('✅ تم تحديث القناة');
 }
 
 function changeChannelAvatar(channelId) {
@@ -1036,7 +986,6 @@ function changeChannelAvatar(channelId) {
             DB_addChannel(channel);
             if (isOnline && window.updateChannel) { window.updateChannel(channelId, { avatar: channel.avatar }).catch(()=>{}); }
             renderChannels();
-            openChannelManagement(channelId);
             toast('✅ تم تحديث الصورة');
         }
     }
@@ -1052,8 +1001,6 @@ async function deleteChannel(channelId) {
         const index = channels.findIndex(c => c.id === channelId);
         if (index !== -1) channels.splice(index, 1);
         renderChannels();
-        document.getElementById('channelManagementModal')?.classList.remove('active');
-        document.getElementById('channelDetailsModal')?.classList.remove('active');
     } catch(err) { toast('⚠️ ' + (err.message || 'فشل الحذف')); }
 }
 
