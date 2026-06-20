@@ -1,7 +1,7 @@
 // ======================================================================
 // common.js - الإصدار النهائي الكامل v4.0
-// جميع الميزات: القوائم، المجموعات، القنوات، القصص (24 ساعة)، الإشعارات، التشفير، المزامنة
-// مع إصلاحات: عرض المحادثات، catch is not a function، القصص المنتهية، الشريط الأفقي
+// جميع الميزات: القوائم، المجموعات، القنوات، القصص (أفقي - 24 ساعة)، الإشعارات، التشفير، المزامنة
+// مع إصلاحات شاملة لجميع الأخطاء
 // ======================================================================
 
 // ==================== نظام تحميل الأيقونات ====================
@@ -175,7 +175,7 @@ function DB_getCurrentUser() {
     return null;
 }
 
-// ==================== التشفير ====================
+// ==================== التشفير E2E ====================
 let currentUserKeyPair = null;
 let peerPublicKeys = {};
 const E2E_KEY_STORE = 'ramzapp_e2e_keys';
@@ -276,6 +276,25 @@ async function decryptMessage(payload) {
     return new TextDecoder().decode(decryptedData);
 }
 
+// ==================== دالة آمنة لتحديث حالة الاتصال ====================
+function safeSetUserOnlineStatus(status) {
+    if (!window.supabaseClient) {
+        console.warn('⚠️ Supabase غير متاح، لا يمكن تحديث الحالة');
+        return Promise.resolve();
+    }
+    const userId = DB_getCurrentUser()?.id;
+    if (!userId) return Promise.resolve();
+    return window.supabaseClient
+        .from('users')
+        .update({ is_online: status, last_seen: new Date().toISOString() })
+        .eq('id', userId)
+        .then(() => {})
+        .catch((err) => {
+            console.warn('⚠️ فشل تحديث حالة الاتصال:', err);
+        });
+}
+window.setUserOnlineStatus = safeSetUserOnlineStatus;
+
 // ==================== مؤشر الاتصال ====================
 function updateConnectionIndicator() {
     try {
@@ -326,25 +345,6 @@ function subscribeToCurrentChat() {
         });
     }
 }
-
-// ==================== دالة آمنة لتحديث حالة الاتصال (لحل مشكلة .catch) ====================
-function safeSetUserOnlineStatus(status) {
-    if (!window.supabaseClient) {
-        console.warn('⚠️ Supabase غير متاح، لا يمكن تحديث الحالة');
-        return Promise.resolve();
-    }
-    const userId = DB_getCurrentUser()?.id;
-    if (!userId) return Promise.resolve();
-    return window.supabaseClient
-        .from('users')
-        .update({ is_online: status, last_seen: new Date().toISOString() })
-        .eq('id', userId)
-        .then(() => {})
-        .catch((err) => {
-            console.warn('⚠️ فشل تحديث حالة الاتصال:', err);
-        });
-}
-window.setUserOnlineStatus = safeSetUserOnlineStatus;
 
 // ==================== دخول التطبيق ====================
 function enterApp() {
@@ -405,7 +405,7 @@ function updateStats() {
     const $sch = $('#statChats'); if ($sch) $sch.textContent = chatsCount;
 }
 
-// ==================== عرض المحادثات (محسّن) ====================
+// ==================== عرض المحادثات ====================
 function renderChats(filter = '') {
     const container = document.getElementById('chatsList');
     if (!container) {
@@ -466,7 +466,7 @@ function renderChats(filter = '') {
 $('#searchChatsInput')?.addEventListener('input', e => renderChats(e.target.value));
 $('#searchBtn')?.addEventListener('click', () => { $('#searchChatsInput')?.focus(); showScreen('chats'); });
 
-// ==================== القوائم المنبثقة الأساسية ====================
+// ==================== القوائم المنبثقة ====================
 function showPopup(items) {
     const menu = $('#popupMenu');
     const overlay = $('#popupOverlay');
@@ -488,7 +488,7 @@ $('#cameraBtn')?.addEventListener('click', () => openStoryCamera());
 $('#settingsBtn')?.addEventListener('click', () => { window.location.href = 'settings.html'; });
 $('#contactsBtn')?.addEventListener('click', () => showScreen('contacts'));
 
-// ==================== القوائم المتقدمة لكل شاشة ====================
+// ==================== القوائم المتقدمة ====================
 function getCustomMenuItems(screen) {
     const menus = {
         'chats': [
@@ -1448,36 +1448,195 @@ function renderCalls() {
     `).join('');
 }
 
+// ==================== مزامنة جهات الاتصال ====================
+async function syncContacts() {
+    if (!isOnline) {
+        toast('📡 يجب الاتصال بالإنترنت لمزامنة جهات الاتصال');
+        return;
+    }
+    if (!window.supabaseClient) {
+        toast('⚠️ خدمة المزامنة غير متاحة حالياً');
+        return;
+    }
+
+    toast('📱 جاري مزامنة جهات الاتصال...');
+
+    try {
+        let deviceContacts = [];
+        if ('contacts' in navigator && 'ContactsManager' in window) {
+            try {
+                deviceContacts = await navigator.contacts.select(['name', 'tel'], { multiple: true });
+            } catch (err) {
+                if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                    toast('⚠️ لم يتم منح صلاحية الوصول لجهات الاتصال');
+                } else {
+                    throw err;
+                }
+            }
+        } else {
+            console.warn('⚠️ المتصفح لا يدعم مزامنة جهات الاتصال التلقائية');
+        }
+
+        const phoneNumbers = [];
+        const contactsMap = {};
+        if (deviceContacts.length > 0) {
+            for (const contact of deviceContacts) {
+                if (contact.tel && contact.tel.length > 0) {
+                    const phone = contact.tel[0].replace(/[\s\-\(\)]/g, '');
+                    if (phone) {
+                        phoneNumbers.push(phone);
+                        contactsMap[phone] = {
+                            name: contact.name || phone,
+                            phone: phone
+                        };
+                    }
+                }
+            }
+        }
+
+        const localContacts = DB_getContacts();
+        for (const c of localContacts) {
+            if (c.phone && !phoneNumbers.includes(c.phone)) {
+                phoneNumbers.push(c.phone);
+                contactsMap[c.phone] = {
+                    name: c.name || c.phone,
+                    phone: c.phone,
+                    id: c.id
+                };
+            }
+        }
+
+        if (phoneNumbers.length === 0) {
+            toast('⚠️ لا توجد جهات اتصال للمزامنة');
+            return;
+        }
+
+        const registeredResult = await window.checkRegisteredPhones(phoneNumbers);
+        const registeredPhones = registeredResult.registered || [];
+        const unregisteredPhones = registeredResult.unregistered || [];
+
+        let updatedCount = 0;
+        for (const phone of phoneNumbers) {
+            const contactInfo = contactsMap[phone] || { name: phone, phone: phone };
+            const isRegistered = registeredPhones.some(r => r.phone === phone);
+            const registeredUser = registeredPhones.find(r => r.phone === phone);
+            
+            let existingContact = DB_getContacts().find(c => c.phone === phone);
+            if (existingContact) {
+                const updated = {
+                    ...existingContact,
+                    name: contactInfo.name || existingContact.name,
+                    registered: isRegistered ? 1 : 0,
+                    id: registeredUser?.id || existingContact.id
+                };
+                DB_saveContact(updated);
+                updatedCount++;
+            } else {
+                const newContact = {
+                    id: registeredUser?.id || 'c_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    phone: phone,
+                    name: contactInfo.name || phone,
+                    registered: isRegistered ? 1 : 0,
+                    invite_code: null
+                };
+                DB_saveContact(newContact);
+                updatedCount++;
+            }
+        }
+
+        renderContactsList();
+        toast(`✅ تمت مزامنة ${updatedCount} جهة اتصال`);
+        
+        const user = DB_getCurrentUser();
+        if (user && user.id) {
+            try {
+                const contactsToSync = DB_getContacts();
+                await window.supabaseClient
+                    .from('contacts')
+                    .delete()
+                    .eq('user_id', user.id);
+
+                if (contactsToSync.length > 0) {
+                    const contactsInsert = contactsToSync.map(c => ({
+                        id: c.id,
+                        phone: c.phone,
+                        name: c.name || '',
+                        registered: c.registered || 0,
+                        user_id: user.id
+                    }));
+                    await window.supabaseClient
+                        .from('contacts')
+                        .insert(contactsInsert);
+                }
+                console.log('✅ تم مزامنة جهات الاتصال مع Supabase');
+            } catch (err) {
+                console.warn('⚠️ فشل مزامنة جهات الاتصال مع Supabase:', err);
+            }
+        }
+
+        const newRegistered = registeredPhones.filter(r => 
+            !localContacts.some(c => c.phone === r.phone && c.registered === 1)
+        );
+        if (newRegistered.length > 0) {
+            toast(`👥 ${newRegistered.length} جهة اتصال مسجلة جديدة في RamzApp`);
+        }
+
+    } catch (err) {
+        console.error('❌ فشل مزامنة جهات الاتصال:', err);
+        toast('⚠️ فشلت المزامنة، حاول مرة أخرى');
+    }
+}
+
 // ==================== جهات الاتصال ====================
 function renderContactsList() {
     const container = $('#contactsList');
     if (!container) return;
-    const registered = DB_getContacts().filter(c => c.registered);
-    const unregistered = DB_getContacts().filter(c => !c.registered);
-    container.innerHTML = `
-        <div class="section-header"><h3>✅ المسجلين في RamzApp</h3></div>
-        ${registered.length === 0 ? '<p style="color:var(--text3);padding:8px 16px;">لا يوجد جهات اتصال مسجلة</p>' : registered.map(c => `
-            <div class="channel-item contact-item" data-id="${c.id}">
-                <div class="channel-avatar">${c.name ? c.name.charAt(0).toUpperCase() : '📞'}</div>
-                <div class="item-info">
-                    <div class="item-title">${c.name || c.phone}</div>
-                    <div class="item-sub">${c.phone} • مسجل</div>
-                </div>
-                <i class="fas fa-comment-dots" style="color:var(--accent);cursor:pointer;" title="مراسلة"></i>
-            </div>
-        `).join('')}
-        <div class="section-header"><h3>⏳ غير المسجلين</h3></div>
-        ${unregistered.length === 0 ? '<p style="color:var(--text3);padding:8px 16px;">لا يوجد جهات اتصال غير مسجلة</p>' : unregistered.map(c => `
-            <div class="channel-item contact-item" data-phone="${c.phone}">
-                <div class="channel-avatar">${c.name ? c.name.charAt(0).toUpperCase() : '📞'}</div>
-                <div class="item-info">
-                    <div class="item-title">${c.name || c.phone}</div>
-                    <div class="item-sub">${c.phone} • غير مسجل</div>
-                </div>
-                <button class="promo-btn invite-btn" style="padding:4px 10px;font-size:11px;" data-phone="${c.phone}">دعوة</button>
-            </div>
-        `).join('')}
+    const allContacts = DB_getContacts();
+    const registered = allContacts.filter(c => c.registered);
+    const unregistered = allContacts.filter(c => !c.registered);
+
+    let html = `
+        <div class="section-header"><h3>✅ المسجلين في RamzApp (${registered.length})</h3></div>
     `;
+    if (registered.length === 0) {
+        html += `<p style="color:var(--text3);padding:8px 16px;">لا يوجد جهات اتصال مسجلة</p>`;
+    } else {
+        registered.forEach(c => {
+            html += `
+                <div class="channel-item contact-item" data-id="${c.id}">
+                    <div class="channel-avatar">${c.name ? c.name.charAt(0).toUpperCase() : '📞'}</div>
+                    <div class="item-info">
+                        <div class="item-title">${esc(c.name || c.phone)}</div>
+                        <div class="item-sub">${c.phone} • مسجل</div>
+                    </div>
+                    <i class="fas fa-comment-dots" style="color:var(--accent);cursor:pointer;" title="مراسلة"></i>
+                </div>
+            `;
+        });
+    }
+
+    html += `
+        <div class="section-header"><h3>⏳ غير المسجلين (${unregistered.length})</h3></div>
+    `;
+    if (unregistered.length === 0) {
+        html += `<p style="color:var(--text3);padding:8px 16px;">لا يوجد جهات اتصال غير مسجلة</p>`;
+    } else {
+        unregistered.forEach(c => {
+            html += `
+                <div class="channel-item contact-item" data-phone="${c.phone}">
+                    <div class="channel-avatar">${c.name ? c.name.charAt(0).toUpperCase() : '📞'}</div>
+                    <div class="item-info">
+                        <div class="item-title">${esc(c.name || c.phone)}</div>
+                        <div class="item-sub">${c.phone} • غير مسجل</div>
+                    </div>
+                    <button class="promo-btn invite-btn" style="padding:4px 10px;font-size:11px;" data-phone="${c.phone}">دعوة</button>
+                </div>
+            `;
+        });
+    }
+
+    container.innerHTML = html;
+
     container.querySelectorAll('.contact-item').forEach(el => {
         el.addEventListener('click', (e) => {
             if (e.target.closest('.invite-btn')) {
@@ -1489,109 +1648,11 @@ function renderContactsList() {
             if (id) {
                 const contact = DB_getContacts().find(c => c.id === id);
                 if (contact) {
-                    const user = { id: contact.id, name: contact.name || 'مستخدم', avatar: contact.avatar || '?' };
-                    startOrOpenChat(user);
-                } else {
-                    toast('⚠️ لم يتم العثور على المستخدم');
+                    startOrOpenChat({ id: contact.id, name: contact.name, avatar: contact.avatar || '?' });
                 }
             }
         });
     });
-}
-
-async function syncContacts() {
-    if (!isOnline) { toast('📡 يجب الاتصال بالإنترنت'); return; }
-    toast('📱 جاري طلب الوصول إلى جهات الاتصال...');
-    if (!('contacts' in navigator) || !('ContactsManager' in window)) {
-        toast('⚠️ متصفحك لا يدعم المزامنة التلقائية');
-        setTimeout(() => {
-            if (confirm('⚠️ هل تريد إضافة جهة اتصال يدوياً؟')) {
-                const phone = prompt('📱 أدخل رقم الهاتف:');
-                if (phone && phone.trim()) {
-                    const name = prompt('👤 أدخل الاسم:') || phone;
-                    DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
-                    renderContactsList();
-                    toast('✅ تمت الإضافة');
-                }
-            }
-        }, 1000);
-        return;
-    }
-    try {
-        let contacts = [];
-        try {
-            contacts = await navigator.contacts.select(['name', 'tel'], { multiple: true });
-        } catch (err) {
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                toast('⚠️ لم يتم منح صلاحية الوصول');
-                setTimeout(() => {
-                    if (confirm('❌ هل تريد إضافة جهة اتصال يدوياً؟')) {
-                        const phone = prompt('📱 أدخل رقم الهاتف:');
-                        if (phone && phone.trim()) {
-                            const name = prompt('👤 أدخل الاسم:') || phone;
-                            DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
-                            renderContactsList();
-                            toast('✅ تمت الإضافة');
-                        }
-                    }
-                }, 1000);
-                return;
-            } else throw err;
-        }
-        if (!contacts || contacts.length === 0) {
-            toast('⚠️ لا توجد جهات اتصال في هاتفك');
-            setTimeout(() => {
-                if (confirm('📭 هل تريد إضافة جهة اتصال يدوياً؟')) {
-                    const phone = prompt('📱 أدخل رقم الهاتف:');
-                    if (phone && phone.trim()) {
-                        const name = prompt('👤 أدخل الاسم:') || phone;
-                        DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
-                        renderContactsList();
-                        toast('✅ تمت الإضافة');
-                    }
-                }
-            }, 1000);
-            return;
-        }
-        toast('🔄 جاري حفظ جهات الاتصال...');
-        for (const contact of contacts) {
-            if (contact.tel && contact.tel.length > 0) {
-                const phone = contact.tel[0].replace(/[\s\-\(\)]/g, '');
-                const name = contact.name || '';
-                if (!DB_getContacts().find(c => c.phone === phone)) {
-                    DB_saveContact({ id: 'sc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4), phone: phone, name: name || phone, registered: 0, invite_code: null });
-                }
-            }
-        }
-        if (window.checkRegisteredPhones) {
-            const allPhones = DB_getContacts().map(c => c.phone);
-            if (allPhones.length > 0) {
-                const result = await window.checkRegisteredPhones(allPhones);
-                if (result && result.registered) {
-                    result.registered.forEach(reg => {
-                        const contact = DB_getContacts().find(c => c.phone === reg.phone);
-                        if (contact) DB_saveContact({ ...contact, registered: 1, id: reg.id || contact.id });
-                    });
-                }
-            }
-        }
-        renderContactsList();
-        toast(`✅ تمت مزامنة ${contacts.length} جهة اتصال`);
-    } catch (err) {
-        console.error('❌ فشل المزامنة:', err);
-        toast('⚠️ فشلت المزامنة');
-        setTimeout(() => {
-            if (confirm('⚠️ هل تريد إضافة جهة اتصال يدوياً؟')) {
-                const phone = prompt('📱 أدخل رقم الهاتف:');
-                if (phone && phone.trim()) {
-                    const name = prompt('👤 أدخل الاسم:') || phone;
-                    DB_saveContact({ id: 'c_' + Date.now(), phone: phone.trim(), name: name, registered: 0, invite_code: null });
-                    renderContactsList();
-                    toast('✅ تمت الإضافة');
-                }
-            }
-        }, 1000);
-    }
 }
 
 async function inviteContact(phone) {
@@ -1611,7 +1672,7 @@ $('#syncContactsBtn')?.addEventListener('click', syncContacts);
 $('#backFromContactsBtn')?.addEventListener('click', () => showScreen('chats'));
 $('#contactsMenuBtn')?.addEventListener('click', () => showScreenMenu('contacts'));
 
-// ==================== القصص (مع 24 ساعة وشريط أفقي) ====================
+// ==================== القصص (شريط أفقي - 24 ساعة) ====================
 function cleanupExpiredStories() {
     const now = new Date().toISOString();
     const stories = DB_getStories();
@@ -1634,50 +1695,123 @@ setTimeout(cleanupExpiredStories, 2000);
 function renderStories() {
     const bar = document.getElementById('storyBar');
     if (!bar) return;
+
     const now = new Date().toISOString();
     const allStories = DB_getStories().filter(s => s.expires_at > now);
     const stories = allStories.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    // ===== شريط القصص العلوي (أفقي) =====
     if (stories.length === 0) {
         bar.style.display = 'none';
         const list = document.getElementById('storiesList');
         if (list) {
             list.innerHTML = '<p style="color:var(--text3);padding:8px 16px;">لا توجد قصص حالياً. أضف قصتك الأولى!</p>';
+            list.style.display = 'block';
         }
         return;
     }
+
     bar.style.display = 'flex';
+    bar.style.flexDirection = 'row';
+    bar.style.alignItems = 'center';
+    bar.style.gap = '12px';
     bar.style.overflowX = 'auto';
     bar.style.overflowY = 'hidden';
-    bar.style.scrollBehavior = 'smooth';
-    bar.style.gap = '12px';
     bar.style.padding = '12px 16px';
-    let html = `<div class="story-item story-add" onclick="openStoryCamera()" style="flex-shrink:0;"><div class="story-ring"><span>+</span></div><div class="story-name">إضافة</div></div>`;
+    bar.style.scrollBehavior = 'smooth';
+    bar.style.whiteSpace = 'nowrap';
+    bar.style.background = 'var(--surface)';
+    bar.style.borderBottom = '1px solid var(--border)';
+    bar.style.scrollbarWidth = 'thin';
+
+    let html = `
+        <div class="story-item story-add" onclick="openStoryCamera()" style="flex-shrink:0; display:inline-flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;">
+            <div class="story-ring" style="width:60px; height:60px; border-radius:50%; background:var(--surface3); border:2px dashed var(--accent); display:flex; align-items:center; justify-content:center;">
+                <span style="font-size:28px; color:var(--accent);">+</span>
+            </div>
+            <div class="story-name" style="font-size:10px; color:var(--text3); text-align:center; max-width:65px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">إضافة</div>
+        </div>
+    `;
+
     const recentStories = stories.slice(0, 10);
     recentStories.forEach((s, i) => {
         const isViewed = s.isViewed || false;
         html += `
-            <div class="story-item" onclick="openStoryViewer(${i})" data-story="${i}" style="flex-shrink:0;">
-                <div class="story-ring ${isViewed ? 'viewed' : ''}">
-                    <div class="story-avatar" style="background:${s.color || '#ff0050'};">${s.avatar || '📷'}</div>
+            <div class="story-item" onclick="openStoryViewer(${i})" data-story="${i}" style="flex-shrink:0; display:inline-flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer;">
+                <div class="story-ring ${isViewed ? 'viewed' : ''}" style="width:60px; height:60px; border-radius:50%; padding:3px; background:${isViewed ? 'var(--surface3)' : 'linear-gradient(135deg, #ff0050, #ff7b00)'}; display:flex; align-items:center; justify-content:center;">
+                    <div class="story-avatar" style="width:52px; height:52px; border-radius:50%; background:${s.color || '#ff0050'}; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; color:#fff; border:2px solid var(--bg);">
+                        ${s.avatar || '📷'}
+                    </div>
                 </div>
-                <div class="story-name">${esc(s.name || 'قصة')}</div>
-                <div style="font-size:8px;color:var(--text3);text-align:center;">${timeAgo(s.time)}</div>
+                <div class="story-name" style="font-size:10px; color:var(--text3); text-align:center; max-width:65px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(s.name || 'قصة')}</div>
+                <div style="font-size:8px; color:var(--text3); text-align:center;">${timeAgo(s.time)}</div>
             </div>
         `;
     });
+
     bar.innerHTML = html;
+
+    // ===== قائمة معاينات القصص (أفقية مع تمرير) =====
     const list = document.getElementById('storiesList');
     if (list) {
+        list.style.display = 'flex';
+        list.style.flexDirection = 'row';
+        list.style.alignItems = 'stretch';
+        list.style.gap = '12px';
+        list.style.overflowX = 'auto';
+        list.style.overflowY = 'hidden';
+        list.style.padding = '8px 16px 12px 16px';
+        list.style.scrollBehavior = 'smooth';
+        list.style.whiteSpace = 'nowrap';
+        list.style.background = 'transparent';
+        list.style.flexWrap = 'nowrap';
+
         list.innerHTML = stories.map(s => `
-            <div class="story-card" onclick="openStoryViewer(${stories.indexOf(s)})">
-                <div class="story-preview">
-                    ${s.type === 'image' ? `<img src="${s.content}" alt="قصة" loading="lazy">` :
-                    s.type === 'video' ? `<video src="${s.content}" muted></video>` :
+            <div class="story-card" onclick="openStoryViewer(${stories.indexOf(s)})" style="
+                flex-shrink: 0;
+                width: 150px;
+                min-width: 140px;
+                max-width: 180px;
+                background: var(--surface);
+                border-radius: 16px;
+                padding: 10px;
+                border: 1px solid var(--border);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+                transition: 0.2s;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            ">
+                <div class="story-preview" style="
+                    width: 100%;
+                    height: 100px;
+                    border-radius: 12px;
+                    background: var(--surface3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 32px;
+                    position: relative;
+                    overflow: hidden;
+                ">
+                    ${s.type === 'image' ? `<img src="${s.content}" alt="قصة" loading="lazy" style="width:100%; height:100%; object-fit:cover; border-radius:12px;">` :
+                    s.type === 'video' ? `<video src="${s.content}" muted style="width:100%; height:100%; object-fit:cover; border-radius:12px;"></video>` :
                     `<span style="font-size:40px;">📝</span>`}
-                    ${s.expires_at ? `<div style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;padding:2px 6px;border-radius:10px;">${Math.ceil((new Date(s.expires_at) - new Date()) / 3600000)} ساعة</div>` : ''}
+                    ${s.expires_at ? `<div style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.7); color:#fff; font-size:9px; padding:2px 8px; border-radius:12px; backdrop-filter:blur(4px);">${Math.ceil((new Date(s.expires_at) - new Date()) / 3600000)} ساعة</div>` : ''}
                 </div>
-                <div class="story-meta">
-                    <span>${esc(s.name)}</span>
+                <div class="story-meta" style="
+                    width: 100%;
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 11px;
+                    color: var(--text3);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                ">
+                    <span style="font-weight:600; color:var(--text);">${esc(s.name)}</span>
                     <span>${timeAgo(s.time)}</span>
                 </div>
             </div>
@@ -2094,9 +2228,7 @@ async function init() {
             console.log('✅ تم تعيين المستخدم في inMemoryDB');
         }
 
-        // ============================================================
-        // إنشاء محادثة فريق RamzApp (مرة واحدة)
-        // ============================================================
+        // محادثة فريق RamzApp
         const TEAM_USER_ID = 'ramzapp_team';
         const TEAM_CHAT_ID = 'ramzapp_team';
         const existingChat = DB_getChats().find(c => c.id === TEAM_CHAT_ID);
@@ -2201,6 +2333,22 @@ async function init() {
                         console.log(`✅ تم جلب ${allUsers.length} مستخدم مسجل`);
                     }
                 }
+                if (window.fetchUserContacts) {
+                    try {
+                        const serverContacts = await window.fetchUserContacts(user.id);
+                        if (serverContacts && serverContacts.length > 0) {
+                            for (const sc of serverContacts) {
+                                const existing = DB_getContacts().find(c => c.id === sc.id);
+                                if (!existing) {
+                                    DB_saveContact(sc);
+                                } else {
+                                    DB_saveContact({ ...existing, ...sc });
+                                }
+                            }
+                            console.log(`✅ تم جلب ${serverContacts.length} جهة اتصال من الخادم`);
+                        }
+                    } catch (e) { console.warn('⚠️ فشل جلب جهات الاتصال من الخادم', e); }
+                }
                 if (window.syncStories) {
                     try { await window.syncStories(); } catch(e) { console.warn('⚠️ فشل مزامنة القصص', e); }
                 }
@@ -2223,9 +2371,7 @@ async function init() {
         console.log('📌 [4] تهيئة التشفير...');
         try {
             await initEncryption();
-        } catch (e) {
-            console.warn('⚠️ فشل تهيئة التشفير:', e);
-        }
+        } catch (e) { console.warn('⚠️ فشل تهيئة التشفير:', e); }
 
         if (typeof window.ensureFontAwesome === 'function') {
             window.ensureFontAwesome();
@@ -2239,6 +2385,12 @@ async function init() {
         if (isOnline && window.syncAllPendingMessages) {
             console.log('📌 [5] بدء المزامنة التلقائية...');
             setTimeout(() => window.syncAllPendingMessages(), 1500);
+        }
+
+        if (isOnline && typeof syncContacts === 'function') {
+            setTimeout(() => {
+                syncContacts().catch(() => {});
+            }, 3000);
         }
 
         if (typeof renderStories === 'function') renderStories();
@@ -2262,6 +2414,22 @@ async function init() {
         }
     }
 }
+
+// مستمع أحداث الشبكة
+window.addEventListener('online', () => {
+    isOnline = true;
+    updateConnectionIndicator();
+    toast('🟢 تم الاتصال بالإنترنت - جاري المزامنة...');
+    if (window.syncAllPendingMessages) window.syncAllPendingMessages();
+    if (window.syncStories) window.syncStories();
+    if (typeof syncContacts === 'function') {
+        setTimeout(() => syncContacts().catch(() => {}), 1000);
+    }
+    if (currentChatId) subscribeToCurrentChat();
+    if (window.setUserOnlineStatus) {
+        window.setUserOnlineStatus(true).catch(() => {});
+    }
+});
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
