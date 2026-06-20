@@ -5,16 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>💬 RamzApp | تطبيق المراسلة المتكامل</title>
 
-    <!-- تحميل Supabase أولاً -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- ===== PWA ===== -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ff0050">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RamzApp">
+    <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png">
 
-    <!-- FontAwesome – تحميل متعدد المصادر -->
+    <!-- ===== FontAwesome (تحميل متعدد المصادر) ===== -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://use.fontawesome.com">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" onload="console.log('✅ FontAwesome loaded from cdnjs')" onerror="console.warn('⚠️ FontAwesome CDN failed')">
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.0/css/all.css" onload="console.log('✅ FontAwesome loaded from use.fontawesome.com')" onerror="console.warn('⚠️ FontAwesome alternative failed')">
 
+    <!-- ===== Google Fonts ===== -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- ===== تحميل Supabase مسبقاً ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <style>
         /* ======================================================================
@@ -53,10 +62,16 @@
         }
 
         /* ======================================================================
-                   نظام الاحتياطي للأيقونات (يُفعَّل فقط عند فشل FontAwesome)
+                   نظام الاحتياطي للأيقونات (في حال فشل FontAwesome)
                    ====================================================================== */
-        body.no-fontawesome .fa, body.no-fontawesome .fas, body.no-fontawesome .far, body.no-fontawesome .fab,
-        body.fa-fallback .fa, body.fa-fallback .fas, body.fa-fallback .far, body.fa-fallback .fab {
+        body.no-fontawesome .fa,
+        body.no-fontawesome .fas,
+        body.no-fontawesome .far,
+        body.no-fontawesome .fab,
+        body.fa-fallback .fa,
+        body.fa-fallback .fas,
+        body.fa-fallback .far,
+        body.fa-fallback .fab {
             font-family: 'Cairo', 'Segoe UI', 'Arial', sans-serif !important;
             font-weight: normal !important;
             font-style: normal !important;
@@ -1179,16 +1194,19 @@
         }
 
         /* ======================================================================
-                   شريط القصص (Story Bar)
+                   شريط القصص (Story Bar) – أفقي
                    ====================================================================== */
         .story-bar {
             padding: 12px 14px;
             border-bottom: 1px solid var(--border);
             overflow-x: auto;
+            overflow-y: hidden;
             white-space: nowrap;
             display: flex;
             gap: 12px;
             background: var(--surface);
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
         }
         .story-bar::-webkit-scrollbar {
             height: 0;
@@ -1201,6 +1219,7 @@
             cursor: pointer;
             min-width: 65px;
             transition: 0.2s;
+            flex-shrink: 0;
         }
         .story-item:active {
             transform: scale(0.95);
@@ -1248,50 +1267,55 @@
         }
 
         /* ======================================================================
-                   قسم القصص في شاشة التحديثات
+                   قائمة معاينات القصص (أفقية)
                    ====================================================================== */
-        .stories-actions {
-            padding: 8px 16px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .stories-actions .promo-btn {
-            flex: 1;
-            min-width: 100px;
-        }
         #storiesList {
-            padding: 8px 16px;
+            padding: 8px 16px 12px;
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: row;
+            align-items: stretch;
             gap: 12px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            white-space: nowrap;
+            background: transparent;
+            flex-wrap: nowrap;
+        }
+        #storiesList::-webkit-scrollbar {
+            height: 0;
         }
         .story-card {
+            flex-shrink: 0;
+            width: 150px;
+            min-width: 140px;
+            max-width: 180px;
             background: var(--surface);
             border-radius: 16px;
-            padding: 12px;
+            padding: 10px;
             border: 1px solid var(--border);
-            width: calc(50% - 6px);
-            min-width: 140px;
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 6px;
             cursor: pointer;
             transition: 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
         .story-card:hover {
             border-color: var(--accent);
         }
         .story-card .story-preview {
             width: 100%;
-            height: 80px;
+            height: 100px;
             border-radius: 12px;
             background: var(--surface3);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 32px;
+            position: relative;
+            overflow: hidden;
         }
         .story-card .story-preview img,
         .story-card .story-preview video {
@@ -1306,6 +1330,13 @@
             justify-content: space-between;
             font-size: 11px;
             color: var(--text3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .story-card .story-meta span:first-child {
+            font-weight: 600;
+            color: var(--text);
         }
 
         /* ======================================================================
@@ -1726,7 +1757,7 @@
         }
 
         /* ======================================================================
-                   مودالات المجموعات والقنوات (إضافية)
+                   مودالات المجموعات والقنوات
                    ====================================================================== */
         .group-modal,
         .channel-modal {
@@ -1774,6 +1805,30 @@
         }
 
         /* ======================================================================
+                   زر تثبيت PWA
+                   ====================================================================== */
+        #installAppBtn {
+            display: none;
+            margin: 8px 16px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            transition: 0.2s;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        #installAppBtn:hover {
+            transform: scale(1.02);
+        }
+
+        /* ======================================================================
                    توافق مع الشاشات الصغيرة
                    ====================================================================== */
         @media (max-width: 380px) {
@@ -1792,6 +1847,10 @@
             .group-card,
             .channel-card {
                 width: 300px;
+            }
+            .story-card {
+                width: 120px;
+                min-width: 110px;
             }
         }
     </style>
@@ -2038,7 +2097,7 @@
         </div>
     </div>
 
-    <!-- مودال تفاصيل القناة -->
+    <!-- مودال تفاصيل القناة (سيتم استبداله بالانتقال إلى channel-feed.html) -->
     <div class="modal-overlay" id="channelDetailsModal">
         <button class="modal-close" id="closeChannelDetailsBtn">&times;</button>
         <div class="modal-card" style="max-width: 360px; text-align: right;">
@@ -2082,12 +2141,15 @@
             <button class="call-action-btn call-end" id="callEndBtn"><i class="fas fa-phone-slash"></i></button>
             <button class="call-action-btn call-speaker" id="callSpeakerBtn"><i class="fas fa-volume-up"></i></button>
         </div>
-        <!-- عناصر الفيديو للمكالمات المرئية (يتم إظهارها عبر JS) -->
+        <!-- عناصر الفيديو للمكالمات المرئية -->
         <div style="display:none;position:relative;width:100%;max-width:400px;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin-top:20px;" id="videoContainer">
             <video id="remoteVideo" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
             <video id="localVideo" autoplay playsinline muted style="position:absolute;bottom:10px;right:10px;width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid #fff;display:none;"></video>
         </div>
     </div>
+
+    <!-- زر تثبيت PWA -->
+    <button id="installAppBtn"><i class="fas fa-download"></i> تثبيت التطبيق</button>
 
     <!-- ================================================================
          الشريط السفلي (Bottom Navigation) – 5 أزرار فقط
@@ -2130,6 +2192,7 @@
                 // المستخدم موجود – نعرض التطبيق
                 document.getElementById('appContainer').style.display = 'flex';
                 document.getElementById('bottomNav').style.display = 'flex';
+                document.getElementById('installAppBtn').style.display = 'flex';
 
                 // تعيين المستخدم في inMemoryDB (حتى قبل تحميل common.js)
                 if (window.inMemoryDB) {
@@ -2150,5 +2213,48 @@
         })();
     </script>
 
+    <!-- ===== تسجيل Service Worker (PWA) ===== -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('✅ Service Worker registered successfully:', registration);
+                    })
+                    .catch(function(err) {
+                        console.warn('⚠️ Service Worker registration failed:', err);
+                    });
+            });
+        }
+
+        // قبل تثبيت PWA
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('installAppBtn');
+            if (btn) {
+                btn.style.display = 'flex';
+                btn.addEventListener('click', () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then((choiceResult) => {
+                            if (choiceResult.outcome === 'accepted') {
+                                console.log('✅ تم تثبيت التطبيق');
+                                toast('✅ تم تثبيت RamzApp على جهازك');
+                            }
+                            deferredPrompt = null;
+                        });
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('✅ RamzApp installed successfully');
+            toast('🎉 شكراً لتثبيت RamzApp!');
+        });
+    </script>
+
 </body>
-    </html>
+        </html>
