@@ -1,64 +1,116 @@
-// ==================== supabase.js - الإصدار النهائي الكامل v4.0 ====================
-// وسيط Supabase المتكامل: المصادقة، المزامنة الفورية، إدارة البيانات، القصص، القنوات، المكالمات، الملفات
+// ======================================================================
+// supabase.js - الإصدار النهائي v5.6 (وسيط مؤقت مع تحميل ديناميكي)
+// ======================================================================
 
 (function() {
+    'use strict';
+
     // ======================================================================
-    // التكوين الأساسي – استخدم مفاتيح مشروعك الخاص
+    // التكوين الأساسي
     // ======================================================================
     const SUPABASE_URL = 'https://serlegwdzjulfcxabxzv.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx';
 
     let supabase = null;
     let isOnline = navigator.onLine;
-    let initError = null;
-    let activeChannels = {};
     let isInitialized = false;
+    let activeChannels = {};
+    let loadingPromise = null;
+    let initAttempts = 0;
+    const MAX_INIT_ATTEMPTS = 5;
 
     // ======================================================================
-    // تهيئة عميل Supabase (يدعم عدة طرق تحميل)
+    // تحميل مكتبة Supabase ديناميكياً (إذا لم تكن محملة مسبقاً)
     // ======================================================================
-    function initSupabase() {
+    async function loadSupabaseLibrary() {
+        if (loadingPromise) return loadingPromise;
+        loadingPromise = new Promise((resolve) => {
+            // 1. تحقق من وجود المكتبة مسبقاً (من script tag)
+            if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
+                resolve(true);
+                return;
+            }
+            if (window.supabase && typeof window.supabase.createClient === 'function') {
+                resolve(true);
+                return;
+            }
+
+            // 2. تحميل من CDN
+            console.log('⏳ تحميل مكتبة Supabase من CDN...');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+            script.crossOrigin = 'anonymous';
+            script.onload = () => {
+                if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
+                    console.log('✅ تم تحميل Supabase عبر UMD');
+                    resolve(true);
+                } else if (window.supabase && typeof window.supabase.createClient === 'function') {
+                    console.log('✅ تم تحميل Supabase عبر window.supabase');
+                    resolve(true);
+                } else {
+                    console.warn('⚠️ تحميل Supabase فشل (المكتبة غير معرفة)');
+                    resolve(false);
+                }
+            };
+            script.onerror = () => {
+                console.warn('⚠️ تعذر تحميل سكربت Supabase');
+                resolve(false);
+            };
+            document.head.appendChild(script);
+        });
+        return loadingPromise;
+    }
+
+    // ======================================================================
+    // تهيئة عميل Supabase
+    // ======================================================================
+    async function initSupabase() {
+        if (initAttempts >= MAX_INIT_ATTEMPTS) {
+            console.warn('⚠️ تم تجاوز الحد الأقصى لمحاولات تهيئة Supabase');
+            return false;
+        }
+        initAttempts++;
+
+        const loaded = await loadSupabaseLibrary();
+        if (!loaded) {
+            supabase = null;
+            return false;
+        }
+
         try {
-            // 1. عبر supabaseJs (UMD من script tag)
             if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
                 supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
-                console.log('✅ Supabase client initialized via UMD (supabaseJs)');
-                return true;
-            }
-            // 2. عبر window.supabase (مكتبة محملة مسبقاً)
-            if (window.supabase && typeof window.supabase.createClient === 'function') {
+            } else if (window.supabase && typeof window.supabase.createClient === 'function') {
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                console.log('✅ Supabase client initialized via window.supabase');
-                return true;
+            } else {
+                throw new Error('لا يمكن تهيئة عميل Supabase');
             }
-            // 3. استيراد ديناميكي (كحل أخير)
-            console.warn('⚠️ Supabase not loaded via script, attempting dynamic import...');
-            import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
-                .then(module => {
-                    supabase = module.createClient(SUPABASE_URL, SUPABASE_KEY);
-                    console.log('✅ Supabase client initialized via dynamic import');
-                    // إشعار للوظائف المعتمدة على supabase
-                    if (window._onSupabaseReady) window._onSupabaseReady();
-                })
-                .catch(err => {
-                    initError = err;
-                    console.error('❌ Dynamic import failed:', err);
-                    supabase = null;
-                });
-            return false;
+            console.log('✅ Supabase client initialized successfully');
+            isInitialized = true;
+            window.supabaseClient = supabase;
+            return true;
         } catch (e) {
-            initError = e;
-            console.error('❌ Supabase initialization error:', e);
+            console.warn('⚠️ Supabase initialization failed:', e.message);
             supabase = null;
+            window.supabaseClient = null;
             return false;
         }
     }
 
-    // تهيئة فورية
-    const initResult = initSupabase();
-    if (initResult) isInitialized = true;
+    // ======================================================================
+    // التأكد من جاهزية العميل (مع إعادة المحاولة)
+    // ======================================================================
+    function ensureSupabase() {
+        if (supabase) return supabase;
+        // محاولة التهيئة فوراً إذا لم تكن جاهزة (غير متزامنة)
+        if (!loadingPromise) {
+            initSupabase().catch(() => {});
+        }
+        return supabase;
+    }
 
-    // تعيين العميل على window للاستخدام العام
+    // تهيئة فورية (غير متزامنة)
+    initSupabase().catch(() => {});
     window.supabaseClient = supabase;
 
     // ======================================================================
@@ -66,282 +118,454 @@
     // ======================================================================
     function getCurrentUserId() {
         const user = JSON.parse(localStorage.getItem('ramzapp_user') || 'null');
-        return user?.id || null;
+        return user?.id || user?.phone || null;
     }
 
     function getCurrentUser() {
         return JSON.parse(localStorage.getItem('ramzapp_user') || 'null');
     }
 
-    // تحديث حالة الاتصال في جدول users
-    async function updatePresence(status) {
-        if (!supabase) return;
-        const userId = getCurrentUserId();
-        if (!userId) return;
-        try {
-            await supabase
-                .from('users')
-                .update({ is_online: status, last_seen: new Date().toISOString() })
-                .eq('id', userId);
-        } catch (e) { /* تجاهل */ }
-    }
-
-    // دوال وهمية (fallback) في حال عدم توفر Supabase
-    function createFallbackFunction(name) {
-        return function(...args) {
-            console.warn(`⚠️ ${name} called but Supabase is not available. Returning local data.`);
-            if (name.startsWith('fetch') || name.startsWith('get') || name.startsWith('check')) {
-                return Promise.resolve([]);
-            }
-            return Promise.resolve(null);
-        };
+    function normalizePhone(phone) {
+        if (!phone) return phone;
+        let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+        if (!cleaned.startsWith('+')) {
+            cleaned = '+' + cleaned;
+        }
+        return cleaned;
     }
 
     // ======================================================================
     // 1. دوال المصادقة (Auth)
     // ======================================================================
 
-    // تسجيل الدخول بالبريد وكلمة المرور
-    window.signInWithEmail = async function(email, password) {
-        if (!supabase) throw new Error('📡 Supabase غير متاح.');
-        if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        return data.user;
-    };
+    // ----- البريد الإلكتروني -----
 
-    // إنشاء حساب جديد بالبريد وكلمة المرور
     window.signUpWithEmail = async function(email, password, name) {
-        if (!supabase) throw new Error('📡 Supabase غير متاح.');
+        const client = ensureSupabase();
+        if (!client) throw new Error('📡 Supabase غير متاح.');
         if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
+
+        // 1. تسجيل المستخدم في Supabase Auth
+        const { data: authData, error: authError } = await client.auth.signUp({
+            email: email,
+            password: password,
             options: { data: { name: name || 'مستخدم' } }
         });
-        if (error) throw error;
-        if (data.user) {
-            await supabase.from('users').upsert({
-                id: data.user.id,
+        if (authError) throw authError;
+        if (!authData.user) throw new Error('فشل إنشاء الحساب');
+
+        const userId = authData.user.id;
+
+        // 2. إدراج المستخدم في جدول users
+        const { error: insertError } = await client
+            .from('users')
+            .insert({
+                id: userId,
                 email: email,
                 name: name || 'مستخدم',
-                avatar: '👤',
+                jid: userId + '@c.us',
+                lid: 'lid_' + Math.random().toString(36).substr(2, 8),
+                avatar_url: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name || 'مستخدم') + '&background=ff0050&color=fff&size=200',
+                public_key: null,
                 is_online: true,
-                last_seen: new Date().toISOString()
+                last_seen: new Date().toISOString(),
+                created_at: new Date().toISOString()
             });
+        if (insertError) {
+            console.error('❌ فشل إدراج المستخدم:', insertError);
+            throw new Error('فشل حفظ بيانات المستخدم');
         }
-        return data.user;
+
+        // 3. تخزين بيانات المستخدم محلياً
+        const userData = {
+            id: userId,
+            email: email,
+            name: name || 'مستخدم',
+            avatar: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name || 'مستخدم') + '&background=ff0050&color=fff&size=200'
+        };
+        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+        return userData;
     };
 
-    // تسجيل الدخول برقم الهاتف (أو إنشاء حساب تلقائي)
-    window.signInWithPhone = async function(phoneNumber, name) {
-        if (!supabase) throw new Error('📡 Supabase غير متاح.');
+    window.signInWithEmail = async function(email, password) {
+        const client = ensureSupabase();
+        if (!client) throw new Error('📡 Supabase غير متاح.');
         if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
-        const cleanPhone = phoneNumber.replace(/[\s\-\(\)]/g, '');
-        let { data: existingUser, error: findError } = await supabase
+
+        const { data: authData, error: authError } = await client.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+        if (authError) throw authError;
+        if (!authData.user) throw new Error('المستخدم غير موجود');
+
+        const userId = authData.user.id;
+
+        // جلب بيانات المستخدم من جدول users
+        let { data: userData, error: userError } = await client
             .from('users')
             .select('*')
-            .eq('phone', cleanPhone)
-            .maybeSingle();
-        if (findError && findError.code !== 'PGRST116') throw findError;
-        let user;
-        if (existingUser) {
-            user = existingUser;
-        } else {
-            const newName = name || 'مستخدم_' + cleanPhone.slice(-4);
-            const { data: newUser, error: insertError } = await supabase
+            .eq('id', userId)
+            .single();
+
+        if (userError || !userData) {
+            // إذا لم يكن في جدول users، نحاول إنشاؤه تلقائياً
+            const { error: insertError } = await client
                 .from('users')
                 .insert({
-                    id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
-                    phone: cleanPhone,
-                    name: newName,
-                    avatar: newName.charAt(0),
+                    id: userId,
+                    email: email,
+                    name: authData.user.user_metadata?.name || 'مستخدم',
+                    jid: userId + '@c.us',
+                    lid: 'lid_' + Math.random().toString(36).substr(2, 8),
+                    avatar_url: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(authData.user.user_metadata?.name || 'مستخدم') + '&background=ff0050&color=fff&size=200',
+                    public_key: null,
                     is_online: true,
-                    last_seen: new Date().toISOString()
-                })
-                .select()
+                    last_seen: new Date().toISOString(),
+                    created_at: new Date().toISOString()
+                });
+            if (insertError) throw new Error('فشل حفظ بيانات المستخدم');
+
+            // جلب البيانات مرة أخرى
+            const { data: newUserData } = await client
+                .from('users')
+                .select('*')
+                .eq('id', userId)
                 .single();
-            if (insertError) throw insertError;
-            user = newUser;
+            userData = newUserData;
         }
-        await supabase.from('users').update({
-            is_online: true,
-            last_seen: new Date().toISOString()
-        }).eq('id', user.id);
-        return user;
+
+        // تحديث حالة الاتصال
+        await client
+            .from('users')
+            .update({ is_online: true, last_seen: new Date().toISOString() })
+            .eq('id', userId);
+
+        const result = {
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            avatar: userData.avatar_url
+        };
+        localStorage.setItem('ramzapp_user', JSON.stringify(result));
+        return result;
     };
 
-    // الدخول كضيف
-    window.signInAsGuest = async function() {
-        if (!supabase) throw new Error('📡 Supabase غير متاح.');
+    // ----- رقم الهاتف -----
+
+    window.signUpWithPhone = async function(phone, name, publicKey) {
+        const client = ensureSupabase();
+        if (!client) throw new Error('📡 Supabase غير متاح.');
         if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
+
+        const cleanPhone = normalizePhone(phone);
+        const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+        // التحقق من عدم وجود الرقم
+        const { data: existing, error: findError } = await client
+            .from('users')
+            .select('phone')
+            .eq('phone', cleanPhone)
+            .maybeSingle();
+
+        if (findError && findError.code !== 'PGRST116') throw findError;
+        if (existing) throw new Error('⚠️ هذا الرقم مسجل بالفعل');
+
+        // إدراج المستخدم
+        const { data: newUser, error: insertError } = await client
+            .from('users')
+            .insert({
+                phone: cleanPhone,
+                jid: cleanPhone + '@c.us',
+                lid: 'lid_' + Math.random().toString(36).substr(2, 8),
+                name: name || 'مستخدم',
+                avatar_url: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name || 'مستخدم') + '&background=ff0050&color=fff&size=200',
+                public_key: publicKey || null,
+                status: 'مرحباً!',
+                is_online: true,
+                last_seen: new Date().toISOString(),
+                created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+        if (insertError) throw insertError;
+
+        const userData = {
+            id: newUser.phone,
+            phone: newUser.phone,
+            name: newUser.name,
+            avatar: newUser.avatar_url,
+            public_key: newUser.public_key
+        };
+        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+        return userData;
+    };
+
+    window.signInWithPhone = async function(phone) {
+        const client = ensureSupabase();
+        if (!client) throw new Error('📡 Supabase غير متاح.');
+        if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
+
+        const cleanPhone = normalizePhone(phone);
+        console.log('🔍 جاري البحث عن الرقم (لتسجيل الدخول):', cleanPhone);
+
+        const { data: user, error } = await client
+            .from('users')
+            .select('phone, name, avatar_url, public_key, is_online, last_seen')
+            .eq('phone', cleanPhone)
+            .single();
+
+        if (error) {
+            console.error('❌ خطأ في الاستعلام:', error);
+            throw new Error('⚠️ هذا الرقم غير مسجل في التطبيق');
+        }
+
+        if (!user) {
+            console.error('❌ المستخدم غير موجود:', cleanPhone);
+            throw new Error('⚠️ هذا الرقم غير مسجل في التطبيق');
+        }
+
+        console.log('✅ تم العثور على المستخدم:', user.name);
+
+        // تحديث حالة الاتصال
+        await client
+            .from('users')
+            .update({ is_online: true, last_seen: new Date().toISOString() })
+            .eq('phone', cleanPhone);
+
+        const userData = {
+            id: user.phone,
+            phone: user.phone,
+            name: user.name,
+            avatar: user.avatar_url,
+            public_key: user.public_key
+        };
+        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+        return userData;
+    };
+
+    // ----- ضيف -----
+
+    window.signInAsGuest = async function() {
+        const client = ensureSupabase();
+        if (!client) throw new Error('📡 Supabase غير متاح.');
+        if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
+
         const guestId = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
-        const guestEmail = `guest_${guestId}@ramzapp.local`;
-        const guestPassword = 'Guest@' + guestId;
-        let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: guestEmail,
-            password: guestPassword
-        });
-        let user;
-        if (signInError) {
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                email: guestEmail,
-                password: guestPassword,
-                options: { data: { name: 'زائر' } }
-            });
-            if (signUpError) throw signUpError;
-            user = signUpData.user;
-            await supabase.from('users').upsert({
-                id: user.id,
-                email: guestEmail,
-                name: 'زائر',
-                avatar: '👤',
+        const guestName = 'زائر_' + Math.random().toString(36).substr(2, 4);
+
+        const { data: newUser, error } = await client
+            .from('users')
+            .insert({
+                id: guestId,
+                phone: guestId,
+                jid: guestId + '@c.us',
+                lid: 'lid_guest_' + Math.random().toString(36).substr(2, 6),
+                name: guestName,
+                avatar_url: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(guestName) + '&background=666&color=fff&size=200',
+                public_key: null,
                 is_guest: true,
                 is_online: true,
                 last_seen: new Date().toISOString()
-            });
-        } else {
-            user = signInData.user;
-            await supabase.from('users').update({
-                is_online: true,
-                last_seen: new Date().toISOString()
-            }).eq('id', user.id);
-        }
-        return user;
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        const userData = {
+            id: newUser.id,
+            phone: null,
+            name: newUser.name,
+            avatar: newUser.avatar_url,
+            public_key: null,
+            is_guest: true
+        };
+        localStorage.setItem('ramzapp_user', JSON.stringify(userData));
+        return userData;
     };
 
-    // تسجيل الخروج
+    // ----- تسجيل الخروج -----
+
     window.signOut = async function() {
+        const client = ensureSupabase();
         const userId = getCurrentUserId();
-        if (userId && supabase) {
-            await supabase.from('users').update({
-                is_online: false,
-                last_seen: new Date().toISOString()
-            }).eq('id', userId);
+        if (userId && client) {
+            await client
+                .from('users')
+                .update({ is_online: false, last_seen: new Date().toISOString() })
+                .eq('id', userId)
+                .catch(() => {});
+            try {
+                await client.auth.signOut();
+            } catch(e) {}
         }
-        if (supabase) await supabase.auth.signOut();
         localStorage.removeItem('ramzapp_user');
-    };
-
-    // الحصول على الجلسة الحالية
-    window.getCurrentSession = async function() {
-        if (!supabase) return null;
-        const { data } = await supabase.auth.getSession();
-        return data.session;
+        // إلغاء الاشتراك من جميع القنوات
+        for (const key in activeChannels) {
+            client?.removeChannel(activeChannels[key]);
+            delete activeChannels[key];
+        }
     };
 
     // ======================================================================
-    // 2. المزامنة الفورية (Realtime) – قنوات المحادثات
+    // 2. دوال الاستعلام عن المستخدمين
+    // ======================================================================
+
+    window.fetchUserByPhone = async function(phone) {
+        const client = ensureSupabase();
+        if (!client || !isOnline) return null;
+        const cleanPhone = normalizePhone(phone);
+        const { data, error } = await client
+            .from('users')
+            .select('id, phone, name, avatar_url, public_key, is_online, last_seen')
+            .eq('phone', cleanPhone)
+            .maybeSingle();
+        if (error || !data) return null;
+        return data;
+    };
+
+    window.fetchUsersByPhones = async function(phones) {
+        const client = ensureSupabase();
+        if (!client || !isOnline || !phones?.length) return [];
+        const cleanPhones = phones.map(p => normalizePhone(p));
+        const { data, error } = await client
+            .from('users')
+            .select('id, phone, name, avatar_url, public_key, is_online, last_seen')
+            .in('phone', cleanPhones);
+        if (error) return [];
+        return data || [];
+    };
+
+    window.fetchUserById = async function(userId) {
+        const client = ensureSupabase();
+        if (!client || !isOnline) return null;
+        const { data, error } = await client
+            .from('users')
+            .select('id, phone, name, avatar_url, public_key, is_online, last_seen')
+            .eq('id', userId)
+            .single();
+        if (error || !data) return null;
+        return data;
+    };
+
+    // ======================================================================
+    // 3. الوسيط (Broker) – Realtime لتوجيه الرسائل
     // ======================================================================
 
     window.activeChannels = activeChannels;
 
-    // الاشتراك في محادثة معينة
     window.subscribeToChat = function(chatId, onMessage, onTyping) {
-        if (!supabase || !isOnline) {
-            console.warn('⚠️ Supabase غير متاح أو غير متصل، لن يتم الاشتراك في الوقت الفعلي');
+        const client = ensureSupabase();
+        if (!client || !isOnline || !chatId) {
+            console.warn('⚠️ لا يمكن الاشتراك: Supabase غير متاح أو غير متصل');
             return null;
         }
-        if (!chatId) return null;
+
         if (activeChannels[chatId]) {
-            supabase.removeChannel(activeChannels[chatId]);
+            client.removeChannel(activeChannels[chatId]);
             delete activeChannels[chatId];
         }
+
         const userId = getCurrentUserId();
-        const channel = supabase.channel(`chat:${chatId}`, {
-            config: {
-                broadcast: { self: false },
-                presence: { key: userId || 'anonymous' }
-            }
+        const channel = client.channel(`chat:${chatId}`, {
+            config: { broadcast: { self: false } }
         });
+
         // استقبال الرسائل الجديدة
         channel.on('broadcast', { event: 'new_message' }, (payload) => {
             if (!isOnline) return;
-            const msg = {
-                ...payload.payload,
-                chat_id: chatId,
-                sync_status: 'delivered',
-                status: 'delivered'
-            };
-            if (msg.sender_id !== userId) {
-                window.markMessagesAsRead?.(chatId, [msg.id]);
-            }
-            onMessage?.(msg);
+            const msg = payload.payload;
+            if (!msg.chat_id) msg.chat_id = chatId;
+            if (typeof onMessage === 'function') onMessage(msg);
         });
+
         // استقبال إشارات الكتابة
         channel.on('broadcast', { event: 'typing' }, (payload) => {
             if (!isOnline) return;
             const { userId: senderId, isTyping } = payload.payload;
-            if (senderId !== userId) {
-                onTyping?.(senderId, isTyping);
+            if (senderId !== userId && typeof onTyping === 'function') {
+                onTyping(senderId, isTyping);
             }
         });
-        channel.subscribe(async (status) => {
+
+        // استقبال إشارات القراءة
+        channel.on('broadcast', { event: 'read_receipt' }, (payload) => {
+            if (!isOnline) return;
+            const { messageId, readerId } = payload.payload;
+            if (typeof window.updateMessageStatus === 'function') {
+                window.updateMessageStatus(messageId, { status: 'read' });
+            }
+        });
+
+        channel.subscribe((status) => {
             if (status === 'SUBSCRIBED') {
                 activeChannels[chatId] = channel;
-                await fetchPendingMessages(chatId);
+                console.log(`✅ مشترك في قناة: ${chatId}`);
+                window.fetchPendingMessages(chatId);
+            } else if (status === 'CHANNEL_ERROR') {
+                console.warn(`⚠️ خطأ في قناة: ${chatId}`);
             }
         });
+
         return channel;
     };
 
-    // إلغاء الاشتراك من محادثة
     window.unsubscribeFromChat = function(chatId) {
+        const client = ensureSupabase();
         if (activeChannels[chatId]) {
-            if (supabase) supabase.removeChannel(activeChannels[chatId]);
+            client?.removeChannel(activeChannels[chatId]);
             delete activeChannels[chatId];
             return true;
         }
         return false;
     };
 
-    // إرسال رسالة عبر Realtime (وتخزينها مؤقتاً)
-    window.sendMessageRealtime = async function(message) {
-        if (!supabase || !isOnline) return { success: false, offline: true };
-        const chatId = message.chat_id || message.sid;
+    window.sendMessageRealtime = async function(msg) {
+        const client = ensureSupabase();
+        if (!client || !isOnline) return { success: false, offline: true };
+
+        const chatId = msg.chat_id || msg.sid;
+        if (!chatId) return { success: false, error: 'معرف المحادثة مطلوب' };
+
         let channel = activeChannels[chatId];
         if (!channel) {
-            channel = supabase.channel(`chat:${chatId}`, {
+            channel = client.channel(`chat:${chatId}`, {
                 config: { broadcast: { self: false } }
             });
             await channel.subscribe();
             activeChannels[chatId] = channel;
         }
+
         try {
+            // 1. إرسال عبر WebSocket
             await channel.send({
                 type: 'broadcast',
                 event: 'new_message',
-                payload: {
-                    id: message.id,
+                payload: msg
+            });
+
+            // 2. تخزين في pending_messages (للمستخدمين غير المتصلين)
+            await client
+                .from('pending_messages')
+                .insert({
+                    message_id: msg.id,
                     chat_id: chatId,
-                    sender_id: message.sender_id || 'me',
-                    text: message.text,
-                    img: message.img,
-                    voice_blob: message.voice_blob,
-                    voice_duration: message.voice_duration,
-                    reply_to: message.reply_to,
-                    time: message.time,
-                    likes: message.likes || 0,
-                    liked: message.liked || false
-                }
-            });
-            // تخزين كرسالة معلقة لضمان وصولها للآخرين
-            await supabase.from('pending_messages').insert({
-                message_id: message.id,
-                chat_id: chatId,
-                sender_id: message.sender_id || 'me',
-                recipient_chat_id: chatId,
-                payload: message,
-                created_at: new Date().toISOString(),
-                expires_at: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString()
-            });
+                    sender_id: msg.sender_id || 'me',
+                    recipient_chat_id: chatId,
+                    payload: msg,
+                    created_at: new Date().toISOString(),
+                    expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+                });
+
             return { success: true };
         } catch (e) {
+            console.error('❌ فشل إرسال الرسالة:', e);
             return { success: false, error: e.message };
         }
     };
 
-    // إرسال إشارة "يكتب الآن..."
     window.sendTypingEvent = function(chatId, isTyping) {
         if (!isOnline || !chatId) return;
         const channel = activeChannels[chatId];
@@ -350,516 +574,158 @@
                 type: 'broadcast',
                 event: 'typing',
                 payload: {
-                    chatId,
-                    isTyping,
-                    userId: getCurrentUserId()
+                    userId: getCurrentUserId(),
+                    isTyping: isTyping || false
                 }
             }).catch(() => {});
         }
     };
 
-    // تعليم رسائل كمقروءة
-    window.markMessagesAsRead = async function(chatId, messageIds) {
-        if (!supabase || !isOnline || !messageIds?.length) return;
-        try {
-            await supabase
-                .from('messages')
-                .update({ status: 'read', read_at: new Date().toISOString() })
-                .in('id', messageIds);
-        } catch (e) { /* تجاهل */ }
+    window.sendReadReceipt = function(chatId, messageId) {
+        if (!isOnline || !chatId) return;
+        const channel = activeChannels[chatId];
+        if (channel) {
+            channel.send({
+                type: 'broadcast',
+                event: 'read_receipt',
+                payload: {
+                    messageId: messageId,
+                    readerId: getCurrentUserId()
+                }
+            }).catch(() => {});
+        }
     };
 
-    // جلب الرسائل المعلقة للمحادثة
-    async function fetchPendingMessages(chatId) {
-        if (!supabase) return;
+    // ======================================================================
+    // 4. الرسائل المعلقة (Pending Messages) – تخزين مؤقت 10 أيام
+    // ======================================================================
+
+    window.fetchPendingMessages = async function(chatId) {
+        const client = ensureSupabase();
+        if (!client || !isOnline) return;
         const userId = getCurrentUserId();
         if (!userId) return;
+
         try {
-            const { data } = await supabase
+            const { data, error } = await client
                 .from('pending_messages')
                 .select('*')
                 .eq('recipient_chat_id', chatId)
                 .neq('sender_id', userId)
                 .gt('expires_at', new Date().toISOString());
-            if (data?.length) {
-                const readIds = [];
-                for (const record of data) {
-                    const msg = record.payload;
-                    msg.sync_status = 'delivered';
-                    msg.status = 'delivered';
-                    window._onMessageCallback?.(msg);
-                    if (msg.sender_id !== userId) {
-                        readIds.push(msg.id);
-                    }
-                }
-                if (readIds.length > 0) {
-                    await window.markMessagesAsRead?.(chatId, readIds);
-                }
-                await supabase.from('pending_messages').delete().in('message_id', data.map(r => r.message_id));
-            }
-        } catch (e) { /* تجاهل */ }
-    }
 
-    // ======================================================================
-    // 3. دوال جلب البيانات (Queries)
-    // ======================================================================
-
-    // جلب محادثات المستخدم
-    window.fetchUserChats = async function(userId) {
-        if (!supabase || !isOnline) return [];
-        const { data, error } = await supabase
-            .from('chats')
-            .select('*')
-            .eq('user_id', userId)
-            .order('last_time', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    };
-
-    // جلب رسائل محادثة
-    window.fetchMessages = async function(chatId, limit = 100) {
-        if (!supabase || !isOnline) return [];
-        const { data, error } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('chat_id', chatId)
-            .order('time', { ascending: true })
-            .limit(limit);
-        if (error) throw error;
-        return data || [];
-    };
-
-    // جلب جهات الاتصال الخاصة بالمستخدم
-    window.fetchContacts = async function(userId) {
-        if (!supabase || !isOnline) return [];
-        const { data, error } = await supabase
-            .from('contacts')
-            .select('*')
-            .eq('user_id', userId);
-        if (error) throw error;
-        return data || [];
-    };
-
-    // جلب جميع المستخدمين المسجلين (للمزامنة مع جهات الاتصال)
-    window.fetchAllRegisteredUsers = async function() {
-        if (!supabase || !isOnline) return [];
-        const { data, error } = await supabase
-            .from('users')
-            .select('id, name, avatar, phone, email')
-            .order('name');
-        if (error) throw error;
-        return data || [];
-    };
-
-    // التحقق من الأرقام المسجلة في التطبيق
-    window.checkRegisteredPhones = async function(phones) {
-        if (!supabase || !isOnline || !phones?.length) {
-            return { registered: [], unregistered: phones || [] };
-        }
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('phone, name, id')
-                .in('phone', phones);
             if (error) throw error;
-            const registeredMap = {};
-            (data || []).forEach(user => {
-                if (user.phone) {
-                    registeredMap[user.phone] = {
-                        phone: user.phone,
-                        name: user.name,
-                        id: user.id
-                    };
+            if (!data || !data.length) return;
+
+            console.log(`📥 جلب ${data.length} رسالة معلقة للمحادثة ${chatId}`);
+
+            for (const record of data) {
+                const msg = record.payload;
+                msg.sync_status = 'delivered';
+                msg.status = 'delivered';
+                msg.chat_id = chatId;
+
+                // إضافة الرسالة إلى التخزين المحلي (عبر common.js)
+                if (typeof window.handleIncomingMessage === 'function') {
+                    await window.handleIncomingMessage(msg);
+                } else if (typeof window.addMessage === 'function') {
+                    window.addMessage(msg);
                 }
-            });
-            const registered = [];
-            const unregistered = [];
-            phones.forEach(phone => {
-                if (registeredMap[phone]) {
-                    registered.push(registeredMap[phone]);
-                } else {
-                    unregistered.push(phone);
-                }
-            });
-            return { registered, unregistered };
+
+                // حذف الرسالة من pending_messages بعد استلامها
+                await client
+                    .from('pending_messages')
+                    .delete()
+                    .eq('message_id', record.message_id);
+            }
+
+            // تحديث الواجهة
+            if (typeof window.renderMessages === 'function') window.renderMessages();
+            if (typeof window.renderChats === 'function') window.renderChats();
+
         } catch (e) {
-            console.error('❌ فشل التحقق من الأرقام المسجلة', e);
-            return { registered: [], unregistered: phones };
+            console.warn('⚠️ فشل جلب الرسائل المعلقة:', e);
         }
     };
 
-    // جلب جميع الرسائل المعلقة للمستخدم الحالي
     window.fetchAllPendingMessages = async function() {
-        if (!supabase || !isOnline) return [];
+        const client = ensureSupabase();
+        if (!client || !isOnline) return [];
         const userId = getCurrentUserId();
         if (!userId) return [];
+
         try {
-            const { data, error } = await supabase
+            const { data, error } = await client
                 .from('pending_messages')
                 .select('*')
                 .neq('sender_id', userId)
                 .gt('expires_at', new Date().toISOString());
+
             if (error) throw error;
-            if (data?.length) {
-                await supabase.from('pending_messages')
-                    .delete()
-                    .in('message_id', data.map(r => r.message_id));
+            if (!data || !data.length) return [];
+
+            // تجميع الرسائل حسب المحادثة
+            const grouped = {};
+            for (const record of data) {
+                const chatId = record.recipient_chat_id;
+                if (!grouped[chatId]) grouped[chatId] = [];
+                grouped[chatId].push(record.payload);
             }
-            return data?.map(r => r.payload) || [];
+
+            // معالجة كل محادثة
+            for (const [chatId, msgs] of Object.entries(grouped)) {
+                for (const msg of msgs) {
+                    msg.sync_status = 'delivered';
+                    msg.status = 'delivered';
+                    msg.chat_id = chatId;
+                    if (typeof window.handleIncomingMessage === 'function') {
+                        await window.handleIncomingMessage(msg);
+                    } else if (typeof window.addMessage === 'function') {
+                        window.addMessage(msg);
+                    }
+                }
+                // حذف الرسائل المعالجة
+                const msgIds = msgs.map(m => m.id);
+                await client
+                    .from('pending_messages')
+                    .delete()
+                    .in('message_id', msgIds);
+            }
+
+            return data.map(r => r.payload);
         } catch (e) {
-            console.warn('⚠️ فشل جلب الرسائل المعلقة', e);
+            console.warn('⚠️ فشل جلب جميع الرسائل المعلقة:', e);
             return [];
         }
     };
 
     // ======================================================================
-    // 4. دوال التحديث (Updates)
+    // 5. إدارة الحالة (Online / Offline)
     // ======================================================================
 
-    // تحديث حالة الاتصال للمستخدم
     window.setUserOnlineStatus = function(status) {
-        if (!supabase) return;
+        const client = ensureSupabase();
+        if (!client) return;
         const userId = getCurrentUserId();
         if (!userId) return;
-        supabase.from('users')
+        client
+            .from('users')
             .update({ is_online: status, last_seen: new Date().toISOString() })
             .eq('id', userId)
             .catch(() => {});
     };
 
-    // تحديث بيانات الملف الشخصي
-    window.updateUserProfile = async function(updates) {
-        if (!supabase) throw new Error('Supabase غير متاح');
-        const userId = getCurrentUserId();
-        if (!userId) throw new Error('المستخدم غير مسجل');
-        const { data, error } = await supabase
-            .from('users')
-            .update(updates)
-            .eq('id', userId)
-            .select()
-            .single();
-        if (error) throw error;
-        return data;
-    };
-
-    // حذف الحساب
-    window.deleteUserAccount = async function() {
-        if (!supabase) throw new Error('Supabase غير متاح');
-        const userId = getCurrentUserId();
-        if (!userId) throw new Error('المستخدم غير مسجل');
-        await supabase.from('users').delete().eq('id', userId);
-        await supabase.auth.signOut();
-        localStorage.removeItem('ramzapp_user');
-    };
-
     // ======================================================================
-    // 5. دوال القصص (Stories)
-    // ======================================================================
-
-    // جلب القصص من الخادم
-    window.fetchStories = async function() {
-        if (!supabase || !isOnline) return [];
-        try {
-            const { data, error } = await supabase
-                .from('stories')
-                .select('*')
-                .gt('expires_at', new Date().toISOString())
-                .order('time', { ascending: false });
-            if (error) throw error;
-            return data || [];
-        } catch (e) {
-            console.warn('⚠️ فشل جلب القصص:', e);
-            return [];
-        }
-    };
-
-    // إضافة قصة إلى الخادم
-    window.addStoryToSupabase = async function(storyData) {
-        if (!supabase || !isOnline) return null;
-        try {
-            const { data, error } = await supabase
-                .from('stories')
-                .insert({
-                    id: storyData.id,
-                    user_id: storyData.user_id,
-                    name: storyData.name,
-                    avatar: storyData.avatar,
-                    type: storyData.type,
-                    content: storyData.content,
-                    caption: storyData.caption || '',
-                    time: storyData.time,
-                    expires_at: storyData.expires_at,
-                    isViewed: storyData.isViewed || false,
-                    color: storyData.color || '#ff0050'
-                })
-                .select()
-                .single();
-            if (error) throw error;
-            return data;
-        } catch (e) {
-            console.warn('⚠️ فشل إضافة القصة إلى Supabase:', e);
-            return null;
-        }
-    };
-
-    // حذف قصة من الخادم
-    window.deleteStoryFromSupabase = async function(storyId) {
-        if (!supabase || !isOnline) return false;
-        try {
-            const { error } = await supabase
-                .from('stories')
-                .delete()
-                .eq('id', storyId);
-            if (error) throw error;
-            return true;
-        } catch (e) {
-            console.warn('⚠️ فشل حذف القصة:', e);
-            return false;
-        }
-    };
-
-    // مزامنة القصص بين المحلي والخادم
-    window.syncStories = async function() {
-        if (!supabase || !isOnline) {
-            console.warn('⚠️ لا يمكن مزامنة القصص: غير متصل أو Supabase غير جاهز');
-            return { synced: 0, failed: 0 };
-        }
-        let synced = 0, failed = 0;
-        try {
-            const serverStories = await window.fetchStories();
-            const localStories = window.getStories?.() || [];
-            const now = new Date().toISOString();
-
-            // حذف المنتهية محلياً
-            const expiredLocal = localStories.filter(s => s.expires_at < now);
-            for (const story of expiredLocal) {
-                window.deleteStory?.(story.id);
-                synced++;
-            }
-
-            // إضافة الجديدة من الخادم
-            const localIds = localStories.map(s => s.id);
-            for (const story of serverStories) {
-                if (!localIds.includes(story.id) && story.expires_at > now) {
-                    window.addStory?.(story);
-                    synced++;
-                }
-            }
-
-            // رفع المحلية غير الموجودة على الخادم
-            const serverIds = serverStories.map(s => s.id);
-            for (const story of localStories) {
-                if (!serverIds.includes(story.id) && story.expires_at > now) {
-                    await window.addStoryToSupabase(story);
-                    synced++;
-                }
-            }
-
-            // تحديث حالة المشاهدة
-            for (const story of localStories) {
-                if (story.isViewed) {
-                    await supabase
-                        .from('stories')
-                        .update({ isViewed: true })
-                        .eq('id', story.id)
-                        .catch(() => {});
-                }
-            }
-
-            // تحديث الواجهة
-            if (typeof renderStories === 'function') renderStories();
-            console.log(`✅ تمت مزامنة القصص: ${synced} محدثة, ${failed} فاشلة`);
-            return { synced, failed };
-        } catch (e) {
-            console.warn('⚠️ فشل مزامنة القصص:', e);
-            return { synced, failed: 1 };
-        }
-    };
-
-    // ======================================================================
-    // 6. دوال القنوات (Channels)
-    // ======================================================================
-
-    // جلب القنوات المتاحة
-    window.fetchChannels = async function() {
-        if (!supabase || !isOnline) return [];
-        const { data, error } = await supabase
-            .from('channels')
-            .select('*')
-            .order('followers', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    };
-
-    // الاشتراك في قناة
-    window.subscribeToChannel = async function(channelId) {
-        if (!supabase || !isOnline) throw new Error('📡 غير متصل');
-        const userId = getCurrentUserId();
-        if (!userId) throw new Error('المستخدم غير مسجل');
-        const { error } = await supabase
-            .from('channel_subscribers')
-            .upsert({ channel_id: channelId, user_id: userId });
-        if (error) throw error;
-        // زيادة عدد المتابعين باستخدام دالة RPC
-        await supabase.rpc('increment_channel_followers', { channel_id: channelId });
-        return true;
-    };
-
-    // ======================================================================
-    // 7. دوال المكالمات وإشارات WebRTC
-    // ======================================================================
-
-    // إرسال إشارة WebRTC إلى مستخدم معين
-    window.sendCallSignal = async function(targetUserId, signalData) {
-        if (!supabase || !isOnline) return false;
-        try {
-            const channel = supabase.channel(`call:${targetUserId}`, {
-                config: { broadcast: { self: false } }
-            });
-            await channel.subscribe();
-            await channel.send({
-                type: 'broadcast',
-                event: 'call_signal',
-                payload: {
-                    from: getCurrentUserId(),
-                    signal: signalData,
-                    timestamp: new Date().toISOString()
-                }
-            });
-            setTimeout(() => supabase.removeChannel(channel), 1000);
-            return true;
-        } catch (e) {
-            console.warn('⚠️ فشل إرسال إشارة المكالمة:', e);
-            return false;
-        }
-    };
-
-    // الاشتراك في إشارات المكالمات القادمة
-    window.subscribeToCallSignals = function(callback) {
-        if (!supabase || !isOnline) return null;
-        const userId = getCurrentUserId();
-        if (!userId) return null;
-        const channel = supabase.channel(`call:${userId}`, {
-            config: { broadcast: { self: false } }
-        });
-        channel.on('broadcast', { event: 'call_signal' }, (payload) => {
-            callback(payload.payload);
-        });
-        channel.subscribe();
-        return channel;
-    };
-
-    // ======================================================================
-    // 8. دوال الوسائط (Media) – التخزين في Supabase Storage
-    // ======================================================================
-
-    // رفع ملف إلى Supabase Storage
-    window.uploadMedia = async function(file, path) {
-        if (!supabase || !isOnline) throw new Error('📡 غير متصل');
-        const userId = getCurrentUserId();
-        if (!userId) throw new Error('المستخدم غير مسجل');
-        const filePath = `users/${userId}/${path || file.name}`;
-        const { data, error } = await supabase.storage
-            .from('ramz-images')
-            .upload(filePath, file, { cacheControl: '3600', upsert: true });
-        if (error) throw error;
-        const { data: urlData } = supabase.storage
-            .from('ramz-images')
-            .getPublicUrl(filePath);
-        return urlData.publicUrl;
-    };
-
-    // حذف ملف من Supabase Storage
-    window.deleteMedia = async function(path) {
-        if (!supabase || !isOnline) throw new Error('📡 غير متصل');
-        const { error } = await supabase.storage
-            .from('ramz-images')
-            .remove([path]);
-        if (error) throw error;
-        return true;
-    };
-
-    // ======================================================================
-    // 9. إدارة الأحداث العامة
-    // ======================================================================
-
-    window._onMessageCallback = null;
-    window.setOnMessageCallback = function(callback) {
-        window._onMessageCallback = callback;
-    };
-
-    // ======================================================================
-    // 10. التنظيف الدوري
-    // ======================================================================
-
-    // حذف الرسائل المعلقة المنتهية كل ساعة
-    setInterval(async () => {
-        if (!supabase || !isOnline) return;
-        try {
-            await supabase
-                .from('pending_messages')
-                .delete()
-                .lt('expires_at', new Date().toISOString());
-        } catch (e) { /* تجاهل */ }
-    }, 3600000);
-
-    // تحديث حالة الاتصال كل 30 ثانية
-    setInterval(() => {
-        if (isOnline && supabase) {
-            const userId = getCurrentUserId();
-            if (userId) {
-                supabase.from('users')
-                    .update({ is_online: true, last_seen: new Date().toISOString() })
-                    .eq('id', userId)
-                    .catch(() => {});
-            }
-        }
-    }, 30000);
-
-    // ======================================================================
-    // 11. مستمعي أحداث الشبكة
-    // ======================================================================
-
-    window.addEventListener('online', async () => {
-        isOnline = true;
-        window.dispatchEvent(new Event('ramzapp:online'));
-        if (!supabase && !isInitialized) {
-            const retryResult = initSupabase();
-            if (retryResult) {
-                isInitialized = true;
-                window.supabaseClient = supabase;
-                console.log('✅ Supabase re-initialized after online');
-            }
-        }
-        if (supabase) {
-            await updatePresence(true);
-        }
-        if (window.syncAllPendingMessages) window.syncAllPendingMessages();
-        if (window.syncStories) window.syncStories();
-    });
-
-    window.addEventListener('offline', () => {
-        isOnline = false;
-        window.dispatchEvent(new Event('ramzapp:offline'));
-    });
-
-    // ======================================================================
-    // 12. تصدير دوال إضافية
-    // ======================================================================
-
-    window.isSupabaseOnline = () => isOnline && supabase !== null;
-    window.getSupabaseInstance = () => supabase;
-
-    // ======================================================================
-    // 13. دوال الدعوة (Invite)
+    // 6. دوال الدعوة (Invite)
     // ======================================================================
 
     window.getInviteCode = async function() {
-        if (!supabase) return null;
+        const client = ensureSupabase();
+        if (!client) return null;
         const userId = getCurrentUserId();
         if (!userId) return null;
         try {
-            const { data, error } = await supabase
+            const { data, error } = await client
                 .from('users')
                 .select('invite_code')
                 .eq('id', userId)
@@ -872,18 +738,95 @@
     };
 
     window.createInviteLink = function(code) {
-        return `${window.location.origin}/redirect.html?ref=${code}`;
+        return window.location.origin + '/redirect.html?ref=' + code;
     };
 
     // ======================================================================
-    // رسالة إتمام التهيئة
+    // 7. تحديث المفتاح العام
     // ======================================================================
 
-    console.log('✅ supabase.js (الإصدار النهائي الكامل) جاهز');
-    if (supabase) {
-        console.log('🔗 متصل بـ:', SUPABASE_URL);
-    } else {
-        console.warn('⚠️ يعمل في وضع عدم الاتصال (Supabase غير متاح) - سيتم إعادة المحاولة عند الاتصال.');
+    window.updateUserPublicKey = async function(publicKey) {
+        const client = ensureSupabase();
+        if (!client) throw new Error('Supabase غير متاح');
+        const userId = getCurrentUserId();
+        if (!userId) throw new Error('المستخدم غير مسجل');
+        const { error } = await client
+            .from('users')
+            .update({ public_key: publicKey })
+            .eq('id', userId);
+        if (error) throw error;
+        const user = getCurrentUser();
+        if (user) {
+            user.public_key = publicKey;
+            localStorage.setItem('ramzapp_user', JSON.stringify(user));
+        }
+        return true;
+    };
+
+    // ======================================================================
+    // 8. مستمعي أحداث الشبكة
+    // ======================================================================
+
+    window.addEventListener('online', async () => {
+        isOnline = true;
+        console.log('🟢 عودة الاتصال بالإنترنت');
+        if (!supabase) {
+            const retry = await initSupabase();
+            if (retry) {
+                isInitialized = true;
+                window.supabaseClient = supabase;
+            }
+        }
+        if (supabase) {
+            window.setUserOnlineStatus(true);
+            setTimeout(() => window.fetchAllPendingMessages(), 1000);
+        }
+    });
+
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        console.log('🔴 انقطع الاتصال بالإنترنت');
+        if (supabase) {
+            window.setUserOnlineStatus(false);
+        }
+    });
+
+    // ======================================================================
+    // 9. التنظيف الدوري للرسائل المنتهية (يتم عبر Trigger في SQL)
+    // ولكن يمكن استدعاء دالة تنظيف هنا كاحتياطي
+    // ======================================================================
+
+    async function cleanupExpiredPendingMessages() {
+        const client = ensureSupabase();
+        if (!client || !isOnline) return;
+        try {
+            await client
+                .from('pending_messages')
+                .delete()
+                .lt('expires_at', new Date().toISOString());
+        } catch (e) { /* تجاهل */ }
+    }
+
+    // تنظيف كل ساعة
+    setInterval(cleanupExpiredPendingMessages, 3600000);
+
+    // ======================================================================
+    // 10. حالة الاتصال بالوسيط
+    // ======================================================================
+
+    window.isSupabaseOnline = () => isOnline && supabase !== null;
+    window.getSupabaseInstance = () => supabase;
+
+    // ======================================================================
+    // رسالة الإتمام
+    // ======================================================================
+
+    console.log('✅ supabase.js (الإصدار النهائي v5.6) جاهز');
+    console.log('🔗 متصل بـ:', SUPABASE_URL);
+    console.log('📡 الوضع: ' + (isOnline ? '🟢 متصل' : '🔴 غير متصل'));
+
+    if (!supabase) {
+        console.warn('⚠️ Supabase غير متاح حالياً، سيتم إعادة المحاولة عند الاتصال.');
     }
 
 })();
