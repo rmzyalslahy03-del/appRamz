@@ -1,8 +1,10 @@
-// ==================== media.js - الإصدار النهائي الكامل v4.0 ====================
-// إدارة الوسائط والملفات: تخزين مباشر عبر File System Access API + احتياطي IndexedDB
-// يدعم الصور، الفيديوهات، الصوتيات، والمستندات
+// ======================================================================
+// media.js - الإصدار النهائي v5.6 (نظام تخزين الملفات الهجين)
+// ======================================================================
 
 (function() {
+    'use strict';
+
     // ======================================================================
     // التكوين الأساسي
     // ======================================================================
@@ -11,11 +13,13 @@
     const STORE_NAME = 'files';
     const FALLBACK_STORE_NAME = 'fallback_files';
     const HANDLE_STORE_NAME = 'directory_handles';
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 ميجابايت كحد أقصى
 
     let directoryHandle = null;
     let mediaReady = false;
     let useFallback = false;
     let indexedDBReady = false;
+    let initPromise = null;
 
     // ======================================================================
     // دوال مساعدة
@@ -56,6 +60,26 @@
             'txt': 'text/plain', 'json': 'application/json', 'zip': 'application/zip'
         };
         return map[ext.toLowerCase()] || 'application/octet-stream';
+    }
+
+    function isImageType(mimeType) {
+        return mimeType && mimeType.startsWith('image/');
+    }
+
+    function isVideoType(mimeType) {
+        return mimeType && mimeType.startsWith('video/');
+    }
+
+    function isAudioType(mimeType) {
+        return mimeType && mimeType.startsWith('audio/');
+    }
+
+    function isDocumentType(mimeType) {
+        if (!mimeType) return false;
+        const docTypes = ['application/pdf', 'application/msword', 
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain', 'application/json', 'application/zip'];
+        return docTypes.some(t => mimeType.includes(t));
     }
 
     // ======================================================================
@@ -214,35 +238,39 @@
 
     // ----- التهيئة -----
     window.initMedia = async function() {
-        // محاولة تحميل المقبض المحفوظ
-        if (isFileSystemAccessSupported()) {
+        if (initPromise) return initPromise;
+        initPromise = (async () => {
+            // محاولة تحميل المقبض المحفوظ
+            if (isFileSystemAccessSupported()) {
+                try {
+                    const saved = await loadDirectoryHandle();
+                    if (saved && await verifyPermission(saved)) {
+                        directoryHandle = saved;
+                        mediaReady = true;
+                        useFallback = false;
+                        console.log('✅ تم تحميل مجلد الوسائط من File System');
+                        return true;
+                    }
+                } catch (e) { /* تجاهل */ }
+            }
+
+            // محاولة فتح مجلد جديد
+            const result = await window.requestNewDirectory();
+            if (result) {
+                return true;
+            }
+
+            // الاحتياطي: استخدام IndexedDB
+            console.log('⚠️ استخدام IndexedDB كتخزين احتياطي للوسائط');
+            useFallback = true;
+            mediaReady = true;
             try {
-                const saved = await loadDirectoryHandle();
-                if (saved && await verifyPermission(saved)) {
-                    directoryHandle = saved;
-                    mediaReady = true;
-                    useFallback = false;
-                    console.log('✅ تم تحميل مجلد الوسائط من File System');
-                    return true;
-                }
+                await openFallbackDB();
+                indexedDBReady = true;
             } catch (e) { /* تجاهل */ }
-        }
-
-        // محاولة فتح مجلد جديد
-        const result = await window.requestNewDirectory();
-        if (result) {
-            return true;
-        }
-
-        // الاحتياطي: استخدام IndexedDB
-        console.log('⚠️ استخدام IndexedDB كتخزين احتياطي للوسائط');
-        useFallback = true;
-        mediaReady = true;
-        try {
-            await openFallbackDB();
-            indexedDBReady = true;
-        } catch (e) { /* تجاهل */ }
-        return false;
+            return false;
+        })();
+        return initPromise;
     };
 
     // ----- طلب مجلد جديد من المستخدم -----
@@ -274,10 +302,15 @@
         }
     };
 
-    // ----- حفظ ملف وسائط -----
+    // ----- حفظ ملف وسائط (للرسائل) -----
     window.saveMedia = async function(messageId, data, fileType) {
         if (!mediaReady) {
             await window.initMedia();
+        }
+
+        if (!data) {
+            console.warn('⚠️ لا توجد بيانات للحفظ');
+            return null;
         }
 
         const fileName = generateUniqueFileName(messageId, fileType);
@@ -296,14 +329,32 @@
                     blob = new Blob([data], { type: fileType || 'application/octet-stream' });
                 }
 
+                // التحقق من حجم الملف
+                if (blob.size > MAX_FILE_SIZE) {
+                    console.warn('⚠️ حجم الملف كبير جداً:', blob.size);
+                    // محاولة ضغط الصورة إذا كانت كبيرة جداً
+                    if (isImageType(blob.type) && blob.size > 5 * 1024 * 1024) {
+                        try {
+                            blob = await compressImage(blob);
+                            console.log('✅ تم ضغط الصورة بنجاح');
+                        } catch (compressError) {
+                            console.warn('⚠️ فشل ضغط الصورة:', compressError);
+                        }
+                    }
+                }
+
                 const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
                 const writable = await fileHandle.createWritable();
                 await writable.write(blob);
                 await writable.close();
 
                 // تخزين نسخة احتياطية في IndexedDB (في حالة فقدان الوصول)
-                const base64 = await window.blobToBase64(blob);
-                await saveToFallbackIndexedDB(fileName, base64, fileType || blob.type);
+                try {
+                    const base64 = await window.blobToBase64(blob);
+                    await saveToFallbackIndexedDB(fileName, base64, fileType || blob.type);
+                } catch (fallbackError) {
+                    console.warn('⚠️ فشل حفظ النسخة الاحتياطية في IndexedDB', fallbackError);
+                }
 
                 return fileName;
             } catch (e) {
@@ -327,6 +378,46 @@
             return null;
         }
     };
+
+    // ----- ضغط الصور (مساعدة) -----
+    async function compressImage(blob, maxWidth = 1280, maxHeight = 1280, quality = 0.8) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+
+                // حساب الأبعاد الجديدة
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                if (height > maxHeight) {
+                    width = (width * maxHeight) / height;
+                    height = maxHeight;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob((compressedBlob) => {
+                    if (compressedBlob) {
+                        resolve(compressedBlob);
+                    } else {
+                        reject(new Error('فشل ضغط الصورة'));
+                    }
+                }, blob.type || 'image/jpeg', quality);
+            };
+            img.onerror = () => reject(new Error('فشل تحميل الصورة للضغط'));
+            img.src = URL.createObjectURL(blob);
+            setTimeout(() => {
+                URL.revokeObjectURL(img.src);
+            }, 10000);
+        });
+    }
 
     // ----- الحصول على رابط URL للملف (للعرض في الواجهة) -----
     window.getMediaUrl = async function(fileName) {
@@ -476,10 +567,9 @@
         return files;
     };
 
-    // ----- تنظيف الملفات غير المستخدمة -----
+    // ----- تنظيف الملفات غير المستخدمة (بناءً على قائمة المفاتيح النشطة) -----
     window.cleanupUnusedMedia = async function(activeNames) {
         if (!activeNames || !activeNames.length) return;
-
         const activeSet = new Set(activeNames);
 
         // تنظيف نظام الملفات
@@ -504,7 +594,42 @@
         } catch (e) { /* تجاهل */ }
     };
 
-    // ----- دوال تحويل البيانات (مساعدات) -----
+    // ----- الحصول على حجم المجلد -----
+    window.getMediaUsage = async function() {
+        let totalSize = 0;
+
+        // من نظام الملفات
+        if (!useFallback && directoryHandle) {
+            try {
+                for await (const [name, handle] of directoryHandle.entries()) {
+                    if (handle.kind === 'file' && name.startsWith('ramz_')) {
+                        try {
+                            const file = await handle.getFile();
+                            totalSize += file.size;
+                        } catch (e) { /* تجاهل */ }
+                    }
+                }
+            } catch (e) { /* تجاهل */ }
+        }
+
+        // من الاحتياطي
+        try {
+            const fallbackFiles = await getAllFallbackFiles();
+            for (const name of fallbackFiles) {
+                if (name.startsWith('ramz_')) {
+                    const record = await getFromFallbackIndexedDB(name);
+                    if (record?.data) {
+                        totalSize += record.data.length;
+                    }
+                }
+            }
+        } catch (e) { /* تجاهل */ }
+        return totalSize;
+    };
+
+    // ======================================================================
+    // دوال تحويل البيانات (مساعدات)
+    // ======================================================================
     window.blobToBase64 = (blob) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -530,19 +655,26 @@
         }
     };
 
-    // ----- دوال الحالة -----
+    window.dataURLToBlob = function(dataURL) {
+        return window.base64ToBlob(dataURL);
+    };
+
+    // ======================================================================
+    // دوال الحالة
+    // ======================================================================
     window.isMediaReady = () => mediaReady;
     window.isUsingFallback = () => useFallback;
     window.getMediaFolderName = () => {
         if (useFallback) return '📦 التخزين الاحتياطي (IndexedDB)';
         return directoryHandle?.name || 'غير محدد';
     };
+    window.getMaxFileSize = () => MAX_FILE_SIZE;
 
     // ======================================================================
     // التهيئة التلقائية
     // ======================================================================
-    console.log('✅ media.js (الإصدار النهائي الكامل) جاهز');
-    console.log('💾 يدعم التخزين المباشر بنظام الملفات + احتياطي IndexedDB');
+    console.log('✅ media.js (الإصدار النهائي v5.6 - تخزين هجين) جاهز');
+    console.log('💾 يدعم التخزين المباشر بنظام الملفات (OPFS) + احتياطي IndexedDB');
 
     // محاولة التهيئة التلقائية بعد تحميل الصفحة
     if (document.readyState === 'complete') {
