@@ -22,7 +22,7 @@
     <!-- ===== Google Fonts ===== -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- ===== تحميل Supabase مسبقاً ===== -->
+    <!-- ===== تحميل Supabase مسبقاً (يُستخدم بواسطة supabase.js) ===== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <style>
@@ -79,7 +79,6 @@
             width: 1.25em;
             text-align: center;
         }
-        /* سيتم إضافة باقي تعاريف الاحتياطي عبر JavaScript في common.js */
 
         /* ======================================================================
                    الأنماط الأساسية
@@ -1858,7 +1857,6 @@
 <body>
 
     <!-- ===== مؤشر الاتصال ===== -->
-    <span class="icon-loading-indicator" id="iconTest" aria-hidden="true"></span>
     <div class="connection-indicator" id="connectionIndicator">📡 أنت غير متصل بالإنترنت</div>
 
     <!-- ===== الحاوية الرئيسية ===== -->
@@ -2061,7 +2059,7 @@
                 <div class="setting-item" onclick="importData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>استيراد النسخة الاحتياطية</span></div><i class="fas fa-chevron-left"></i></div>
                 <div class="setting-item" onclick="clearAllData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt"></i></div><span>حذف جميع المحادثات</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
                 <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span>تسجيل الخروج</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v4.0 | جميع الحقوق محفوظة © 2026</p>
+                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v5.0 | جميع الحقوق محفوظة © 2026</p>
             </div>
         </div>
 
@@ -2163,13 +2161,17 @@
     </div>
 
     <!-- ================================================================
-         تحميل السكربتات
+         تحميل السكربتات (ترتيب التحميل مهم جداً)
          ================================================================ -->
+    <!-- 1. قاعدة البيانات المحلية (أولاً) -->
     <script src="db.js"></script>
+    <!-- 2. وسيط Supabase -->
     <script src="supabase.js"></script>
-    <script src="media.js"></script>
+    <!-- 3. المزامنة -->
     <script src="sync.js"></script>
+    <!-- 4. منطق التطبيق الرئيسي -->
     <script src="common.js"></script>
+    <!-- 5. أدوات الاختبار (اختياري) -->
     <script src="test.js"></script>
 
     <!-- ================================================================
@@ -2177,8 +2179,10 @@
          ================================================================ -->
     <script>
         (function() {
+            // هذا السكربت يعمل قبل تحميل common.js بالكامل للتوجيه السريع
             const savedUser = localStorage.getItem('ramzapp_user');
             if (!savedUser) {
+                // إذا لم يكن هناك مستخدم، التوجيه إلى login.html
                 window.location.href = 'login.html';
                 return;
             }
@@ -2189,23 +2193,8 @@
                     window.location.href = 'login.html';
                     return;
                 }
-                // المستخدم موجود – نعرض التطبيق
-                document.getElementById('appContainer').style.display = 'flex';
-                document.getElementById('bottomNav').style.display = 'flex';
-                document.getElementById('installAppBtn').style.display = 'flex';
-
-                // تعيين المستخدم في inMemoryDB (حتى قبل تحميل common.js)
-                if (window.inMemoryDB) {
-                    window.inMemoryDB.user = user;
-                    console.log('✅ تم تعيين المستخدم في inMemoryDB من index.html:', user.name);
-                }
-
-                // تنشيط شاشة الدردشات
-                const chatsScreen = document.getElementById('chatsScreen');
-                if (chatsScreen) {
-                    chatsScreen.classList.add('active');
-                    console.log('✅ تم تنشيط شاشة الدردشات من index.html');
-                }
+                // المستخدم موجود – سيتم عرض التطبيق بواسطة common.js
+                console.log('✅ مستخدم موجود:', user.name);
             } catch (e) {
                 localStorage.removeItem('ramzapp_user');
                 window.location.href = 'login.html';
@@ -2256,5 +2245,7 @@
         });
     </script>
 
+</body>
+</html>
 </body>
         </html>
