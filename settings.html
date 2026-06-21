@@ -5,102 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>الإعدادات | RamzApp</title>
 
-    <!-- ======================================================================
-         FontAwesome – روابط متعددة لضمان التحميل
-         ====================================================================== -->
-    <!-- الرابط الرئيسي (الإصدار الأحدث) -->
+    <!-- ===== FontAwesome ===== -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <!-- رابط احتياطي عبر use.fontawesome.com -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.0/css/all.css">
-    <!-- رابط آخر من cdnjs -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/brands.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/solid.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/regular.min.css">
+    <!-- ===== Google Fonts ===== -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- ======================================================================
-         نظام الاحتياطي للأيقونات (إذا فشل FontAwesome)
-         ====================================================================== -->
-    <style id="fa-fallback-style">
-        /* سيتم تفعيل هذا إذا فشل تحميل FontAwesome */
-        body.fa-fallback .fa,
-        body.fa-fallback .fas,
-        body.fa-fallback .far,
-        body.fa-fallback .fab {
-            font-family: 'Cairo', 'Segoe UI', 'Arial', sans-serif !important;
-            font-weight: normal !important;
-            font-style: normal !important;
-            display: inline-block !important;
-            width: 1.25em;
-            text-align: center;
-        }
-        body.fa-fallback .fa-moon::before { content: "🌙"; }
-        body.fa-fallback .fa-check-circle::before { content: "✅"; }
-        body.fa-fallback .fa-user-circle::before { content: "👤"; }
-        body.fa-fallback .fa-lock::before { content: "🔒"; }
-        body.fa-fallback .fa-comment-dots::before { content: "💬"; }
-        body.fa-fallback .fa-bell::before { content: "🔔"; }
-        body.fa-fallback .fa-database::before { content: "💾"; }
-        body.fa-fallback .fa-language::before { content: "🌐"; }
-        body.fa-fallback .fa-question-circle::before { content: "❓"; }
-        body.fa-fallback .fa-user-plus::before { content: "👤+"; }
-        body.fa-fallback .fa-chevron-left::before { content: "◀"; }
-        body.fa-fallback .fa-arrow-right::before { content: "◀"; }
-        body.fa-fallback .fa-ellipsis-v::before { content: "⋮"; }
-        body.fa-fallback .fa-home::before { content: "🏠"; }
-        body.fa-fallback .fa-user-edit::before { content: "✏️"; }
-        body.fa-fallback .fa-info-circle::before { content: "ℹ️"; }
-        body.fa-fallback .fa-sign-out-alt::before { content: "🚪"; }
-        body.fa-fallback .fa-trash-alt::before { content: "🗑️"; }
-        body.fa-fallback .fa-chevron-right::before { content: "▶"; }
-        body.fa-fallback .fa-cog::before { content: "⚙️"; }
-        body.fa-fallback .fa-address-book::before { content: "📇"; }
-        body.fa-fallback .fa-phone::before { content: "📞"; }
-        body.fa-fallback .fa-video::before { content: "📹"; }
-        body.fa-fallback .fa-sync-alt::before { content: "🔄"; }
-        body.fa-fallback .fa-tools::before { content: "🛠️"; }
-        body.fa-fallback .fa-comment-dots::before { content: "💬"; }
-        body.fa-fallback .fa-paper-plane::before { content: "✉️"; }
-        body.fa-fallback .fa-microphone::before { content: "🎤"; }
-        body.fa-fallback .fa-paperclip::before { content: "📎"; }
-        body.fa-fallback .fa-smile-wink::before { content: "😊"; }
-        body.fa-fallback .fa-reply::before { content: "↩️"; }
-        body.fa-fallback .fa-image::before { content: "🖼️"; }
-        body.fa-fallback .fa-file-alt::before { content: "📄"; }
-        body.fa-fallback .fa-plus-circle::before { content: "➕"; }
-        body.fa-fallback .fa-boxes::before { content: "📦"; }
-        body.fa-fallback .fa-bullhorn::before { content: "📣"; }
-        body.fa-fallback .fa-layer-group::before { content: "📁"; }
-        body.fa-fallback .fa-list-ul::before { content: "📋"; }
-        body.fa-fallback .fa-laptop::before { content: "💻"; }
-        body.fa-fallback .fa-sliders-h::before { content: "⚙️"; }
-        body.fa-fallback .fa-calendar-alt::before { content: "📅"; }
-        body.fa-fallback .fa-star::before { content: "⭐"; }
-        body.fa-fallback .fa-archive::before { content: "📦"; }
-        body.fa-fallback .fa-user::before { content: "👤"; }
-        body.fa-fallback .fa-shield-alt::before { content: "🛡️"; }
-        body.fa-fallback .fa-edit::before { content: "✏️"; }
-        body.fa-fallback .fa-share::before { content: "↗️"; }
-        body.fa-fallback .fa-link::before { content: "🔗"; }
-        body.fa-fallback .fa-copy::before { content: "📋"; }
-        body.fa-fallback .fa-save::before { content: "💾"; }
-        body.fa-fallback .fa-eye::before { content: "👁️"; }
-        body.fa-fallback .fa-exclamation-triangle::before { content: "⚠️"; }
-        body.fa-fallback .fa-ban::before { content: "🚫"; }
-        body.fa-fallback .fa-flag::before { content: "🚩"; }
-        body.fa-fallback .fa-palette::before { content: "🎨"; }
-        body.fa-fallback .fa-exchange-alt::before { content: "↔️"; }
-        body.fa-fallback .fa-plus-square::before { content: "➕"; }
-        body.fa-fallback .fa-ad::before { content: "📢"; }
-        body.fa-fallback .fa-check-circle::before { content: "✅"; }
-    </style>
-
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- ======================================================================
-         الأنماط الأساسية
-         ====================================================================== -->
     <style>
+        /* ======================================================================
+                   الأنماط الأساسية – متوافقة مع RamzApp v5.0
+                   ====================================================================== */
         :root {
             --bg: #0d0d0d;
             --surface: #1a1a1a;
@@ -128,18 +42,17 @@
             --border: #e0e0e0;
             --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: var(--bg);
             font-family: var(--font);
             color: var(--text);
             transition: background 0.2s, color 0.2s;
+            min-height: 100vh;
             padding-bottom: 30px;
         }
+
         /* ===== الهيدر ===== */
         .header {
             background: var(--surface);
@@ -152,7 +65,27 @@
             top: 0;
             z-index: 100;
         }
-        .back-btn,
+        .back-btn {
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 22px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .back-btn:active { transform: scale(0.92); }
+        .header h2 {
+            font-size: 20px;
+            font-weight: 700;
+            flex: 1;
+            text-align: center;
+        }
         .menu-btn {
             background: none;
             border: none;
@@ -167,20 +100,12 @@
             justify-content: center;
             transition: 0.2s;
         }
-        .back-btn:active,
-        .menu-btn:active {
-            transform: scale(0.92);
-        }
-        .header h2 {
-            font-size: 20px;
-            font-weight: 700;
-            flex: 1;
-            text-align: center;
-        }
+        .menu-btn:active { transform: scale(0.92); }
+
         /* ===== بطاقة الملف الشخصي ===== */
         .profile-card {
             background: var(--surface);
-            margin: 12px 12px;
+            margin: 16px 12px;
             border-radius: 20px;
             padding: 16px;
             display: flex;
@@ -190,9 +115,9 @@
             border: 1px solid var(--border);
             transition: 0.2s;
         }
-        .profile-card:hover {
-            background: var(--surface2);
-        }
+        .profile-card:hover { background: var(--surface2); }
+        .profile-card:active { transform: scale(0.98); }
+
         .profile-avatar {
             width: 60px;
             height: 60px;
@@ -202,7 +127,7 @@
             align-items: center;
             justify-content: center;
             font-size: 28px;
-            font-weight: bold;
+            font-weight: 700;
             color: var(--text);
             overflow: hidden;
             flex-shrink: 0;
@@ -228,10 +153,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .chevron-right {
-            color: var(--text3);
-            font-size: 18px;
-        }
+        .chevron-right { color: var(--text3); font-size: 18px; }
+
         /* ===== قائمة الإعدادات ===== */
         .settings-list {
             max-width: 600px;
@@ -253,18 +176,17 @@
             cursor: pointer;
             transition: 0.2s;
             border-bottom: 1px solid var(--border);
+            min-height: 60px;
         }
-        .setting-item:last-child {
-            border-bottom: none;
-        }
-        .setting-item:hover {
-            background: var(--surface2);
-        }
+        .setting-item:last-child { border-bottom: none; }
+        .setting-item:hover { background: var(--surface2); }
+        .setting-item:active { transform: scale(0.98); }
+
         .setting-icon {
             width: 32px;
             font-size: 22px;
             text-align: center;
-            color: var(--green);
+            color: var(--text3);
             flex-shrink: 0;
         }
         .setting-info {
@@ -274,6 +196,7 @@
         .setting-title {
             font-weight: 700;
             font-size: 16px;
+            color: var(--text);
         }
         .setting-desc {
             font-size: 12px;
@@ -288,6 +211,7 @@
             font-size: 14px;
             flex-shrink: 0;
         }
+
         /* ===== زر التبديل (Toggle) ===== */
         .toggle-sw {
             width: 48px;
@@ -299,9 +223,7 @@
             transition: 0.3s;
             flex-shrink: 0;
         }
-        .toggle-sw.active {
-            background: var(--accent);
-        }
+        .toggle-sw.active { background: var(--accent); }
         .toggle-sw::after {
             content: '';
             position: absolute;
@@ -313,66 +235,123 @@
             right: 2px;
             transition: 0.3s;
         }
-        .toggle-sw.active::after {
-            right: 24px;
+        .toggle-sw.active::after { right: 24px; }
+
+        /* ===== الأزرار الداخلية ===== */
+        .promo-btn {
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.2s;
+            width: 100%;
         }
-        /* ===== قسم Meta Verified ===== */
-        .meta-verified {
-            background: linear-gradient(135deg, var(--surface), #182229);
-            border: 1px solid #ffcc00;
+        .promo-btn:hover { opacity: 0.9; }
+        .promo-btn:active { transform: scale(0.97); }
+        .promo-btn.secondary {
+            background: var(--surface3);
+            color: var(--text);
         }
-        .meta-verified .setting-icon i {
-            color: #ffcc00;
+        .promo-btn.danger {
+            background: #ff4444;
+            color: #fff;
         }
-        /* ===== القائمة المنبثقة (ثلاث نقاط) ===== */
-        .popup-menu {
+
+        /* ===== القائمة المنبثقة ===== */
+        .popup-overlay {
             position: fixed;
-            top: 60px;
-            right: 10px;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 2000;
+            display: none;
+            justify-content: flex-end;
+            align-items: flex-start;
+        }
+        .popup-overlay.active { display: flex; }
+        .popup-menu {
             background: var(--surface);
             border-radius: 16px;
-            width: 220px;
-            z-index: 1000;
+            margin: 60px 12px 0 0;
+            width: 240px;
             box-shadow: var(--shadow);
-            overflow: hidden;
             border: 1px solid var(--border);
+            overflow: hidden;
+            animation: slideIn 0.25s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .popup-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 16px;
+            padding: 13px 16px;
             cursor: pointer;
             color: var(--text2);
             font-size: 13px;
             border-bottom: 1px solid var(--border);
             transition: 0.15s;
         }
-        .popup-item:last-child {
-            border-bottom: none;
+        .popup-item:last-child { border-bottom: none; }
+        .popup-item:hover { background: var(--surface3); }
+        .popup-item i { width: 20px; color: var(--text3); text-align: center; }
+        .popup-item.danger { color: #ff4444; }
+
+        /* ===== مودال (نافذة منبثقة) ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
         }
-        .popup-item:hover {
-            background: var(--surface2);
-        }
-        .popup-item.danger {
-            color: #ff4444;
-        }
-        /* ===== التذييل ===== */
-        .footer-note {
-            text-align: center;
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--surface);
+            border-radius: 24px;
+            width: 340px;
+            max-width: 92%;
             padding: 24px;
-            font-size: 11px;
-            color: var(--text3);
+            box-shadow: var(--shadow);
+            animation: popIn 0.3s ease;
         }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-card h3 { font-size: 18px; margin-bottom: 12px; text-align: center; }
+        .modal-card p { color: var(--text3); font-size: 14px; text-align: center; margin-bottom: 16px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .modal-actions button {
+            padding: 10px 24px;
+            border-radius: 25px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.2s;
+        }
+        .modal-actions .btn-confirm { background: var(--accent); color: #fff; }
+        .modal-actions .btn-cancel { background: var(--surface3); color: var(--text); }
+
         /* ===== Toast ===== */
-        .global-toast {
+        .toast {
             position: fixed;
             bottom: 90px;
             left: 50%;
             transform: translateX(-50%);
             background: #333;
             color: #fff;
-            padding: 10px 20px;
+            padding: 10px 24px;
             border-radius: 25px;
             font-size: 13px;
             z-index: 5000;
@@ -383,20 +362,22 @@
             font-family: var(--font);
             box-shadow: var(--shadow);
         }
-        .global-toast.show {
-            opacity: 1;
+        .toast.show { opacity: 1; }
+
+        /* ===== التذييل ===== */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            font-size: 11px;
+            color: var(--text3);
         }
+
         /* ===== توافق مع الشاشات الصغيرة ===== */
         @media (max-width: 400px) {
-            .profile-name {
-                font-size: 16px;
-            }
-            .setting-title {
-                font-size: 14px;
-            }
-            .setting-desc {
-                font-size: 11px;
-            }
+            .profile-name { font-size: 16px; }
+            .setting-title { font-size: 14px; }
+            .setting-desc { font-size: 11px; }
+            .modal-card { width: 300px; padding: 18px; }
         }
     </style>
 </head>
@@ -422,121 +403,89 @@
     <!-- ===== قائمة الإعدادات ===== -->
     <div class="settings-list">
 
-        <!-- الوضع الليلي -->
+        <!-- القسم: التخصيص -->
         <div class="setting-section">
-            <div class="setting-item" id="themeToggleItem">
+            <div class="setting-item" id="themeToggle">
                 <div class="setting-icon"><i class="fas fa-moon"></i></div>
                 <div class="setting-info">
                     <div class="setting-title">الوضع الليلي</div>
-                    <div class="setting-desc">تبديل مظهر التطبيق</div>
+                    <div class="setting-desc">تبديل مظهر التطبيق بين الليلي والنهاري</div>
                 </div>
                 <div class="toggle-sw active" id="themeSwitch"></div>
             </div>
-        </div>
-
-        <!-- Meta Verified -->
-        <div class="setting-section meta-verified">
-            <div class="setting-item" id="metaVerified">
-                <div class="setting-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="setting-info">
-                    <div class="setting-title">Meta Verified</div>
-                    <div class="setting-desc">الحصول على شارة تحقق ومزايا أخرى</div>
-                </div>
-                <div class="chevron"><i class="fas fa-chevron-left"></i></div>
-            </div>
-        </div>
-
-        <!-- الحساب -->
-        <div class="setting-section">
-            <div class="setting-item" id="accountSetting">
-                <div class="setting-icon"><i class="fas fa-user-circle"></i></div>
-                <div class="setting-info">
-                    <div class="setting-title">الحساب</div>
-                    <div class="setting-desc">إشعارات الأمان، تغيير الرقم</div>
-                </div>
-                <div class="chevron"><i class="fas fa-chevron-left"></i></div>
-            </div>
-        </div>
-
-        <!-- الخصوصية -->
-        <div class="setting-section">
-            <div class="setting-item" id="privacySetting">
-                <div class="setting-icon"><i class="fas fa-lock"></i></div>
-                <div class="setting-info">
-                    <div class="setting-title">الخصوصية</div>
-                    <div class="setting-desc">الحسابات المحظورة، الرسائل ذاتية الاختفاء</div>
-                </div>
-                <div class="chevron"><i class="fas fa-chevron-left"></i></div>
-            </div>
-        </div>
-
-        <!-- الدردشات -->
-        <div class="setting-section">
-            <div class="setting-item" id="chatsSetting">
-                <div class="setting-icon"><i class="fas fa-comment-dots"></i></div>
-                <div class="setting-info">
-                    <div class="setting-title">الدردشات</div>
-                    <div class="setting-desc">السمة، خلفيات الشاشة، سجلات الدردشة</div>
-                </div>
-                <div class="chevron"><i class="fas fa-chevron-left"></i></div>
-            </div>
-        </div>
-
-        <!-- الإشعارات -->
-        <div class="setting-section">
-            <div class="setting-item" id="notifSetting">
+            <div class="setting-item" id="notifToggle">
                 <div class="setting-icon"><i class="fas fa-bell"></i></div>
                 <div class="setting-info">
                     <div class="setting-title">الإشعارات</div>
-                    <div class="setting-desc">نغمات الرسالة والمجموعة والمكالمة</div>
+                    <div class="setting-desc">تفعيل أو تعطيل الإشعارات الصوتية</div>
                 </div>
-                <div class="chevron"><i class="fas fa-chevron-left"></i></div>
+                <div class="toggle-sw active" id="notifSwitch"></div>
             </div>
         </div>
 
-        <!-- التخزين والبيانات -->
+        <!-- القسم: البيانات -->
         <div class="setting-section">
-            <div class="setting-item" id="storageSetting">
-                <div class="setting-icon"><i class="fas fa-database"></i></div>
+            <div class="setting-item" id="syncContactsItem">
+                <div class="setting-icon"><i class="fas fa-sync-alt"></i></div>
                 <div class="setting-info">
-                    <div class="setting-title">التخزين والبيانات</div>
-                    <div class="setting-desc">استعمال الشبكة، التنزيل التلقائي</div>
+                    <div class="setting-title">مزامنة جهات الاتصال</div>
+                    <div class="setting-desc">تحديث جهات الاتصال من هاتفك</div>
                 </div>
                 <div class="chevron"><i class="fas fa-chevron-left"></i></div>
             </div>
-        </div>
-
-        <!-- لغة التطبيق -->
-        <div class="setting-section">
-            <div class="setting-item" id="languageSetting">
-                <div class="setting-icon"><i class="fas fa-language"></i></div>
+            <div class="setting-item" id="exportDataItem">
+                <div class="setting-icon"><i class="fas fa-download"></i></div>
                 <div class="setting-info">
-                    <div class="setting-title">لغة التطبيق</div>
-                    <div class="setting-desc">العربية</div>
+                    <div class="setting-title">تصدير البيانات</div>
+                    <div class="setting-desc">نسخة احتياطية للمحادثات والملفات</div>
                 </div>
                 <div class="chevron"><i class="fas fa-chevron-left"></i></div>
             </div>
-        </div>
-
-        <!-- المساعدة والملاحظات -->
-        <div class="setting-section">
-            <div class="setting-item" id="helpSetting">
-                <div class="setting-icon"><i class="fas fa-question-circle"></i></div>
+            <div class="setting-item" id="importDataItem">
+                <div class="setting-icon"><i class="fas fa-upload"></i></div>
                 <div class="setting-info">
-                    <div class="setting-title">المساعدة والملاحظات</div>
-                    <div class="setting-desc">مركز المساعدة، اتصل بنا، سياسة الخصوصية</div>
+                    <div class="setting-title">استيراد البيانات</div>
+                    <div class="setting-desc">استعادة النسخة الاحتياطية</div>
                 </div>
                 <div class="chevron"><i class="fas fa-chevron-left"></i></div>
             </div>
+            <div class="setting-item danger" id="clearDataItem">
+                <div class="setting-icon"><i class="fas fa-trash-alt"></i></div>
+                <div class="setting-info">
+                    <div class="setting-title" style="color:#ff4444;">مسح جميع البيانات</div>
+                    <div class="setting-desc">حذف جميع المحادثات والملفات نهائياً</div>
+                </div>
+                <div class="chevron"><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
+            </div>
         </div>
 
-        <!-- دعوة جهة اتصال -->
+        <!-- القسم: الحساب -->
         <div class="setting-section">
-            <div class="setting-item" id="inviteSetting">
-                <div class="setting-icon"><i class="fas fa-user-plus"></i></div>
+            <div class="setting-item" id="logoutItem">
+                <div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div>
                 <div class="setting-info">
-                    <div class="setting-title">دعوة جهة اتصال</div>
-                    <div class="setting-desc">مشاركة رابط التحميل مع الأصدقاء</div>
+                    <div class="setting-title">تسجيل الخروج</div>
+                    <div class="setting-desc">الخروج من حسابك الحالي</div>
+                </div>
+                <div class="chevron"><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
+            </div>
+            <div class="setting-item danger" id="deleteAccountItem">
+                <div class="setting-icon"><i class="fas fa-user-slash"></i></div>
+                <div class="setting-info">
+                    <div class="setting-title" style="color:#ff4444;">حذف الحساب</div>
+                    <div class="setting-desc">حذف الحساب وجميع البيانات المرتبطة</div>
+                </div>
+                <div class="chevron"><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
+            </div>
+        </div>
+
+        <!-- القسم: معلومات -->
+        <div class="setting-section">
+            <div class="setting-item" id="aboutItem">
+                <div class="setting-icon"><i class="fas fa-info-circle"></i></div>
+                <div class="setting-info">
+                    <div class="setting-title">حول التطبيق</div>
+                    <div class="setting-desc">RamzApp v5.0 – الهاتف هو المصدر</div>
                 </div>
                 <div class="chevron"><i class="fas fa-chevron-left"></i></div>
             </div>
@@ -545,288 +494,336 @@
     </div>
 
     <!-- ===== التذييل ===== -->
-    <div class="footer-note">
-        © 2026 RamzApp v4.0 | جميع الحقوق محفوظة
+    <div class="footer">© 2026 RamzApp v5.0 | جميع الحقوق محفوظة</div>
+
+    <!-- ===== النوافذ المنبثقة ===== -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-card">
+            <h3 id="modalTitle">⚠️ تأكيد</h3>
+            <p id="modalMessage">هل أنت متأكد من هذا الإجراء؟</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="modalCancel">إلغاء</button>
+                <button class="btn-confirm" id="modalConfirm">تأكيد</button>
+            </div>
+        </div>
     </div>
 
-    <!-- ===== تحميل supabase.js (إن وجد) ===== -->
+    <div class="popup-overlay" id="popupOverlay">
+        <div class="popup-menu" id="popupMenu"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== تحميل السكربتات ===== -->
+    <script src="db.js"></script>
     <script src="supabase.js"></script>
+    <script src="common.js"></script>
 
-    <!-- ===== السكربت الرئيسي ===== -->
     <script>
-        // ================================================================
-        // التحقق من تحميل FontAwesome وتفعيل الاحتياطي إذا لزم الأمر
-        // ================================================================
-        (function detectFontAwesome() {
-            // ننتظر حتى تحميل الصفحة بالكامل
-            window.addEventListener('load', function() {
-                // إنشاء عنصر اختبار
-                const testEl = document.createElement('i');
-                testEl.className = 'fas fa-home';
-                testEl.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
-                document.body.appendChild(testEl);
+        (function() {
+            'use strict';
 
-                // الحصول على المحتوى المظلل
-                const style = window.getComputedStyle(testEl, ':before');
-                const content = style.getPropertyValue('content');
-
-                // إزالة عنصر الاختبار
-                document.body.removeChild(testEl);
-
-                // إذا كان المحتوى فارغاً أو 'none'، فهذا يعني فشل تحميل FontAwesome
-                if (!content || content === 'none' || content === '') {
-                    document.body.classList.add('fa-fallback');
-                    console.log('⚠️ FontAwesome لم يتم تحميله، تم تفعيل نظام الاحتياطي (fallback).');
-                } else {
-                    console.log('✅ FontAwesome تم تحميله بنجاح.');
-                }
-            });
-
-            // أيضاً نفحص بعد فترة قصيرة للتأكد
-            setTimeout(function() {
-                const testEl = document.createElement('i');
-                testEl.className = 'fas fa-home';
-                testEl.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
-                document.body.appendChild(testEl);
-                const style = window.getComputedStyle(testEl, ':before');
-                const content = style.getPropertyValue('content');
-                document.body.removeChild(testEl);
-                if (!content || content === 'none' || content === '') {
-                    document.body.classList.add('fa-fallback');
-                }
-            }, 2000);
-        })();
-
-        // ================================================================
-        // دوال مساعدة
-        // ================================================================
-        function toast(msg, duration = 2000) {
-            const existing = document.querySelector('.global-toast');
-            if (existing) existing.remove();
-            const el = document.createElement('div');
-            el.className = 'global-toast';
-            el.textContent = msg;
-            document.body.appendChild(el);
-            requestAnimationFrame(() => el.style.opacity = '1');
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 300);
-            }, duration);
-        }
-
-        function getCurrentUser() {
-            const raw = localStorage.getItem('ramzapp_user');
-            if (!raw) {
-                window.location.href = 'login.html';
-                return null;
+            // ================================================================
+            // دوال مساعدة
+            // ================================================================
+            function toast(msg, duration = 2500) {
+                const el = document.getElementById('toast');
+                el.textContent = msg;
+                el.classList.add('show');
+                clearTimeout(el._hideTimer);
+                el._hideTimer = setTimeout(() => el.classList.remove('show'), duration);
             }
-            try { return JSON.parse(raw); } catch (e) { return null; }
-        }
 
-        function loadTheme() {
-            const theme = localStorage.getItem('ramzapp_theme') || 'dark';
-            document.body.classList.toggle('light-theme', theme === 'light');
-            const ts = document.getElementById('themeSwitch');
-            if (ts) ts.classList.toggle('active', theme === 'dark');
-        }
-
-        function toggleTheme() {
-            const isLight = document.body.classList.toggle('light-theme');
-            const newTheme = isLight ? 'light' : 'dark';
-            localStorage.setItem('ramzapp_theme', newTheme);
-            const ts = document.getElementById('themeSwitch');
-            if (ts) ts.classList.toggle('active', !isLight);
-            toast(isLight ? '☀️ الوضع النهاري' : '🌙 الوضع الليلي');
-        }
-
-        function logout() {
-            if (confirm('تسجيل الخروج؟')) {
-                localStorage.removeItem('ramzapp_user');
-                window.location.href = 'login.html';
+            function getCurrentUser() {
+                try {
+                    const raw = localStorage.getItem('ramzapp_user');
+                    return raw ? JSON.parse(raw) : null;
+                } catch(e) { return null; }
             }
-        }
 
-        async function deleteAccount() {
-            if (confirm('⚠️ تحذير: سيتم حذف حسابك وجميع بياناتك نهائياً. هل أنت متأكد؟')) {
-                if (window.supabaseClient) {
-                    const user = getCurrentUser();
-                    if (user) {
-                        try {
-                            await window.supabaseClient.from('users').delete().eq('id', user.id);
-                            await window.supabaseClient.auth.signOut();
-                        } catch (e) { /* تجاهل */ }
-                    }
-                }
-                localStorage.removeItem('ramzapp_user');
-                toast('✅ تم حذف الحساب');
-                setTimeout(() => { window.location.href = 'login.html'; }, 1000);
-            }
-        }
-
-        // ================================================================
-        // تحميل بيانات المستخدم
-        // ================================================================
-        function loadUserProfile() {
-            const user = getCurrentUser();
-            if (!user) return;
-            document.getElementById('profileName').innerText = user.name || 'مستخدم';
-            document.getElementById('profileStatus').innerText = user.bio || 'مرحباً! أنا أستخدم RamzApp';
-            const avatar = document.getElementById('profileAvatar');
-            if (user.avatar && user.avatar.startsWith('http')) {
-                avatar.innerHTML = `<img src="${user.avatar}" alt="avatar">`;
-            } else {
-                avatar.innerText = (user.name || 'م').charAt(0);
-                avatar.style.fontSize = '28px';
-            }
-        }
-
-        // ================================================================
-        // القائمة المنبثقة (ثلاث نقاط)
-        // ================================================================
-        function showPopupMenu() {
-            const existing = document.querySelector('.popup-menu');
-            if (existing) existing.remove();
-            const menu = document.createElement('div');
-            menu.className = 'popup-menu';
-            menu.innerHTML = `
-                <div class="popup-item" data-action="home"><i class="fas fa-home"></i> الرئيسية</div>
-                <div class="popup-item" data-action="profile"><i class="fas fa-user-edit"></i> تعديل الملف الشخصي</div>
-                <div class="popup-item" data-action="about"><i class="fas fa-info-circle"></i> حول التطبيق</div>
-                <div class="popup-item danger" data-action="logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</div>
-                <div class="popup-item danger" data-action="delete"><i class="fas fa-trash-alt"></i> حذف الحساب</div>
-            `;
-            document.body.appendChild(menu);
-            const closeMenu = () => menu.remove();
-            menu.querySelectorAll('.popup-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const action = item.dataset.action;
-                    if (action === 'home') window.location.href = 'index.html';
-                    else if (action === 'profile') window.location.href = 'edit-profile.html';
-                    else if (action === 'about') alert('RamzApp v4.0\nتطبيق مراسلة آمن ومتكامل\nجميع الحقوق محفوظة © 2026');
-                    else if (action === 'logout') logout();
-                    else if (action === 'delete') deleteAccount();
-                    closeMenu();
+            function showModal(title, message, onConfirm) {
+                document.getElementById('modalTitle').textContent = title;
+                document.getElementById('modalMessage').textContent = message;
+                document.getElementById('confirmModal').classList.add('active');
+                const confirmBtn = document.getElementById('modalConfirm');
+                const cancelBtn = document.getElementById('modalCancel');
+                const newConfirm = confirmBtn.cloneNode(true);
+                const newCancel = cancelBtn.cloneNode(true);
+                confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+                cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+                newCancel.addEventListener('click', () => {
+                    document.getElementById('confirmModal').classList.remove('active');
                 });
-            });
-            setTimeout(() => {
-                document.addEventListener('click', closeMenu, { once: true });
-            }, 10);
-        }
+                newConfirm.addEventListener('click', () => {
+                    document.getElementById('confirmModal').classList.remove('active');
+                    if (typeof onConfirm === 'function') onConfirm();
+                });
+            }
 
-        // ================================================================
-        // ربط الأحداث
-        // ================================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            // زر الرجوع
-            document.getElementById('backBtn').addEventListener('click', () => {
-                window.location.href = 'index.html';
-            });
-
-            // زر القائمة (ثلاث نقاط)
-            document.getElementById('menuBtn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                showPopupMenu();
-            });
-
-            // بطاقة الملف الشخصي – تفتح edit-profile.html
-            document.getElementById('profileCard').addEventListener('click', () => {
-                window.location.href = 'edit-profile.html';
-            });
-
-            // الوضع الليلي
-            document.getElementById('themeToggleItem').addEventListener('click', toggleTheme);
-
-            // Meta Verified
-            document.getElementById('metaVerified').addEventListener('click', () => {
-                toast('⭐ طلب التحقق (Meta Verified) - قريباً');
-            });
-
-            // الحساب
-            document.getElementById('accountSetting').addEventListener('click', () => {
-                toast('🔧 إعدادات الحساب - قريباً');
-            });
-
-            // الخصوصية
-            document.getElementById('privacySetting').addEventListener('click', () => {
-                toast('🔒 إعدادات الخصوصية - قريباً');
-            });
-
-            // الدردشات
-            document.getElementById('chatsSetting').addEventListener('click', () => {
-                toast('💬 إعدادات الدردشات - قريباً');
-            });
-
-            // الإشعارات
-            document.getElementById('notifSetting').addEventListener('click', () => {
-                toast('🔔 إعدادات الإشعارات - قريباً');
-            });
-
-            // التخزين والبيانات
-            document.getElementById('storageSetting').addEventListener('click', () => {
-                toast('💾 إدارة التخزين - قريباً');
-            });
-
-            // اللغة
-            document.getElementById('languageSetting').addEventListener('click', () => {
-                toast('🌐 سيتم إضافة لغات أخرى قريباً');
-            });
-
-            // المساعدة والملاحظات
-            document.getElementById('helpSetting').addEventListener('click', () => {
-                toast('📞 مركز المساعدة - سيتوفر قريباً');
-            });
-
-            // دعوة جهة اتصال
-            document.getElementById('inviteSetting').addEventListener('click', async () => {
+            // ================================================================
+            // تحميل بيانات المستخدم وعرضها
+            // ================================================================
+            function loadProfile() {
                 const user = getCurrentUser();
-                if (user) {
-                    const link = `${window.location.origin}/redirect.html?id=${user.id}`;
-                    if (navigator.share) {
+                if (!user) {
+                    document.getElementById('profileName').textContent = 'زائر';
+                    document.getElementById('profileStatus').textContent = 'سجل الدخول أولاً';
+                    return;
+                }
+                document.getElementById('profileName').textContent = user.name || 'مستخدم';
+                document.getElementById('profileStatus').textContent = user.bio || 'مرحباً! أنا في RamzApp 💬';
+                const avatar = document.getElementById('profileAvatar');
+                if (user.avatar && user.avatar.startsWith('http')) {
+                    avatar.innerHTML = `<img src="${user.avatar}" alt="avatar">`;
+                } else {
+                    avatar.textContent = (user.name || 'م').charAt(0);
+                    avatar.style.fontSize = '28px';
+                }
+            }
+
+            // ================================================================
+            // تطبيق الثيم
+            // ================================================================
+            function applyTheme(theme) {
+                const isLight = theme === 'light';
+                document.body.classList.toggle('light-theme', isLight);
+                const ts = document.getElementById('themeSwitch');
+                if (ts) ts.classList.toggle('active', theme === 'dark');
+                localStorage.setItem('ramzapp_theme', theme);
+            }
+
+            function loadTheme() {
+                const theme = localStorage.getItem('ramzapp_theme') || 'dark';
+                applyTheme(theme);
+            }
+
+            // ================================================================
+            // القائمة المنبثقة (ثلاث نقاط)
+            // ================================================================
+            function showPopupMenu() {
+                const overlay = document.getElementById('popupOverlay');
+                const menu = document.getElementById('popupMenu');
+                menu.innerHTML = `
+                    <div class="popup-item" data-action="home"><i class="fas fa-home"></i> الرئيسية</div>
+                    <div class="popup-item" data-action="edit-profile"><i class="fas fa-user-edit"></i> تعديل الملف الشخصي</div>
+                    <div class="popup-item" data-action="sync"><i class="fas fa-sync-alt"></i> مزامنة جهات الاتصال</div>
+                    <div class="popup-item" data-action="about"><i class="fas fa-info-circle"></i> حول التطبيق</div>
+                    <div class="popup-item danger" data-action="logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</div>
+                `;
+                overlay.classList.add('active');
+                menu.querySelectorAll('.popup-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        overlay.classList.remove('active');
+                        const action = item.dataset.action;
+                        if (action === 'home') window.location.href = 'index.html';
+                        else if (action === 'edit-profile') window.location.href = 'edit-profile.html';
+                        else if (action === 'sync') {
+                            if (typeof window.syncContacts === 'function') {
+                                window.syncContacts().catch(() => toast('⚠️ فشلت المزامنة'));
+                            } else {
+                                toast('⚠️ خدمة المزامنة غير متاحة');
+                            }
+                        }
+                        else if (action === 'about') {
+                            toast('ℹ️ RamzApp v5.0\nالهاتف هو المصدر\nمراسلة آمنة ومتكاملة');
+                        }
+                        else if (action === 'logout') {
+                            if (typeof window.logout === 'function') window.logout();
+                            else toast('⚠️ تسجيل الخروج غير متاح');
+                        }
+                    });
+                });
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) overlay.classList.remove('active');
+                });
+            }
+
+            // ================================================================
+            // دوال الإعدادات
+            // ================================================================
+            function exportData() {
+                if (typeof window.exportAllData === 'function') {
+                    const data = window.exportAllData();
+                    const blob = new Blob([data], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'ramzapp_backup_' + new Date().toISOString().slice(0,10) + '.json';
+                    a.click();
+                    toast('💾 تم تصدير البيانات');
+                } else {
+                    toast('⚠️ وظيفة التصدير غير متاحة');
+                }
+            }
+
+            function importData() {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async (ev) => {
                         try {
-                            await navigator.share({ title: 'RamzApp', text: `انضم إلي على RamzApp: ${link}` });
-                        } catch (e) { /* تجاهل */ }
-                    } else {
-                        try {
-                            await navigator.clipboard.writeText(link);
-                            toast('📋 تم نسخ رابط الدعوة');
-                        } catch (e) {
-                            toast('📋 رابط الدعوة: ' + link);
+                            if (typeof window.importAllData === 'function') {
+                                const success = await window.importAllData(ev.target.result);
+                                if (success) {
+                                    toast('✅ تم استيراد البيانات بنجاح');
+                                    setTimeout(() => location.reload(), 1000);
+                                } else {
+                                    toast('❌ الملف غير صالح');
+                                }
+                            } else {
+                                toast('⚠️ وظيفة الاستيراد غير متاحة');
+                            }
+                        } catch(err) {
+                            toast('❌ فشل الاستيراد');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            }
+
+            function clearAllData() {
+                showModal('⚠️ مسح جميع البيانات',
+                    'سيتم حذف جميع المحادثات، الملفات، والإعدادات نهائياً. هل أنت متأكد؟',
+                    () => {
+                        if (typeof window.clearAllData === 'function') {
+                            window.clearAllData();
+                            toast('🗑️ تم مسح جميع البيانات');
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            toast('⚠️ وظيفة المسح غير متاحة');
                         }
                     }
-                } else {
-                    toast('⚠️ يجب تسجيل الدخول أولاً');
-                }
-            });
-
-            // تحميل السمة وبيانات المستخدم
-            loadTheme();
-            loadUserProfile();
-
-            // إذا كانت supabase.js موجودة، نحاول جلب بيانات المستخدم من الخادم
-            if (window.supabaseClient) {
-                const user = getCurrentUser();
-                if (user) {
-                    window.supabaseClient
-                        .from('users')
-                        .select('name, avatar, bio')
-                        .eq('id', user.id)
-                        .single()
-                        .then(({ data }) => {
-                            if (data) {
-                                if (data.name) document.getElementById('profileName').innerText = data.name;
-                                if (data.bio) document.getElementById('profileStatus').innerText = data.bio;
-                                if (data.avatar) {
-                                    document.getElementById('profileAvatar').innerHTML =
-                                        `<img src="${data.avatar}" alt="avatar">`;
-                                }
-                            }
-                        })
-                        .catch(() => {});
-                }
+                );
             }
 
-            console.log('✅ settings.html (مع دعم كامل للأيقونات) جاهز');
-        });
+            function deleteAccount() {
+                showModal('⚠️ حذف الحساب',
+                    'سيتم حذف حسابك وجميع بياناتك نهائياً. لا يمكن التراجع عن هذا الإجراء.',
+                    async () => {
+                        try {
+                            if (typeof window.deleteUserAccount === 'function') {
+                                await window.deleteUserAccount();
+                                toast('🗑️ تم حذف الحساب');
+                                setTimeout(() => window.location.href = 'login.html', 1000);
+                            } else if (window.supabaseClient) {
+                                // محاولة الحذف مباشرة عبر supabase
+                                const user = getCurrentUser();
+                                if (user && user.id) {
+                                    await window.supabaseClient.from('users').delete().eq('id', user.id);
+                                    localStorage.removeItem('ramzapp_user');
+                                    toast('🗑️ تم حذف الحساب');
+                                    setTimeout(() => window.location.href = 'login.html', 1000);
+                                } else {
+                                    toast('⚠️ لا يمكن حذف الحساب');
+                                }
+                            } else {
+                                toast('⚠️ خدمة حذف الحساب غير متاحة');
+                            }
+                        } catch(err) {
+                            toast('❌ فشل حذف الحساب');
+                        }
+                    }
+                );
+            }
+
+            // ================================================================
+            // ربط الأحداث
+            // ================================================================
+            document.addEventListener('DOMContentLoaded', function() {
+                // تحميل البيانات والثيم
+                loadProfile();
+                loadTheme();
+
+                // زر الرجوع
+                document.getElementById('backBtn').addEventListener('click', () => {
+                    window.location.href = 'index.html';
+                });
+
+                // زر القائمة (ثلاث نقاط)
+                document.getElementById('menuBtn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showPopupMenu();
+                });
+
+                // بطاقة الملف الشخصي – تفتح edit-profile.html
+                document.getElementById('profileCard').addEventListener('click', () => {
+                    window.location.href = 'edit-profile.html';
+                });
+
+                // تبديل الثيم
+                document.getElementById('themeToggle').addEventListener('click', function() {
+                    const current = localStorage.getItem('ramzapp_theme') || 'dark';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    applyTheme(next);
+                });
+
+                // تبديل الإشعارات
+                const notifToggle = document.getElementById('notifToggle');
+                const notifSwitch = document.getElementById('notifSwitch');
+                const notifState = localStorage.getItem('ramzapp_notif') !== 'false';
+                notifSwitch.classList.toggle('active', notifState);
+                notifToggle.addEventListener('click', function() {
+                    const newState = !notifSwitch.classList.contains('active');
+                    notifSwitch.classList.toggle('active', newState);
+                    localStorage.setItem('ramzapp_notif', String(newState));
+                    if (typeof window.updateSetting === 'function') {
+                        window.updateSetting('notifications', newState);
+                    }
+                    toast(newState ? '🔔 الإشعارات مفعلة' : '🔕 الإشعارات معطلة');
+                });
+
+                // مزامنة جهات الاتصال
+                document.getElementById('syncContactsItem').addEventListener('click', () => {
+                    if (typeof window.syncContacts === 'function') {
+                        window.syncContacts().catch(() => toast('⚠️ فشلت المزامنة'));
+                    } else {
+                        toast('⚠️ خدمة المزامنة غير متاحة');
+                    }
+                });
+
+                // تصدير البيانات
+                document.getElementById('exportDataItem').addEventListener('click', exportData);
+
+                // استيراد البيانات
+                document.getElementById('importDataItem').addEventListener('click', importData);
+
+                // مسح البيانات
+                document.getElementById('clearDataItem').addEventListener('click', clearAllData);
+
+                // تسجيل الخروج
+                document.getElementById('logoutItem').addEventListener('click', () => {
+                    showModal('🚪 تسجيل الخروج', 'هل تريد تسجيل الخروج من حسابك؟', () => {
+                        if (typeof window.logout === 'function') {
+                            window.logout();
+                        } else {
+                            localStorage.removeItem('ramzapp_user');
+                            window.location.href = 'login.html';
+                        }
+                    });
+                });
+
+                // حذف الحساب
+                document.getElementById('deleteAccountItem').addEventListener('click', deleteAccount);
+
+                // حول التطبيق
+                document.getElementById('aboutItem').addEventListener('click', () => {
+                    toast('ℹ️ RamzApp v5.0\n"الهاتف هو المصدر"\nمراسلة آمنة ومتكاملة');
+                });
+
+                // إغلاق المودال عند النقر خارج المحتوى
+                document.getElementById('confirmModal').addEventListener('click', function(e) {
+                    if (e.target === this) this.classList.remove('active');
+                });
+
+                console.log('✅ settings.html (الإصدار النهائي v5.0) جاهز');
+            });
+
+        })();
     </script>
+
 </body>
-                  </html>
+</html>
