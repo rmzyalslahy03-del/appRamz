@@ -1,9 +1,9 @@
 // ======================================================================
-// common.js - الإصدار v6.3 النهائي الكامل
+// common.js - الإصدار النهائي v6.4 (المستقر والكامل)
 // جميع الميزات مفعلة | الهاتف هو المصدر | Supabase وسيط مؤقت
 // ======================================================================
 
-console.log('🚀 common.js v6.3 (النسخة الكاملة) بدأ التحميل...');
+console.log('🚀 common.js v6.4 (النسخة النهائية الكاملة) بدأ التحميل...');
 
 // ==================== تحميل FontAwesome ====================
 (function() {
@@ -180,47 +180,153 @@ async function openE2EStore() {
         req.onerror = reject;
     });
 }
-async function saveKeyPairToStorage(userId, pub, priv) {
+
+// ==================== دوال تشفير المفاتيح الخاصة (PBKDF2 + AES-GCM) ====================
+async function deriveEncryptionKey(password, salt) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(password),
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+    );
+    return crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 600000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+    );
+}
+
+async function saveKeyPairToStorage(userId, pubBase64, privBase64, password) {
     const db = await openE2EStore();
     const tx = db.transaction('keys', 'readwrite');
     const store = tx.objectStore('keys');
+
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const encryptionKey = await deriveEncryptionKey(password, salt);
+
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encodedPriv = new TextEncoder().encode(privBase64);
+    const encryptedPriv = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv: iv },
+        encryptionKey,
+        encodedPriv
+    );
+
+    const combined = new Uint8Array(iv.length + encryptedPriv.byteLength);
+    combined.set(iv, 0);
+    combined.set(new Uint8Array(encryptedPriv), iv.length);
+    const encryptedPrivBase64 = btoa(String.fromCharCode(...combined));
+
     await Promise.all([
-        new Promise((res, rej) => { const r = store.put({id: userId+'_public', key: pub}); r.onsuccess = res; r.onerror = rej; }),
-        new Promise((res, rej) => { const r = store.put({id: userId+'_private', key: priv}); r.onsuccess = res; r.onerror = rej; })
+        new Promise((res, rej) => {
+            const r = store.put({id: userId+'_public', key: pubBase64});
+            r.onsuccess = res; r.onerror = rej;
+        }),
+        new Promise((res, rej) => {
+            const r = store.put({
+                id: userId+'_private',
+                key: encryptedPrivBase64,
+                salt: btoa(String.fromCharCode(...salt))
+            });
+            r.onsuccess = res; r.onerror = rej;
+        })
     ]);
 }
-async function loadKeyPairFromStorage(userId) {
+
+async function loadKeyPairFromStorage(userId, password) {
     const db = await openE2EStore();
     const tx = db.transaction('keys', 'readonly');
     const store = tx.objectStore('keys');
-    const pub = await new Promise(res => { const r = store.get(userId+'_public'); r.onsuccess = () => res(r.result); });
-    const priv = await new Promise(res => { const r = store.get(userId+'_private'); r.onsuccess = () => res(r.result); });
-    if (pub && priv) {
-        const publicKey = await importPublicKey(pub.key);
-        const privateKey = await importPrivateKey(priv.key);
+
+    const pubRecord = await new Promise(res => { const r = store.get(userId+'_public'); r.onsuccess = () => res(r.result); });
+    const privRecord = await new Promise(res => { const r = store.get(userId+'_private'); r.onsuccess = () => res(r.result); });
+
+    if (!pubRecord || !privRecord) return null;
+
+    try {
+        const salt = Uint8Array.from(atob(privRecord.salt), c => c.charCodeAt(0));
+        const encryptionKey = await deriveEncryptionKey(password, salt);
+
+        const combined = Uint8Array.from(atob(privRecord.key), c => c.charCodeAt(0));
+        const iv = combined.slice(0, 12);
+        const encryptedData = combined.slice(12);
+
+        const decryptedPriv = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            encryptionKey,
+            encryptedData
+        );
+        const privBase64 = new TextDecoder().decode(decryptedPriv);
+
+        const publicKey = await importPublicKey(pubRecord.key);
+        const privateKey = await importPrivateKey(privBase64);
         if (publicKey && privateKey) return { publicKey, privateKey };
+    } catch (e) {
+        console.error('❌ فشل فك التشفير (كلمة المرور خاطئة أو البيانات تالفة)');
+        return null;
     }
     return null;
 }
-async function initEncryption() {
+
+async function initEncryption(password) {
     const user = DB_getCurrentUser();
     if (!user) return;
     const userId = user.phone || user.id;
-    const stored = await loadKeyPairFromStorage(userId);
-    if (stored) { currentUserKeyPair = stored; }
-    else {
-        currentUserKeyPair = await generateKeyPair();
-        const pubBase64 = await exportPublicKey(currentUserKeyPair.publicKey);
-        const privBase64 = await exportPrivateKey(currentUserKeyPair.privateKey);
-        await saveKeyPairToStorage(userId, pubBase64, privBase64);
-        if (window.supabaseClient) {
-            try { await window.supabaseClient.from('users').update({ public_key: pubBase64 }).eq('phone', userId); } catch(e) {}
+    if (!userId) return;
+
+    if (password) {
+        const stored = await loadKeyPairFromStorage(userId, password);
+        if (stored) {
+            currentUserKeyPair = stored;
+            console.log('✅ تم فك تشفير المفتاح الخاص بنجاح');
+            return;
         }
+    }
+
+    // إنشاء مفاتيح جديدة (لأول مرة)
+    console.log('🆕 إنشاء مفاتيح جديدة للمستخدم');
+    currentUserKeyPair = await generateKeyPair();
+    const pubBase64 = await exportPublicKey(currentUserKeyPair.publicKey);
+    const privBase64 = await exportPrivateKey(currentUserKeyPair.privateKey);
+
+    // إذا كان هناك كلمة مرور، نخزن المفاتيح مشفرة
+    if (password) {
+        await saveKeyPairToStorage(userId, pubBase64, privBase64, password);
+    } else {
+        // وضع الضيف: تخزين عادي (أقل أماناً)
+        const db = await openE2EStore();
+        const tx = db.transaction('keys', 'readwrite');
+        const store = tx.objectStore('keys');
+        await Promise.all([
+            new Promise((res, rej) => { const r = store.put({id: userId+'_public', key: pubBase64}); r.onsuccess = res; r.onerror = rej; }),
+            new Promise((res, rej) => { const r = store.put({id: userId+'_private', key: privBase64}); r.onsuccess = res; r.onerror = rej; })
+        ]);
+    }
+
+    if (window.supabaseClient) {
+        try {
+            await window.supabaseClient.from('users').update({ public_key: pubBase64 }).eq('phone', userId);
+        } catch(e) {}
     }
 }
 
 async function deriveSharedSecret(myPrivateKey, theirPublicKey) {
-    return await crypto.subtle.deriveKey({ name: "ECDH", public: theirPublicKey }, myPrivateKey, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+    return await crypto.subtle.deriveKey(
+        { name: "ECDH", public: theirPublicKey },
+        myPrivateKey,
+        { name: "AES-GCM", length: 256 },
+        true,
+        ["encrypt", "decrypt"]
+    );
 }
 async function encryptText(plaintext, sharedSecret) {
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -293,13 +399,17 @@ window.unsubscribeFromChat = function(chatId) {
 window.sendMessageRealtime = async function(msg) {
     if (!window.supabaseClient || !isOnline) return { success: false, offline: true };
     const chatId = msg.chat_id;
-    if (!activeChannels[chatId]) {
-        const channel = window.supabaseClient.channel(`chat:${chatId}`, { config: { broadcast: { self: false } } });
+    if (!chatId) return { success: false, error: 'معرف المحادثة مطلوب' };
+
+    let channel = activeChannels[chatId];
+    if (!channel) {
+        channel = window.supabaseClient.channel(`chat:${chatId}`, { config: { broadcast: { self: false } } });
         await channel.subscribe();
         activeChannels[chatId] = channel;
     }
+
     try {
-        await activeChannels[chatId].send({
+        await channel.send({
             type: 'broadcast',
             event: 'new_message',
             payload: msg
@@ -307,14 +417,15 @@ window.sendMessageRealtime = async function(msg) {
         await window.supabaseClient.from('pending_messages').insert({
             message_id: msg.id,
             chat_id: chatId,
-            sender_id: msg.sender_id,
+            sender_id: msg.sender_id || 'me',
+            recipient_chat_id: chatId,
             payload: msg,
             created_at: new Date().toISOString(),
             expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
         });
         return { success: true };
     } catch (e) {
-        console.warn('sendMessageRealtime error:', e);
+        console.error('❌ فشل إرسال الرسالة:', e);
         return { success: false, error: e.message };
     }
 };
@@ -433,6 +544,8 @@ let currentChatId = null;
 let replyTarget = null;
 let pendingImg = null;
 let pendingVoice = null;
+let pendingVideo = null;
+let pendingDocument = null;
 let isRecording = false;
 let mediaRecorder = null;
 let recordingChunks = [];
@@ -440,6 +553,7 @@ let callInterval = null;
 let callSeconds = 0;
 let selectedModalUser = null;
 let currentScreen = 'chats';
+let sessionPassword = null; // كلمة المرور المؤقتة للتشفير
 
 // ==================== دوال المجموعات ====================
 function createGroupUI() {
@@ -759,7 +873,7 @@ function showPopup(items) {
     const menu = $('#popupMenu');
     const overlay = $('#popupOverlay');
     if (!menu || !overlay) return;
-    menu.innerHTML = items.map(i => `<div class="popup-item${i.danger?' danger':''}"><i class="fas ${i.icon}"></i>${i.label}</div>`).join('');
+    menu.innerHTML = items.map(i => `<div class="popup-item${i.danger?' danger':''}"><i class="fas ${i.icon}"></i>${esc(i.label)}</div>`).join('');
     menu.querySelectorAll('.popup-item').forEach((el, idx) => {
         el.addEventListener('click', () => {
             items[idx].action?.();
@@ -1121,7 +1235,7 @@ function openChat(chatId) {
     }
 
     c.unread = 0; c._typing = null; DB_saveChat(c);
-    replyTarget = null; pendingImg = null; pendingVoice = null;
+    replyTarget = null; pendingImg = null; pendingVoice = null; pendingVideo = null; pendingDocument = null;
     $('#replyBar').style.display = 'none';
     const inp = $('#msgInput'); if (inp) inp.value = '';
 
@@ -1150,14 +1264,36 @@ function openChat(chatId) {
     scheduleRenderChats();
 }
 
-// ==================== إرسال رسالة ====================
+// ==================== إرسال رسالة (محسن بالكامل) ====================
 async function sendMessage() {
     if (!currentChatId) return;
     const inp = $('#msgInput');
     const text = inp?.value.trim();
-    if (!text && !pendingImg && !pendingVoice) return;
 
-    let msgText = text || (pendingVoice ? '🎤 رسالة صوتية' : '📷 صورة');
+    // إذا كان هناك تسجيل صوتي قيد التقدم، ننهيه أولاً
+    if (isRecording) {
+        if (mediaRecorder?.state === 'recording') {
+            mediaRecorder.stop();
+        }
+        isRecording = false;
+        $('#micBtn')?.classList.remove('recording');
+        // ننتظر حتى يتم معالجة الصوت في onstop
+        return;
+    }
+
+    // التحقق من وجود محتوى
+    if (!text && !pendingImg && !pendingVoice && !pendingVideo && !pendingDocument) {
+        return;
+    }
+
+    // تحديد نوع المحتوى
+    let msgText = text || '';
+    if (pendingVoice) msgText = '🎤 رسالة صوتية';
+    else if (pendingImg) msgText = '📷 صورة';
+    else if (pendingVideo) msgText = '🎬 فيديو';
+    else if (pendingDocument) msgText = '📄 مستند';
+
+    // تشفير الرسالة (E2EE)
     let encryptedPayload = null;
     if (isOnline && currentUserKeyPair) {
         const peerKey = await fetchPeerPublicKey(currentChatId);
@@ -1169,18 +1305,35 @@ async function sendMessage() {
     }
 
     const msg = {
-        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2,6),
-        chat_id: currentChatId, sender_id: 'me', text: msgText,
-        encrypted: !!encryptedPayload, encrypted_payload: encryptedPayload,
-        time: new Date().toISOString(), likes: 0, liked: false,
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+        chat_id: currentChatId,
+        sender_id: 'me',
+        text: msgText,
+        encrypted: !!encryptedPayload,
+        encrypted_payload: encryptedPayload,
+        time: new Date().toISOString(),
+        likes: 0,
+        liked: false,
         reply_to: replyTarget?.id || null,
-        img: pendingImg || null, voice_blob: pendingVoice?.blob || null, voice_duration: pendingVoice?.duration || null,
-        status: 'sending', sync_status: 'pending-send'
+        img: pendingImg || null,
+        voice_blob: pendingVoice?.blob || null,
+        voice_duration: pendingVoice?.duration || null,
+        video: pendingVideo || null,
+        document: pendingDocument || null,
+        status: 'sending',
+        sync_status: 'pending-send'
     };
 
+    // إضافة الرسالة للتخزين المحلي
     DB_addMessage(msg);
+
+    // تنظيف المدخلات
     if (inp) inp.value = '';
-    pendingImg = null; pendingVoice = null; replyTarget = null;
+    pendingImg = null;
+    pendingVoice = null;
+    pendingVideo = null;
+    pendingDocument = null;
+    replyTarget = null;
     $('#replyBar').style.display = 'none';
     updateSendBtn();
     window.sendTypingEvent?.(currentChatId, false);
@@ -1189,14 +1342,19 @@ async function sendMessage() {
     scheduleRenderMessages();
     scheduleRenderChats();
 
+    // محاولة الإرسال عبر Supabase
     if (isOnline && window.sendMessageRealtime) {
         const result = await window.sendMessageRealtime(msg);
-        DB_updateMessage(msg.id, { sync_status: result.success ? 'sent' : 'failed', status: result.success ? 'sent' : 'failed' });
+        DB_updateMessage(msg.id, {
+            sync_status: result.success ? 'sent' : 'failed',
+            status: result.success ? 'sent' : 'failed'
+        });
         scheduleRenderMessages();
         scheduleRenderChats();
     }
 }
 
+// ==================== معالجة الرسائل الواردة ====================
 async function handleIncomingMessage(msg) {
     if (!msg || msg.sender_id === 'me') return;
     const curId = DB_getCurrentUser()?.phone || DB_getCurrentUser()?.id;
@@ -1219,57 +1377,170 @@ async function handleIncomingMessage(msg) {
     playNotificationSound();
 }
 
-// ==================== التسجيل الصوتي ====================
+// ==================== التسجيل الصوتي (محسن بالكامل) ====================
 async function startRecording(e) {
     e.preventDefault();
     if (isRecording) return;
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        isRecording = true; $('#micBtn')?.classList.add('recording');
-        toast('🎤 جاري التسجيل...', 3000);
+        isRecording = true;
+        $('#micBtn')?.classList.add('recording');
+        toast('🎤 جاري التسجيل... اضغط زر الإرسال لإنهاء', 3000);
+
         mediaRecorder = new MediaRecorder(stream);
         recordingChunks = [];
-        mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunks.push(e.data); };
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordingChunks.push(e.data);
+        };
+
         mediaRecorder.onstop = () => {
             const blob = new Blob(recordingChunks, { type: 'audio/webm' });
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64 = reader.result;
                 const duration = Math.floor(recordingChunks.length * 0.05);
-                pendingVoice = { blob: base64, duration: '0:' + Math.min(duration, 59).toString().padStart(2, '0') };
-                updateSendBtn(); toast('✅ اضغط إرسال');
+                pendingVoice = {
+                    blob: base64,
+                    duration: '0:' + Math.min(duration, 59).toString().padStart(2, '0')
+                };
+                $('#micBtn')?.classList.remove('recording');
+                updateSendBtn();
+                toast('🎤 صوت مسجل، جاري الإرسال...', 1500);
+                // إرسال الصوت تلقائياً بعد التسجيل
+                sendMessage();
             };
             reader.readAsDataURL(blob);
             stream.getTracks().forEach(t => t.stop());
+            isRecording = false;
         };
-        mediaRecorder.start();
-        setTimeout(() => { if (isRecording && mediaRecorder.state === 'recording') { mediaRecorder.stop(); isRecording = false; $('#micBtn')?.classList.remove('recording'); } }, 15000);
-    } catch (err) { toast('⚠️ لا يمكن الوصول للميكروفون'); isRecording = false; $('#micBtn')?.classList.remove('recording'); }
-}
-function stopRecording() { if (isRecording && mediaRecorder?.state === 'recording') { mediaRecorder.stop(); isRecording = false; $('#micBtn')?.classList.remove('recording'); } }
 
-// ==================== إرفاق ملفات ====================
-$('#attachBtn')?.addEventListener('click', () => { $('#attachSheet')?.classList.add('open'); $('#attachOverlay')?.classList.add('active'); });
-$('#closeAttachBtn')?.addEventListener('click', () => { $('#attachSheet')?.classList.remove('open'); $('#attachOverlay')?.classList.remove('active'); });
-$('#attachOverlay')?.addEventListener('click', () => { $('#attachSheet')?.classList.remove('open'); $('#attachOverlay')?.classList.remove('active'); });
+        mediaRecorder.start();
+
+        // إيقاف التسجيل عند رفع الإصبع (حدث mouseup/touchend)
+        const stopOnRelease = () => {
+            if (isRecording && mediaRecorder?.state === 'recording') {
+                mediaRecorder.stop();
+                isRecording = false;
+                $('#micBtn')?.classList.remove('recording');
+            }
+            document.removeEventListener('mouseup', stopOnRelease);
+            document.removeEventListener('touchend', stopOnRelease);
+        };
+        document.addEventListener('mouseup', stopOnRelease);
+        document.addEventListener('touchend', stopOnRelease);
+
+        // حد أقصى للتسجيل 15 ثانية (احتياطي)
+        setTimeout(() => {
+            if (isRecording && mediaRecorder?.state === 'recording') {
+                mediaRecorder.stop();
+                isRecording = false;
+                $('#micBtn')?.classList.remove('recording');
+            }
+        }, 15000);
+
+    } catch (err) {
+        toast('⚠️ لا يمكن الوصول للميكروفون');
+        isRecording = false;
+        $('#micBtn')?.classList.remove('recording');
+    }
+}
+
+function stopRecording() {
+    if (isRecording && mediaRecorder?.state === 'recording') {
+        mediaRecorder.stop();
+        isRecording = false;
+        $('#micBtn')?.classList.remove('recording');
+    }
+}
+
+// ==================== إرفاق ملفات (محسن) ====================
+$('#attachBtn')?.addEventListener('click', () => {
+    $('#attachSheet')?.classList.add('open');
+    $('#attachOverlay')?.classList.add('active');
+});
+
+$('#closeAttachBtn')?.addEventListener('click', () => {
+    $('#attachSheet')?.classList.remove('open');
+    $('#attachOverlay')?.classList.remove('active');
+});
+
+$('#attachOverlay')?.addEventListener('click', () => {
+    $('#attachSheet')?.classList.remove('open');
+    $('#attachOverlay')?.classList.remove('active');
+});
 
 const hiddenFileInput = $('#hiddenFileInput');
 $$('.attach-option')?.forEach(o => o.addEventListener('click', () => {
     const type = o.dataset.type;
-    if (type === 'gallery') { hiddenFileInput.accept = 'image/*,video/*'; hiddenFileInput.click(); }
-    else if (type === 'camera') { hiddenFileInput.accept = 'image/*'; hiddenFileInput.capture = 'environment'; hiddenFileInput.click(); }
-    else if (type === 'document') { hiddenFileInput.accept = '.pdf,.doc,.docx,.txt'; hiddenFileInput.click(); }
-    $('#attachSheet')?.classList.remove('open'); $('#attachOverlay')?.classList.remove('active');
+    if (type === 'gallery') {
+        hiddenFileInput.accept = 'image/*,video/*';
+        hiddenFileInput.click();
+    } else if (type === 'camera') {
+        hiddenFileInput.accept = 'image/*';
+        hiddenFileInput.capture = 'environment';
+        hiddenFileInput.click();
+    } else if (type === 'document') {
+        hiddenFileInput.accept = '.pdf,.doc,.docx,.txt,.zip';
+        hiddenFileInput.click();
+    } else if (type === 'contact') {
+        const contact = prompt('أدخل اسم جهة الاتصال:');
+        if (contact) {
+            const msg = {
+                id: 'msg_' + Date.now(),
+                chat_id: currentChatId,
+                sender_id: 'me',
+                text: `📇 ${contact}`,
+                time: new Date().toISOString(),
+                status: 'sending',
+                sync_status: 'pending-send'
+            };
+            DB_addMessage(msg);
+            scheduleRenderMessages();
+            scheduleRenderChats();
+            if (isOnline && window.sendMessageRealtime) {
+                window.sendMessageRealtime(msg);
+            }
+            toast('📇 تم إرسال جهة الاتصال');
+        }
+    }
+    $('#attachSheet')?.classList.remove('open');
+    $('#attachOverlay')?.classList.remove('active');
 }));
+
 hiddenFileInput?.addEventListener('change', (e) => {
     const files = e.target.files;
     if (files.length) {
         Array.from(files).forEach(f => {
             if (f.type.startsWith('image/')) {
                 const r = new FileReader();
-                r.onload = ev => { pendingImg = ev.target.result; updateSendBtn(); toast('📷 اضغط إرسال'); };
+                r.onload = ev => {
+                    pendingImg = ev.target.result;
+                    toast('📷 صورة جاهزة، جاري الإرسال...');
+                    updateSendBtn();
+                    sendMessage(); // إرسال مباشر
+                };
                 r.readAsDataURL(f);
-            } else toast('📄 ' + f.name);
+            } else if (f.type.startsWith('video/')) {
+                const r = new FileReader();
+                r.onload = ev => {
+                    pendingVideo = ev.target.result;
+                    toast('🎬 فيديو جاهز، جاري الإرسال...');
+                    updateSendBtn();
+                    sendMessage();
+                };
+                r.readAsDataURL(f);
+            } else {
+                // ملفات أخرى (مستندات)
+                const r = new FileReader();
+                r.onload = ev => {
+                    pendingDocument = ev.target.result;
+                    toast('📄 مستند جاهز، جاري الإرسال...');
+                    updateSendBtn();
+                    sendMessage();
+                };
+                r.readAsDataURL(f);
+            }
         });
     }
     hiddenFileInput.value = '';
@@ -1484,8 +1755,32 @@ window.importData = function() {
 window.clearAllData = function() {
     if (confirm('⚠️ حذف جميع البيانات؟')) { DB_clearAllData(); toast('🗑 تم الحذف'); setTimeout(() => location.reload(), 500); }
 };
+
+// ==================== تحديث دالة logout (محسنة مع حفظ البيانات) ====================
 window.logout = function() {
-    if (confirm('تسجيل الخروج؟')) { localStorage.removeItem('ramzapp_user'); window.location.href = 'login.html'; }
+    if (confirm('تسجيل الخروج؟')) {
+        if (window.saveAllData) {
+            window.saveAllData().then(() => {
+                localStorage.removeItem('ramzapp_user');
+                sessionPassword = null;
+                currentUserKeyPair = null;
+                if (window.supabaseClient) {
+                    window.supabaseClient.auth.signOut().catch(() => {});
+                }
+                window.location.href = 'login.html';
+            }).catch(() => {
+                localStorage.removeItem('ramzapp_user');
+                sessionPassword = null;
+                currentUserKeyPair = null;
+                window.location.href = 'login.html';
+            });
+        } else {
+            localStorage.removeItem('ramzapp_user');
+            sessionPassword = null;
+            currentUserKeyPair = null;
+            window.location.href = 'login.html';
+        }
+    }
 };
 
 // ==================== التنقل بين الشاشات ====================
@@ -1511,14 +1806,26 @@ window.navigateTo = function(screen) {
 };
 $$('.nav-item').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.nav)));
 
-// ==================== تحديث زر الإرسال ====================
+// ==================== تحديث زر الإرسال (محسن مع المرفقات) ====================
 function updateSendBtn() {
     const inp = $('#msgInput');
-    const has = inp && inp.value.trim().length > 0;
+    const hasText = inp && inp.value.trim().length > 0;
+    const hasAttachment = pendingImg || pendingVoice || pendingVideo || pendingDocument;
+    const hasContent = hasText || hasAttachment;
+
     const sendBtn = $('#sendMsgBtn');
     const micBtn = $('#micBtn');
-    if (sendBtn) sendBtn.style.display = has ? 'flex' : 'none';
-    if (micBtn) micBtn.style.display = has ? 'none' : 'flex';
+
+    if (sendBtn) sendBtn.style.display = hasContent ? 'flex' : 'none';
+    if (micBtn) micBtn.style.display = hasContent ? 'none' : 'flex';
+
+    if (sendBtn) {
+        if (hasAttachment) {
+            sendBtn.style.background = 'var(--accent2)';
+        } else {
+            sendBtn.style.background = 'var(--accent)';
+        }
+    }
 }
 
 // ==================== جميع مستمعي الأحداث ====================
@@ -1551,16 +1858,31 @@ $('#addContactBtn')?.addEventListener('click', () => window.addContactManually?.
 $('#startAdBtn')?.addEventListener('click', () => toast('🚀 إعلان قريباً'));
 $('#broadcastBtn')?.addEventListener('click', () => toast('📢 رسائل جماعية قريباً'));
 
-// ==================== التهيئة النهائية ====================
+// ==================== التهيئة النهائية (محسنة) ====================
 let initRun = false;
 
 async function init() {
     if (initRun) return;
     initRun = true;
 
+    // التحقق من وجود مستخدم
     const user = DB_getCurrentUser();
-    if (!user || !user.phone) { window.location.href = 'login.html'; return; }
+    if (!user || !user.phone) {
+        window.location.href = 'login.html';
+        return;
+    }
 
+    // تهيئة قاعدة البيانات المحلية وانتظارها
+    if (window.initDB) {
+        try {
+            await window.initDB();
+            console.log('✅ تم تهيئة قاعدة البيانات المحلية');
+        } catch (e) {
+            console.warn('⚠️ فشل تهيئة قاعدة البيانات، استخدام الاحتياطي', e);
+        }
+    }
+
+    // عرض واجهة التطبيق
     const app = $('#appContainer');
     const nav = $('#bottomNav');
     if (app) app.style.display = 'flex';
@@ -1568,10 +1890,17 @@ async function init() {
     showScreen('chats');
     toast('📱 جاري التحميل...');
 
-    initEncryption().catch(() => {});
+    // تهيئة التشفير (مع كلمة المرور إذا كانت موجودة)
+    try {
+        await initEncryption(sessionPassword);
+    } catch (e) {
+        console.warn('⚠️ فشل تهيئة التشفير', e);
+    }
+
     bindMenuButtons();
     applyTheme();
 
+    // تحميل البيانات وعرضها
     scheduleRenderChats();
     scheduleRenderContacts();
     scheduleRenderStories();
@@ -1582,15 +1911,41 @@ async function init() {
         window.fetchAllPendingMessages?.();
     }, 100);
 
-    setTimeout(() => { if (isOnline && window.syncContacts) window.syncContacts().catch(()=>{}); }, 5000);
+    setTimeout(() => {
+        if (isOnline && window.syncContacts) window.syncContacts().catch(()=>{});
+    }, 5000);
 
-    window.addEventListener('online', () => { isOnline = true; toast('🟢 متصل'); window.fetchAllPendingMessages?.(); window.fetchAllUsersAsContacts?.(); });
-    window.addEventListener('offline', () => { isOnline = false; toast('🔴 غير متصل'); });
+    // مستمعي أحداث الشبكة
+    window.addEventListener('online', () => {
+        isOnline = true;
+        toast('🟢 متصل');
+        window.fetchAllPendingMessages?.();
+        window.fetchAllUsersAsContacts?.();
+    });
 
-    console.log('✅ RamzApp v6.3 النهائي جاهز – جميع الميزات مفعلة');
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        toast('🔴 غير متصل');
+    });
+
+    // حفظ البيانات قبل إغلاق المتصفح (مهم جداً)
+    window.addEventListener('beforeunload', function(e) {
+        if (window.saveAllData) {
+            window.saveAllData();
+        }
+    });
+
+    // حفظ البيانات بشكل دوري (كل 30 ثانية)
+    setInterval(() => {
+        if (window.saveAllData) {
+            window.saveAllData().catch(() => {});
+        }
+    }, 30000);
+
+    console.log('✅ RamzApp v6.4 النهائي جاهز – جميع الميزات مفعلة');
 }
 
-// تصدير الدوال العامة
+// ==================== تصدير الدوال العامة ====================
 window.sendMessage = sendMessage;
 window.handleIncomingMessage = handleIncomingMessage;
 window.renderChats = renderChats;
@@ -1610,7 +1965,11 @@ window.exportData = exportData;
 window.importData = importData;
 window.clearAllData = clearAllData;
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-else setTimeout(init, 10);
+// ==================== بدء التطبيق ====================
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    setTimeout(init, 10);
+}
 
-console.log('✅ common.js v6.3 محمّل وجاهز');
+console.log('✅ common.js v6.4 محمّل وجاهز');
