@@ -1,20 +1,18 @@
 // ======================================================================
-// db.js - الإصدار النهائي v5.0 (مستقر، جاهز للتشغيل)
+// db.js - الإصدار النهائي v5.1 (مع إصلاحات تحميل البيانات)
 // ======================================================================
 
 (function() {
     'use strict';
 
-    // ======================================================================
-    // التكوين الأساسي
-    // ======================================================================
     const DB_CONFIG = {
         localStorageKey: 'ramzapp_v5_db_cache',
         userKey: 'ramzapp_user',
         sqliteFileName: 'ramzapp.db',
         sqlWasmUrl: 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.0/sql-wasm.wasm',
         sqlJsUrl: 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.0/sql-wasm.js',
-        maxRetries: 3
+        maxRetries: 3,
+        SAVE_INTERVAL: 30000 // حفظ تلقائي كل 30 ثانية
     };
 
     let SQL = null;
@@ -25,13 +23,10 @@
     let initAttempts = 0;
     const MAX_INIT_ATTEMPTS = 5;
 
-    // ======================================================================
-    // الذاكرة المؤقتة (In-Memory) – تستخدم كطبقة وسيطة
-    // ======================================================================
     const inMemoryDB = {
         user: null,
         chats: [],
-        messages: {},      // { chatId: [message, ...] }
+        messages: {},
         contacts: [],
         stories: [],
         channels: [],
@@ -65,6 +60,7 @@
                     delete copy._messages;
                     return copy;
                 }),
+                messages: inMemoryDB.messages,
                 contacts: inMemoryDB.contacts,
                 stories: inMemoryDB.stories,
                 channels: inMemoryDB.channels,
@@ -73,6 +69,7 @@
                 lastUpdate: currentTimestamp()
             };
             localStorage.setItem(DB_CONFIG.localStorageKey, JSON.stringify(cache));
+            console.log('💾 تم حفظ البيانات في LocalStorage (احتياطي)');
         } catch (e) { /* تجاهل */ }
     }
 
@@ -82,116 +79,23 @@
             if (raw) {
                 const data = JSON.parse(raw);
                 if (data.chats) inMemoryDB.chats = data.chats;
+                if (data.messages) inMemoryDB.messages = data.messages;
                 if (data.contacts) inMemoryDB.contacts = data.contacts;
                 if (data.stories) inMemoryDB.stories = data.stories;
                 if (data.channels) inMemoryDB.channels = data.channels;
                 if (data.catalog) inMemoryDB.catalog = data.catalog;
                 if (data.settings) inMemoryDB.settings = data.settings;
+                console.log('✅ تم تحميل البيانات من LocalStorage:', inMemoryDB.chats.length, 'محادثات');
                 return true;
             }
-        } catch (e) { /* تجاهل */ }
+        } catch (e) {
+            console.warn('⚠️ فشل تحميل LocalStorage:', e);
+        }
         return false;
     }
 
     // ======================================================================
-    // تحميل SQL.js (WebAssembly) – مع إعادة محاولة
-    // ======================================================================
-    function loadSqlJs() {
-        return new Promise(function(resolve, reject) {
-            // إذا كان SQL موجوداً مسبقاً
-            if (SQL) {
-                resolve(SQL);
-                return;
-            }
-
-            // محاولة تحميل SQL.js عبر script tag
-            var script = document.createElement('script');
-            script.src = DB_CONFIG.sqlJsUrl;
-            script.onload = function() {
-                // محاولة تهيئة SQL.js
-                if (window.initSqlJs) {
-                    window.initSqlJs({ locateFile: function(file) { return DB_CONFIG.sqlWasmUrl; } })
-                        .then(function(sql) {
-                            SQL = sql;
-                            console.log('✅ SQL.js loaded successfully');
-                            resolve(SQL);
-                        })
-                        .catch(function(err) {
-                            console.warn('⚠️ SQL.js init failed:', err);
-                            reject(err);
-                        });
-                } else if (window.SQL) {
-                    SQL = window.SQL;
-                    console.log('✅ SQL.js loaded (global)');
-                    resolve(SQL);
-                } else {
-                    reject(new Error('SQL.js not found after loading'));
-                }
-            };
-            script.onerror = function() {
-                reject(new Error('Failed to load SQL.js script'));
-            };
-            document.head.appendChild(script);
-        });
-    }
-
-    // ======================================================================
-    // فتح قاعدة البيانات (OPFS / IndexedDB)
-    // ======================================================================
-    async function openDatabase() {
-        if (!SQL) {
-            try {
-                await loadSqlJs();
-            } catch (e) {
-                console.warn('⚠️ Failed to load SQL.js, using fallback');
-                useFallback = true;
-                dbReady = true;
-                return false;
-            }
-        }
-
-        // 1. محاولة OPFS (File System Access API)
-        try {
-            if ('storage' in navigator && 'getDirectory' in navigator.storage) {
-                const opfsRoot = await navigator.storage.getDirectory();
-                const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
-                const file = await fileHandle.getFile();
-                const arrayBuffer = await file.arrayBuffer();
-
-                if (arrayBuffer.byteLength > 0) {
-                    db = new SQL.Database(new Uint8Array(arrayBuffer));
-                } else {
-                    db = new SQL.Database();
-                }
-                dbReady = true;
-                console.log('✅ SQLite database opened via OPFS');
-                return true;
-            }
-        } catch (e) {
-            console.warn('⚠️ OPFS failed, trying IndexedDB...', e);
-        }
-
-        // 2. محاولة IndexedDB (احتياطي)
-        try {
-            const saved = await loadFromIndexedDB();
-            if (saved) {
-                db = new SQL.Database(new Uint8Array(saved));
-            } else {
-                db = new SQL.Database();
-            }
-            dbReady = true;
-            console.log('✅ SQLite database opened via IndexedDB');
-            return true;
-        } catch (e2) {
-            console.warn('⚠️ IndexedDB failed, using LocalStorage only', e2);
-            useFallback = true;
-            dbReady = true;
-            return false;
-        }
-    }
-
-    // ======================================================================
-    // IndexedDB (لحفظ ملف SQLite كـ ArrayBuffer)
+    // IndexedDB (لحفظ ملف SQLite)
     // ======================================================================
     function saveToIndexedDB(data) {
         return new Promise(function(resolve, reject) {
@@ -239,7 +143,95 @@
     }
 
     // ======================================================================
-    // حفظ البيانات (Persist)
+    // تحميل SQL.js (WebAssembly)
+    // ======================================================================
+    function loadSqlJs() {
+        return new Promise(function(resolve, reject) {
+            if (SQL) { resolve(SQL); return; }
+            var script = document.createElement('script');
+            script.src = DB_CONFIG.sqlJsUrl;
+            script.onload = function() {
+                if (window.initSqlJs) {
+                    window.initSqlJs({ locateFile: function(file) { return DB_CONFIG.sqlWasmUrl; } })
+                        .then(function(sql) {
+                            SQL = sql;
+                            console.log('✅ SQL.js loaded successfully');
+                            resolve(SQL);
+                        })
+                        .catch(function(err) {
+                            console.warn('⚠️ SQL.js init failed:', err);
+                            reject(err);
+                        });
+                } else if (window.SQL) {
+                    SQL = window.SQL;
+                    console.log('✅ SQL.js loaded (global)');
+                    resolve(SQL);
+                } else {
+                    reject(new Error('SQL.js not found after loading'));
+                }
+            };
+            script.onerror = function() {
+                reject(new Error('Failed to load SQL.js script'));
+            };
+            document.head.appendChild(script);
+        });
+    }
+
+    // ======================================================================
+    // فتح قاعدة البيانات (OPFS / IndexedDB)
+    // ======================================================================
+    async function openDatabase() {
+        if (!SQL) {
+            try { await loadSqlJs(); } catch (e) {
+                console.warn('⚠️ Failed to load SQL.js, using fallback');
+                useFallback = true;
+                dbReady = true;
+                return false;
+            }
+        }
+
+        // 1. محاولة OPFS
+        try {
+            if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+                const opfsRoot = await navigator.storage.getDirectory();
+                const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
+                const file = await fileHandle.getFile();
+                const arrayBuffer = await file.arrayBuffer();
+
+                if (arrayBuffer.byteLength > 0) {
+                    db = new SQL.Database(new Uint8Array(arrayBuffer));
+                } else {
+                    db = new SQL.Database();
+                }
+                dbReady = true;
+                console.log('✅ SQLite database opened via OPFS');
+                return true;
+            }
+        } catch (e) {
+            console.warn('⚠️ OPFS failed, trying IndexedDB...', e);
+        }
+
+        // 2. محاولة IndexedDB
+        try {
+            const saved = await loadFromIndexedDB();
+            if (saved) {
+                db = new SQL.Database(new Uint8Array(saved));
+            } else {
+                db = new SQL.Database();
+            }
+            dbReady = true;
+            console.log('✅ SQLite database opened via IndexedDB');
+            return true;
+        } catch (e2) {
+            console.warn('⚠️ IndexedDB failed, using LocalStorage only', e2);
+            useFallback = true;
+            dbReady = true;
+            return false;
+        }
+    }
+
+    // ======================================================================
+    // حفظ البيانات (Persist) - محسنة مع التحقق من صحة البيانات
     // ======================================================================
     async function persistDatabase() {
         if (useFallback || !db) {
@@ -247,8 +239,17 @@
             return;
         }
         try {
+            // التحقق من وجود بيانات قبل الحفظ (لتجنب الكتابة الفارغة)
+            const hasData = inMemoryDB.chats.length > 0 || 
+                           Object.keys(inMemoryDB.messages).length > 0 ||
+                           inMemoryDB.contacts.length > 0;
+            
+            if (!hasData) {
+                console.log('ℹ️ لا توجد بيانات للحفظ، تخطي');
+                return;
+            }
+
             var data = db.export();
-            // محاولة OPFS أولاً
             try {
                 if ('storage' in navigator && 'getDirectory' in navigator.storage) {
                     var opfsRoot = await navigator.storage.getDirectory();
@@ -262,8 +263,8 @@
             } catch (e) {
                 await saveToIndexedDB(data.buffer);
             }
+            saveToLocalStorageCache();
         } catch (e) { /* تجاهل */ }
-        saveToLocalStorageCache();
     }
 
     // ======================================================================
@@ -271,9 +272,7 @@
     // ======================================================================
     function createTables() {
         if (useFallback || !db) return;
-
         try {
-            // جدول المستخدم
             db.run(`CREATE TABLE IF NOT EXISTS user (
                 id TEXT PRIMARY KEY,
                 email TEXT,
@@ -284,7 +283,6 @@
                 last_sync TEXT
             )`);
 
-            // جدول المحادثات
             db.run(`CREATE TABLE IF NOT EXISTS chats (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -307,7 +305,6 @@
                 members TEXT
             )`);
 
-            // جدول الرسائل
             db.run(`CREATE TABLE IF NOT EXISTS messages (
                 id TEXT PRIMARY KEY,
                 chat_id TEXT NOT NULL,
@@ -329,7 +326,6 @@
             db.run('CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id)');
             db.run('CREATE INDEX IF NOT EXISTS idx_messages_time ON messages(time)');
 
-            // جدول جهات الاتصال
             db.run(`CREATE TABLE IF NOT EXISTS contacts (
                 id TEXT PRIMARY KEY,
                 phone TEXT NOT NULL,
@@ -342,7 +338,6 @@
                 public_key TEXT
             )`);
 
-            // جدول القصص
             db.run(`CREATE TABLE IF NOT EXISTS stories (
                 id TEXT PRIMARY KEY,
                 user_id TEXT,
@@ -356,10 +351,7 @@
                 isViewed INTEGER DEFAULT 0,
                 color TEXT
             )`);
-            db.run('CREATE INDEX IF NOT EXISTS idx_stories_time ON stories(time)');
-            db.run('CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at)');
 
-            // جدول القنوات
             db.run(`CREATE TABLE IF NOT EXISTS channels (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -374,7 +366,6 @@
                 subscribers TEXT
             )`);
 
-            // جدول المكالمات
             db.run(`CREATE TABLE IF NOT EXISTS calls (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -384,7 +375,6 @@
                 user_id TEXT
             )`);
 
-            // جدول الكتالوج
             db.run(`CREATE TABLE IF NOT EXISTS catalog (
                 id TEXT PRIMARY KEY,
                 name TEXT,
@@ -393,7 +383,6 @@
                 user_id TEXT
             )`);
 
-            // جدول الإعدادات
             db.run(`CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
                 value TEXT
@@ -407,7 +396,7 @@
     }
 
     // ======================================================================
-    // تحميل البيانات من SQLite إلى الذاكرة المؤقتة
+    // تحميل البيانات من SQLite إلى الذاكرة المؤقتة (محسنة)
     // ======================================================================
     function loadInMemoryFromSQLite() {
         if (useFallback || !db) return false;
@@ -427,12 +416,16 @@
                     var c = {};
                     chatRows[0].columns.forEach(function(col, i) { c[col] = r[i]; });
                     if (c.members && typeof c.members === 'string') {
-                        try { c.members = JSON.parse(c.members); } catch(e) { c.members = []; }
+                        try { c.members = JSON.parse(c.members); } catch(e) { 
+                            console.warn('⚠️ فشل تحليل members للمحادثة:', c.id);
+                            c.members = []; 
+                        }
                     } else if (!c.members) {
                         c.members = [];
                     }
                     return c;
                 });
+                console.log('✅ تم تحميل', inMemoryDB.chats.length, 'محادثة من SQLite');
             }
 
             // تحميل الرسائل
@@ -448,6 +441,7 @@
                     if (!inMemoryDB.messages[m.chat_id]) inMemoryDB.messages[m.chat_id] = [];
                     inMemoryDB.messages[m.chat_id].push(m);
                 });
+                console.log('✅ تم تحميل', all.length, 'رسالة من SQLite');
             }
 
             // تحميل جهات الاتصال
@@ -460,7 +454,7 @@
                 });
             }
 
-            // تحميل القصص (مع فلترة المنتهية)
+            // تحميل القصص
             var now = new Date().toISOString();
             var storyRows = db.exec("SELECT * FROM stories WHERE expires_at > datetime('" + now + "') ORDER BY time DESC");
             if (storyRows.length) {
@@ -480,7 +474,10 @@
                     var ch = {};
                     channelRows[0].columns.forEach(function(col, i) { ch[col] = r[i]; });
                     if (ch.subscribers && typeof ch.subscribers === 'string') {
-                        try { ch.subscribers = JSON.parse(ch.subscribers); } catch(e) { ch.subscribers = []; }
+                        try { ch.subscribers = JSON.parse(ch.subscribers); } catch(e) { 
+                            console.warn('⚠️ فشل تحليل subscribers للقناة:', ch.id);
+                            ch.subscribers = []; 
+                        }
                     } else if (!ch.subscribers) {
                         ch.subscribers = [];
                     }
@@ -519,13 +516,13 @@
 
             return true;
         } catch (e) {
-            console.warn('⚠️ فشل تحميل البيانات من SQLite', e);
+            console.warn('⚠️ فشل تحميل البيانات من SQLite:', e);
             return false;
         }
     }
 
     // ======================================================================
-    // حفظ جميع البيانات إلى SQLite
+    // حفظ جميع البيانات إلى SQLite (محسنة)
     // ======================================================================
     async function persistAllData() {
         if (useFallback || !db) {
@@ -533,6 +530,16 @@
             return;
         }
         try {
+            // التحقق من وجود بيانات قبل الحفظ
+            const hasData = inMemoryDB.chats.length > 0 || 
+                           Object.keys(inMemoryDB.messages).length > 0 ||
+                           inMemoryDB.contacts.length > 0;
+            
+            if (!hasData) {
+                console.log('ℹ️ لا توجد بيانات للحفظ الشامل، تخطي');
+                return;
+            }
+
             db.run("DELETE FROM user");
             db.run("DELETE FROM messages");
             db.run("DELETE FROM chats");
@@ -695,6 +702,7 @@
 
             await persistDatabase();
             saveToLocalStorageCache();
+            console.log('✅ تم حفظ جميع البيانات بنجاح');
         } catch (e) {
             console.warn('⚠️ فشل حفظ البيانات في SQLite، استخدام LocalStorage', e);
             saveToLocalStorageCache();
@@ -713,13 +721,15 @@
             chat.last_time = msg.time;
             if (msg.sender_id !== 'me' && !chat.online) chat.unread = (chat.unread || 0) + 1;
         }
+        // حفظ تلقائي بعد كل رسالة جديدة
+        setTimeout(() => persistAllData().catch(() => {}), 500);
     }
 
     // ======================================================================
-    // واجهة API العامة – جميع الدوال المطلوبة
+    // واجهة API العامة
     // ======================================================================
 
-    // ----- التهيئة -----
+    // ----- التهيئة (محسنة) -----
     window.initDB = async function() {
         if (initPromise) return initPromise;
         initPromise = (async function() {
@@ -733,6 +743,7 @@
                 }
 
                 // فتح قاعدة البيانات
+                let loadedFromSQLite = false;
                 if (!useFallback) {
                     try {
                         await openDatabase();
@@ -742,19 +753,30 @@
                     }
                 }
 
-                // إذا كانت قاعدة البيانات جاهزة، أنشئ الجداول وحمّل البيانات
+                // إذا كانت قاعدة البيانات جاهزة
                 if (!useFallback && db) {
                     try {
                         createTables();
-                        loadInMemoryFromSQLite();
+                        loadedFromSQLite = loadInMemoryFromSQLite();
+                        if (!loadedFromSQLite) {
+                            console.warn('⚠️ فشل تحميل البيانات من SQLite، استخدام LocalStorage');
+                            useFallback = true;
+                        }
                     } catch (e) {
-                        console.warn('⚠️ Table creation failed, using fallback', e);
+                        console.warn('⚠️ Table creation or loading failed, using fallback', e);
                         useFallback = true;
                     }
                 }
 
-                if (useFallback) {
-                    loadFromLocalStorageCache();
+                // إذا فشل SQLite، استخدم LocalStorage كاحتياطي
+                if (useFallback || !loadedFromSQLite) {
+                    const loadedFromCache = loadFromLocalStorageCache();
+                    if (!loadedFromCache) {
+                        console.log('ℹ️ لا توجد بيانات في LocalStorage، بدء بقاعدة بيانات فارغة');
+                    } else {
+                        console.log('✅ تم تحميل البيانات من LocalStorage (الاحتياطي)');
+                    }
+                    useFallback = true;
                 }
 
                 // تحميل المستخدم من localStorage
@@ -765,6 +787,12 @@
 
                 console.log('✅ db.js initialized: ' + inMemoryDB.chats.length + ' chats, ' + inMemoryDB.contacts.length + ' contacts');
                 dbReady = true;
+
+                // بدء الحفظ التلقائي الدوري
+                setInterval(() => {
+                    persistAllData().catch(() => {});
+                }, DB_CONFIG.SAVE_INTERVAL);
+
                 return true;
             } catch (e) {
                 console.error('❌ db.js initialization failed:', e);
@@ -930,6 +958,11 @@
             }
         }
         return false;
+    };
+
+    // ----- حفظ جميع البيانات (للتصدير والخروج) -----
+    window.saveAllData = function() {
+        return persistAllData();
     };
 
     // ----- جهات الاتصال -----
@@ -1201,13 +1234,13 @@
     // ----- حالة التخزين -----
     window.isUsingFallback = function() { return useFallback; };
     window.isDbReady = function() { return dbReady; };
-    window.saveAllData = function() { return persistAllData(); };
 
     // ======================================================================
-    // تهيئة أولية
+    // التهيئة التلقائية
     // ======================================================================
-    console.log('✅ db.js (الإصدار النهائي v5.0) جاهز');
+    console.log('✅ db.js (الإصدار النهائي v5.1) جاهز');
     console.log('💾 يدعم OPFS + IndexedDB + LocalStorage احتياطي');
+    console.log('⏰ حفظ تلقائي كل ' + (DB_CONFIG.SAVE_INTERVAL / 1000) + ' ثانية');
 
     if (document.readyState === 'complete') {
         setTimeout(function() { window.initDB().catch(function() {}); }, 500);
