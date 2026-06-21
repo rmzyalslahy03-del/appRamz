@@ -3,15 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-    <title>RamzApp - رابط مراسلة</title>
-    <!-- تحميل Supabase أولاً (مهم) -->
+    <title>رابط مراسلة | RamzApp</title>
+
+    <!-- ===== تحميل Supabase أولاً (للاستعلام عن المستخدمين) ===== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- ===== Font Awesome ===== -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+
     <style>
         /* ======================================================================
-                   الأنماط الأساسية – متوافقة مع تطبيق RamzApp
+                   الأنماط الأساسية – متوافقة مع RamzApp v5.0
                    ====================================================================== */
         :root {
             --bg: #0d0d0d;
@@ -22,15 +24,12 @@
             --text3: #999;
             --accent: #ff0050;
             --accent2: #ff6b8a;
+            --green: #00a884;
             --border: #2c2c2c;
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
             --font: 'Cairo', 'Segoe UI', 'Arial', sans-serif;
         }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background: var(--bg);
             font-family: var(--font);
@@ -49,6 +48,7 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
         .logo {
             font-size: 48px;
             font-weight: 900;
@@ -59,11 +59,12 @@
             text-align: center;
             margin-bottom: 8px;
         }
+
         .card {
             background: var(--surface);
             border-radius: 24px;
             padding: 30px 24px;
-            width: 340px;
+            width: 360px;
             max-width: 100%;
             text-align: center;
             box-shadow: var(--shadow);
@@ -74,6 +75,7 @@
             from { opacity: 0; transform: scale(0.9) translateY(30px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
+
         .avatar {
             width: 90px;
             height: 90px;
@@ -87,24 +89,28 @@
             margin: 0 auto 16px;
             border: 3px solid var(--accent);
             color: var(--text);
+            overflow: hidden;
         }
         .avatar img {
             width: 100%;
             height: 100%;
-            border-radius: 50%;
             object-fit: cover;
         }
+
         .name {
             font-size: 22px;
             font-weight: 700;
             margin-bottom: 6px;
             color: var(--text);
         }
-        .sub {
+        .status {
             color: var(--text3);
             font-size: 14px;
             margin-bottom: 22px;
         }
+        .status .online { color: var(--green); }
+        .status .offline { color: var(--text3); }
+
         .btn {
             width: 100%;
             padding: 14px;
@@ -119,60 +125,41 @@
             transition: all 0.25s;
             margin-top: 8px;
         }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 0, 80, 0.35);
-        }
-        .btn:active {
-            transform: scale(0.96);
-        }
-        .btn.secondary {
-            background: transparent;
-            border: 2px solid var(--accent);
-            color: var(--accent);
-        }
-        .btn.secondary:hover {
-            background: var(--accent);
-            color: #fff;
-        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 0, 80, 0.35); }
+        .btn:active { transform: scale(0.96); }
         .btn:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none !important;
-            box-shadow: none !important;
         }
-        .error {
-            color: #ff4444;
-            font-size: 14px;
-            margin-top: 12px;
-            display: none;
+        .btn-secondary {
+            background: transparent !important;
+            border: 2px solid var(--accent) !important;
+            color: var(--accent) !important;
         }
-        .error.show {
-            display: block;
+        .btn-secondary:hover {
+            background: var(--accent) !important;
+            color: #fff !important;
         }
-        .loading-spinner {
+
+        .spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255,255,255,0.3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 0.8s linear infinite;
             margin-right: 10px;
             vertical-align: middle;
         }
-        .loading-spinner.dark {
-            border-top-color: var(--accent);
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .loading-text {
-            color: var(--text3);
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .hidden { display: none !important; }
+        .error-msg {
+            color: #ff4444;
             font-size: 14px;
-        }
-        .hidden {
-            display: none !important;
+            margin-top: 12px;
         }
         .info-row {
             display: flex;
@@ -183,18 +170,16 @@
             font-size: 12px;
             margin-top: 16px;
         }
-        .info-row i {
-            color: var(--accent);
-        }
-        .footer-note {
+        .info-row i { color: var(--green); }
+
+        .footer {
             color: var(--text3);
             font-size: 11px;
             text-align: center;
-            margin-top: 12px;
         }
 
         /* ===== Toast ===== */
-        .global-toast {
+        .toast {
             position: fixed;
             bottom: 30px;
             left: 50%;
@@ -212,9 +197,7 @@
             font-family: var(--font);
             box-shadow: var(--shadow);
         }
-        .global-toast.show {
-            opacity: 1;
-        }
+        .toast.show { opacity: 1; }
 
         @media (max-width: 400px) {
             .logo { font-size: 36px; }
@@ -226,20 +209,23 @@
 </head>
 <body>
 
+    <!-- ===== الشعار ===== -->
     <div class="logo">💬 RamzApp</div>
 
+    <!-- ===== البطاقة الرئيسية ===== -->
     <div class="card" id="card">
+
         <!-- حالة التحميل -->
         <div id="loadingState">
-            <span class="loading-spinner"></span>
-            <span class="loading-text">جاري التحقق من الرابط...</span>
+            <span class="spinner"></span>
+            <span style="color: var(--text3);">جاري التحقق من الرابط...</span>
         </div>
 
         <!-- المحتوى الرئيسي (يظهر بعد التحميل) -->
         <div id="contentState" class="hidden">
             <div class="avatar" id="userAvatar">?</div>
             <div class="name" id="userName">...</div>
-            <div class="sub" id="userSub">يريد مراسلتك عبر RamzApp</div>
+            <div class="status" id="userStatus">...</div>
 
             <!-- زر فتح المحادثة (للمستخدمين المسجلين) -->
             <button class="btn" id="openChatBtn" style="display:none;">
@@ -247,310 +233,312 @@
             </button>
 
             <!-- زر تسجيل الدخول (لغير المسجلين) -->
-            <button class="btn secondary" id="loginFirstBtn" style="display:none;">
+            <button class="btn btn-secondary" id="loginFirstBtn" style="display:none;">
                 <i class="fas fa-sign-in-alt"></i> تسجيل الدخول أولاً
             </button>
 
             <!-- زر التحميل أثناء الانتظار -->
             <button class="btn" id="loadingBtn" style="display:none;" disabled>
-                <span class="loading-spinner"></span> جاري...
+                <span class="spinner"></span> جاري...
             </button>
 
-            <!-- رسالة خطأ -->
-            <div class="error" id="errorMsg"></div>
+            <div class="error-msg" id="errorMsg"></div>
 
             <!-- معلومات إضافية -->
             <div class="info-row" id="infoRow" style="display:none;">
-                <i class="fas fa-lock" style="color: #25D366;"></i>
+                <i class="fas fa-lock"></i>
                 <span>مشفر من طرف إلى طرف</span>
             </div>
         </div>
     </div>
 
-    <div class="footer-note">© 2026 RamzApp v4.0 | جميع الحقوق محفوظة</div>
+    <div class="footer">© 2026 RamzApp v5.0 | جميع الحقوق محفوظة</div>
 
     <!-- ===== Toast Container ===== -->
-    <div class="global-toast" id="toastMsg"></div>
+    <div class="toast" id="toast"></div>
 
     <!-- ===== تحميل supabase.js (إن وجد) ===== -->
     <script src="supabase.js"></script>
 
     <script>
-        // ================================================================
-        // دوال مساعدة
-        // ================================================================
-        function showToast(message, duration = 2500) {
-            const el = document.getElementById('toastMsg');
-            if (!el) return;
-            el.textContent = message;
-            el.classList.add('show');
-            clearTimeout(el._hideTimer);
-            el._hideTimer = setTimeout(() => {
-                el.classList.remove('show');
-            }, duration);
-        }
+        (function() {
+            'use strict';
 
-        function getCurrentUser() {
-            try {
-                const raw = localStorage.getItem('ramzapp_user');
-                if (raw) return JSON.parse(raw);
-            } catch (e) { /* ignore */ }
-            return null;
-        }
-
-        function getSupabase() {
-            // محاولة الحصول على عميل Supabase من عدة مصادر
-            if (window.supabaseClient) return window.supabaseClient;
-            // إذا كانت المكتبة محملة عبر script
-            if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
-                const client = supabaseJs.createClient(
-                    'https://serlegwdzjulfcxabxzv.supabase.co',
-                    'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx'
-                );
-                window.supabaseClient = client;
-                return client;
+            // ================================================================
+            // دوال مساعدة
+            // ================================================================
+            function toast(message, duration = 2500) {
+                const el = document.getElementById('toast');
+                el.textContent = message;
+                el.classList.add('show');
+                clearTimeout(el._hideTimer);
+                el._hideTimer = setTimeout(() => el.classList.remove('show'), duration);
             }
-            return null;
-        }
 
-        // ================================================================
-        // قراءة معاملات الرابط
-        // ================================================================
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetUserId = urlParams.get('id');
-        const refCode = urlParams.get('ref');
-
-        // ================================================================
-        // عناصر DOM
-        // ================================================================
-        const loadingState = document.getElementById('loadingState');
-        const contentState = document.getElementById('contentState');
-        const userAvatar = document.getElementById('userAvatar');
-        const userName = document.getElementById('userName');
-        const userSub = document.getElementById('userSub');
-        const openChatBtn = document.getElementById('openChatBtn');
-        const loginFirstBtn = document.getElementById('loginFirstBtn');
-        const loadingBtn = document.getElementById('loadingBtn');
-        const errorMsg = document.getElementById('errorMsg');
-        const infoRow = document.getElementById('infoRow');
-
-        // ================================================================
-        // التحقق من صحة الرابط
-        // ================================================================
-        if (!targetUserId && !refCode) {
-            loadingState.innerHTML = `
-                <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">❌</span>
-                <span style="color: var(--text3);">رابط غير صالح</span>
-                <p style="color: var(--text3); font-size: 13px; margin-top: 8px;">
-                    تأكد من أن الرابط صحيح وحاول مرة أخرى.
-                </p>
-                <button class="btn secondary" onclick="window.location.href='index.html'" style="margin-top:16px;">
-                    <i class="fas fa-home"></i> العودة للرئيسية
-                </button>
-            `;
-            throw new Error('رابط غير صالح');
-        }
-
-        // ================================================================
-        // الحصول على بيانات المستخدم المستهدف
-        // ================================================================
-        async function loadTargetUser(userId) {
-            try {
-                const supabase = getSupabase();
-                if (!supabase) {
-                    throw new Error('تعذر الاتصال بقاعدة البيانات');
-                }
-
-                const { data: targetUser, error } = await supabase
-                    .from('users')
-                    .select('name, avatar, phone, is_online, last_seen')
-                    .eq('id', userId)
-                    .single();
-
-                if (error || !targetUser) {
-                    throw new Error('المستخدم غير موجود');
-                }
-
-                return targetUser;
-            } catch (e) {
-                console.error('❌ فشل جلب بيانات المستخدم:', e);
-                throw e;
+            function getCurrentUser() {
+                try {
+                    const raw = localStorage.getItem('ramzapp_user');
+                    return raw ? JSON.parse(raw) : null;
+                } catch(e) { return null; }
             }
-        }
 
-        // ================================================================
-        // فتح المحادثة
-        // ================================================================
-        function openChatWithUser(userId) {
-            // تخزين معرف المستخدم في localStorage
-            localStorage.setItem('currentChatId', userId);
-            // الانتقال إلى صفحة المحادثة
-            window.location.href = 'chat.html';
-        }
-
-        // ================================================================
-        // التهيئة الرئيسية
-        // ================================================================
-        (async function init() {
-            try {
-                // استخدام targetUserId أو refCode (إذا كان refCode موجوداً، نبحث عن المستخدم)
-                let userId = targetUserId;
-
-                // إذا لم يكن هناك id ولكن يوجد ref، نحاول البحث عن المستخدم عبر ref
-                if (!userId && refCode) {
-                    const supabase = getSupabase();
-                    if (supabase) {
-                        const { data } = await supabase
-                            .from('users')
-                            .select('id')
-                            .eq('invite_code', refCode)
-                            .single();
-                        if (data) userId = data.id;
-                    }
+            function getSupabase() {
+                if (window.supabaseClient) return window.supabaseClient;
+                if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
+                    const client = supabaseJs.createClient(
+                        'https://serlegwdzjulfcxabxzv.supabase.co',
+                        'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx'
+                    );
+                    window.supabaseClient = client;
+                    return client;
                 }
+                return null;
+            }
 
-                if (!userId) {
-                    loadingState.innerHTML = `
-                        <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">❌</span>
-                        <span style="color: var(--text3);">رابط غير صالح</span>
-                        <button class="btn secondary" onclick="window.location.href='index.html'" style="margin-top:16px;">
-                            <i class="fas fa-home"></i> العودة للرئيسية
-                        </button>
-                    `;
-                    return;
-                }
+            // ================================================================
+            // قراءة معاملات الرابط
+            // ================================================================
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetId = urlParams.get('id');        // UUID قديم
+            const targetPhone = urlParams.get('phone');  // رقم الهاتف (جديد)
+            const refCode = urlParams.get('ref');        // رمز الدعوة
 
-                // جلب بيانات المستخدم المستهدف
-                const targetUser = await loadTargetUser(userId);
+            // ================================================================
+            // عناصر DOM
+            // ================================================================
+            const loadingState = document.getElementById('loadingState');
+            const contentState = document.getElementById('contentState');
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = document.getElementById('userName');
+            const userStatus = document.getElementById('userStatus');
+            const openChatBtn = document.getElementById('openChatBtn');
+            const loginFirstBtn = document.getElementById('loginFirstBtn');
+            const loadingBtn = document.getElementById('loadingBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const infoRow = document.getElementById('infoRow');
 
-                // عرض البيانات
-                loadingState.classList.add('hidden');
-                contentState.classList.remove('hidden');
-
-                // تعيين الصورة الرمزية
-                if (targetUser.avatar && targetUser.avatar.startsWith('http')) {
-                    userAvatar.innerHTML = `<img src="${targetUser.avatar}" alt="avatar">`;
-                } else {
-                    userAvatar.textContent = targetUser.avatar || targetUser.name?.charAt(0) || '?';
-                }
-
-                // تعيين الاسم
-                userName.textContent = targetUser.name || 'مستخدم';
-
-                // تعيين النص الفرعي
-                if (targetUser.is_online) {
-                    userSub.textContent = '🟢 متصل الآن - يريد مراسلتك عبر RamzApp';
-                } else {
-                    const lastSeen = targetUser.last_seen ? new Date(targetUser.last_seen) : null;
-                    if (lastSeen) {
-                        const diff = Math.floor((Date.now() - lastSeen.getTime()) / 1000);
-                        let timeText = '';
-                        if (diff < 60) timeText = 'الآن';
-                        else if (diff < 3600) timeText = Math.floor(diff / 60) + ' د';
-                        else if (diff < 86400) timeText = Math.floor(diff / 3600) + ' س';
-                        else timeText = Math.floor(diff / 86400) + ' يوم';
-                        userSub.textContent = `📅 آخر ظهور ${timeText} - يريد مراسلتك عبر RamzApp`;
-                    } else {
-                        userSub.textContent = '📱 يريد مراسلتك عبر RamzApp';
-                    }
-                }
-
-                // إظهار معلومات التشفير
-                infoRow.style.display = 'flex';
-
-                // التحقق من حالة تسجيل الدخول للمستخدم الحالي
-                const currentUser = getCurrentUser();
-
-                if (currentUser && currentUser.id) {
-                    // المستخدم مسجل الدخول
-                    openChatBtn.style.display = 'block';
-                    loginFirstBtn.style.display = 'none';
-
-                    // إذا كان المستخدم الحالي هو نفس المستخدم المستهدف، نعرض رسالة خاصة
-                    if (currentUser.id === userId) {
-                        openChatBtn.textContent = '👤 هذا أنت!';
-                        openChatBtn.disabled = true;
-                        openChatBtn.style.opacity = '0.6';
-                        userSub.textContent = 'هذا حسابك الشخصي';
-                    } else {
-                        openChatBtn.textContent = '💬 فتح المحادثة';
-                        openChatBtn.disabled = false;
-
-                        // الانتقال التلقائي بعد 2.5 ثانية
-                        setTimeout(() => {
-                            openChatWithUser(userId);
-                        }, 2500);
-
-                        // إضافة مؤشر الانتقال التلقائي
-                        const autoHint = document.createElement('p');
-                        autoHint.style.cssText =
-                            'color: var(--text3); font-size: 12px; margin-top: 12px; animation: pulse 1.5s infinite;';
-                        autoHint.textContent = '⏳ جاري فتح المحادثة تلقائياً...';
-                        contentState.appendChild(autoHint);
-                    }
-
-                    // ربط زر فتح المحادثة
-                    openChatBtn.addEventListener('click', () => {
-                        if (!openChatBtn.disabled) {
-                            openChatWithUser(userId);
-                        }
-                    });
-
-                } else {
-                    // المستخدم غير مسجل الدخول
-                    openChatBtn.style.display = 'none';
-                    loginFirstBtn.style.display = 'block';
-
-                    // تخزين معرف المستخدم المستهدف للرجوع إليه بعد تسجيل الدخول
-                    localStorage.setItem('ramzapp_deep_link_target', userId);
-
-                    loginFirstBtn.addEventListener('click', () => {
-                        // حفظ معرف المستخدم المستهدف للرجوع إليه بعد تسجيل الدخول
-                        localStorage.setItem('ramzapp_deep_link_target', userId);
-                        window.location.href = 'login.html';
-                    });
-
-                    // إضافة تنبيه
-                    const hint = document.createElement('p');
-                    hint.style.cssText = 'color: var(--text3); font-size: 12px; margin-top: 12px;';
-                    hint.textContent = '🔐 يجب تسجيل الدخول لفتح المحادثة';
-                    contentState.appendChild(hint);
-                }
-
-            } catch (e) {
-                console.error('❌ خطأ:', e);
+            // ================================================================
+            // التحقق من صحة الرابط
+            // ================================================================
+            if (!targetId && !targetPhone && !refCode) {
                 loadingState.innerHTML = `
-                    <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">⚠️</span>
-                    <span style="color: var(--text3);">${e.message || 'حدث خطأ غير متوقع'}</span>
-                    <button class="btn secondary" onclick="location.reload()" style="margin-top:16px;">
-                        <i class="fas fa-redo"></i> إعادة المحاولة
-                    </button>
-                    <button class="btn secondary" onclick="window.location.href='index.html'" style="margin-top:8px;">
+                    <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">❌</span>
+                    <span style="color: var(--text3);">رابط غير صالح</span>
+                    <button class="btn btn-secondary" onclick="window.location.href='index.html'" style="margin-top:16px;">
                         <i class="fas fa-home"></i> العودة للرئيسية
                     </button>
                 `;
+                throw new Error('رابط غير صالح');
             }
-        })();
 
-        // ================================================================
-        // عند تحميل الصفحة، التحقق من وجود deep link متبقي بعد تسجيل الدخول
-        // ================================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            // إذا كان هناك target محفوظ ولم نستخدمه بعد (من login.html)
-            const savedTarget = localStorage.getItem('ramzapp_deep_link_target');
-            if (savedTarget && !targetUserId && !refCode) {
-                // تم تسجيل الدخول حديثاً، نوجه مباشرة إلى المحادثة
-                const currentUser = getCurrentUser();
-                if (currentUser && currentUser.id) {
-                    localStorage.removeItem('ramzapp_deep_link_target');
-                    localStorage.setItem('currentChatId', savedTarget);
-                    window.location.href = 'chat.html';
+            // ================================================================
+            // دوال البحث عن المستخدم
+            // ================================================================
+            async function findUserByPhone(phone) {
+                const supabase = getSupabase();
+                if (!supabase) throw new Error('تعذر الاتصال بقاعدة البيانات');
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('id, phone, name, avatar_url, is_online, last_seen')
+                    .eq('phone', phone)
+                    .single();
+                if (error || !data) throw new Error('المستخدم غير موجود');
+                return data;
+            }
+
+            async function findUserById(id) {
+                const supabase = getSupabase();
+                if (!supabase) throw new Error('تعذر الاتصال بقاعدة البيانات');
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('id, phone, name, avatar_url, is_online, last_seen')
+                    .eq('id', id)
+                    .single();
+                if (error || !data) throw new Error('المستخدم غير موجود');
+                return data;
+            }
+
+            async function findUserByRef(ref) {
+                const supabase = getSupabase();
+                if (!supabase) throw new Error('تعذر الاتصال بقاعدة البيانات');
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('id, phone, name, avatar_url, is_online, last_seen')
+                    .eq('invite_code', ref)
+                    .single();
+                if (error || !data) throw new Error('المستخدم غير موجود');
+                return data;
+            }
+
+            // ================================================================
+            // فتح المحادثة
+            // ================================================================
+            function openChatWithUser(userId, userPhone) {
+                // تخزين معرف المستخدم للرجوع إليه في index.html
+                localStorage.setItem('ramzapp_deep_link_target', userId);
+                localStorage.setItem('ramzapp_deep_link_phone', userPhone);
+                // الانتقال إلى التطبيق
+                window.location.href = 'index.html?openChat=' + userId;
+            }
+
+            // ================================================================
+            // التهيئة الرئيسية
+            // ================================================================
+            (async function init() {
+                try {
+                    let targetUser = null;
+
+                    // 1. البحث عن المستخدم حسب المعامل المتاح
+                    if (targetPhone) {
+                        targetUser = await findUserByPhone(targetPhone);
+                    } else if (targetId) {
+                        targetUser = await findUserById(targetId);
+                    } else if (refCode) {
+                        targetUser = await findUserByRef(refCode);
+                    }
+
+                    if (!targetUser) {
+                        throw new Error('المستخدم غير موجود');
+                    }
+
+                    // 2. عرض البيانات
+                    loadingState.classList.add('hidden');
+                    contentState.classList.remove('hidden');
+
+                    // الصورة الرمزية
+                    if (targetUser.avatar_url && targetUser.avatar_url.startsWith('http')) {
+                        userAvatar.innerHTML = `<img src="${targetUser.avatar_url}" alt="avatar">`;
+                    } else {
+                        userAvatar.textContent = targetUser.name?.charAt(0) || '?';
+                    }
+
+                    // الاسم
+                    userName.textContent = targetUser.name || 'مستخدم';
+
+                    // الحالة
+                    if (targetUser.is_online) {
+                        userStatus.innerHTML = '🟢 <span class="online">متصل الآن</span> - يريد مراسلتك';
+                    } else {
+                        const lastSeen = targetUser.last_seen ? new Date(targetUser.last_seen) : null;
+                        let timeText = '';
+                        if (lastSeen) {
+                            const diff = Math.floor((Date.now() - lastSeen.getTime()) / 1000);
+                            if (diff < 60) timeText = 'الآن';
+                            else if (diff < 3600) timeText = Math.floor(diff / 60) + ' د';
+                            else if (diff < 86400) timeText = Math.floor(diff / 3600) + ' س';
+                            else timeText = Math.floor(diff / 86400) + ' يوم';
+                            userStatus.innerHTML = `📅 آخر ظهور <span class="offline">${timeText}</span>`;
+                        } else {
+                            userStatus.innerHTML = '📱 غير متصل حالياً';
+                        }
+                    }
+
+                    // إظهار معلومات التشفير
+                    infoRow.style.display = 'flex';
+
+                    // 3. التحقق من حالة تسجيل الدخول للمستخدم الحالي
+                    const currentUser = getCurrentUser();
+
+                    if (currentUser && currentUser.id) {
+                        // المستخدم مسجل الدخول
+                        openChatBtn.style.display = 'block';
+                        loginFirstBtn.style.display = 'none';
+
+                        // إذا كان المستخدم الحالي هو نفس المستخدم المستهدف
+                        if (currentUser.id === targetUser.id) {
+                            openChatBtn.textContent = '👤 هذا أنت!';
+                            openChatBtn.disabled = true;
+                            openChatBtn.style.opacity = '0.6';
+                            userStatus.innerHTML = '📌 هذا حسابك الشخصي';
+                        } else {
+                            openChatBtn.textContent = '💬 فتح المحادثة';
+                            openChatBtn.disabled = false;
+
+                            // محاولة الانتقال التلقائي بعد 2.5 ثانية
+                            setTimeout(() => {
+                                openChatWithUser(targetUser.id, targetUser.phone);
+                            }, 2500);
+
+                            // إضافة مؤشر الانتقال التلقائي
+                            const autoHint = document.createElement('p');
+                            autoHint.style.cssText =
+                                'color: var(--text3); font-size: 12px; margin-top: 12px; animation: pulse 1.5s infinite;';
+                            autoHint.textContent = '⏳ جاري فتح المحادثة تلقائياً...';
+                            contentState.appendChild(autoHint);
+
+                            // ربط زر فتح المحادثة
+                            openChatBtn.addEventListener('click', () => {
+                                if (!openChatBtn.disabled) {
+                                    openChatWithUser(targetUser.id, targetUser.phone);
+                                }
+                            });
+                        }
+                    } else {
+                        // المستخدم غير مسجل الدخول
+                        openChatBtn.style.display = 'none';
+                        loginFirstBtn.style.display = 'block';
+
+                        // تخزين معرف المستخدم المستهدف للرجوع إليه بعد تسجيل الدخول
+                        localStorage.setItem('ramzapp_deep_link_target', targetUser.id);
+                        localStorage.setItem('ramzapp_deep_link_phone', targetUser.phone);
+
+                        loginFirstBtn.addEventListener('click', () => {
+                            window.location.href = 'login.html';
+                        });
+
+                        // إضافة تنبيه
+                        const hint = document.createElement('p');
+                        hint.style.cssText = 'color: var(--text3); font-size: 12px; margin-top: 12px;';
+                        hint.textContent = '🔐 يجب تسجيل الدخول لفتح المحادثة';
+                        contentState.appendChild(hint);
+                    }
+
+                } catch (err) {
+                    console.error('❌ خطأ:', err);
+                    loadingState.innerHTML = `
+                        <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">⚠️</span>
+                        <span style="color: var(--text3);">${err.message || 'حدث خطأ غير متوقع'}</span>
+                        <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:16px;">
+                            <i class="fas fa-redo"></i> إعادة المحاولة
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.location.href='index.html'" style="margin-top:8px;">
+                            <i class="fas fa-home"></i> العودة للرئيسية
+                        </button>
+                    `;
                 }
-            }
-        });
+            })();
 
-        console.log('✅ redirect.html (الإصدار النهائي) جاهز');
+            // ================================================================
+            // دعم الانتقال التلقائي بعد تسجيل الدخول (عودة من login.html)
+            // ================================================================
+            document.addEventListener('DOMContentLoaded', function() {
+                // إذا كان هناك target محفوظ ولم نستخدمه بعد (من login.html)
+                const savedTarget = localStorage.getItem('ramzapp_deep_link_target');
+                const savedPhone = localStorage.getItem('ramzapp_deep_link_phone');
+                if (savedTarget && savedPhone) {
+                    // التحقق من أننا وصلنا من login.html
+                    const currentUser = getCurrentUser();
+                    if (currentUser && currentUser.id) {
+                        // تنظيف التخزين
+                        localStorage.removeItem('ramzapp_deep_link_target');
+                        localStorage.removeItem('ramzapp_deep_link_phone');
+                        // فتح المحادثة مباشرة
+                        openChatWithUser(savedTarget, savedPhone);
+                    }
+                }
+            });
+
+            console.log('✅ redirect.html (الإصدار النهائي v5.0) جاهز');
+        })();
     </script>
 
+    <style>
+        /* ===== إضافة مؤشر نبض للانتقال التلقائي ===== */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+
 </body>
-  </html>
+</html>
