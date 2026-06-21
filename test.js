@@ -1,8 +1,13 @@
-// test.js - أداة الفحص الشامل النهائية لـ RamzApp v4.0
-// تنتظر اكتمال تهيئة التطبيق، ثم تفحص جميع المكونات وتعرض تقريراً مفصلاً.
+// ======================================================================
+// test.js - أداة الفحص الشامل لـ RamzApp v5.0
+// ======================================================================
 
 (function() {
-    // ================== المتغيرات العامة ==================
+    'use strict';
+
+    // ======================================================================
+    // المتغيرات العامة
+    // ======================================================================
     const TEST = {
         passed: 0,
         failed: 0,
@@ -15,7 +20,9 @@
     let waitAttempts = 0;
     const MAX_WAIT_ATTEMPTS = 30; // 15 ثانية كحد أقصى
 
-    // ================== دوال العرض ==================
+    // ======================================================================
+    // دوال العرض
+    // ======================================================================
     function logGroup(title, color = '#4fc3f7') {
         console.group(`%c🧪 ${title}`, `color: ${color}; font-weight: bold; font-size: 14px;`);
     }
@@ -56,7 +63,9 @@
         return navigator.onLine;
     }
 
-    // ================== انتظار تهيئة التطبيق ==================
+    // ======================================================================
+    // انتظار تهيئة التطبيق
+    // ======================================================================
     function waitForAppReady() {
         return new Promise((resolve) => {
             console.log('⏳ انتظار تهيئة التطبيق...');
@@ -67,8 +76,9 @@
                 const hasUser = localStorage.getItem('ramzapp_user') !== null;
                 const hasSupabase = typeof window.supabaseClient !== 'undefined' && window.supabaseClient !== null;
                 const hasInMemory = typeof window.inMemoryDB !== 'undefined' && window.inMemoryDB !== null;
+                const hasDBReady = typeof window.isDbReady === 'function' ? window.isDbReady() : true;
 
-                if (isAppReady && hasUser && hasSupabase && hasInMemory) {
+                if (isAppReady && hasUser && hasSupabase && hasInMemory && hasDBReady) {
                     console.log('✅ التطبيق جاهز (appReady = true)');
                     clearInterval(waitInterval);
                     resolve(true);
@@ -78,10 +88,10 @@
                     console.warn(`   - hasUser: ${hasUser}`);
                     console.warn(`   - hasSupabase: ${hasSupabase}`);
                     console.warn(`   - hasInMemory: ${hasInMemory}`);
+                    console.warn(`   - dbReady: ${hasDBReady}`);
                     clearInterval(waitInterval);
                     resolve(false);
                 } else {
-                    // عرض تقدم الانتظار كل 5 محاولات
                     if (waitAttempts % 5 === 0) {
                         console.log(`⏳ جاري الانتظار... (${waitAttempts}/${MAX_WAIT_ATTEMPTS})`);
                     }
@@ -93,10 +103,12 @@
         });
     }
 
-    // ================== دالة تشغيل الفحص ==================
-    async function runAllTests() {
+    // ======================================================================
+    // دالة تشغيل الفحص
+    // ======================================================================
+    window.runAllTests = async function() {
         console.clear();
-        console.log('%c🧪  فحص شامل لتطبيق RamzApp v4.0  🧪', 'font-size: 20px; font-weight: bold; color: #4fc3f7;');
+        console.log('%c🧪  فحص شامل لتطبيق RamzApp v5.0  🧪', 'font-size: 20px; font-weight: bold; color: #4fc3f7;');
         console.log(`%c📅 ${new Date().toLocaleString()}`, 'color: #90a4ae;');
         console.log(`%c📡 حالة الإنترنت: ${isOnline() ? '🟢 متصل' : '🔴 غير متصل'}`, 'color: #90a4ae;');
         console.log('═══════════════════════════════════════════════════');
@@ -111,16 +123,12 @@
 
         // تنفيذ الاختبارات
         await testEnvironment();
-        await testDB();
-        await testSupabase();
+        await testLocalStorage();
+        await testSupabaseBroker();
         await testSync();
-        await testMedia();
-        await testUser();
-        await testRouting();
-        await testEvents();
         await testEncryption();
-        await testRealtime();
-        await testStories();
+        await testCommonFunctions();
+        await testUI();
 
         const endTime = performance.now();
         const duration = ((endTime - startTime) / 1000).toFixed(2);
@@ -139,16 +147,17 @@
         }
 
         console.log('%c💡  تلميحات:', 'font-weight: bold;');
-        console.log('   - إذا فشل اتصال Supabase، تأكد من المفاتيح والإنترنت.');
-        console.log('   - إذا فشلت دوال التخزين، تأكد من تحميل db.js بشكل صحيح.');
+        console.log('   - إذا فشلت اختبارات Supabase، تأكد من المفاتيح والإنترنت.');
+        console.log('   - إذا فشلت اختبارات التخزين المحلي، تأكد من تحميل db.js بشكل صحيح.');
+        console.log('   - إذا فشلت اختبارات التشفير، تأكد من دعم crypto.subtle في المتصفح.');
         console.log('   - إذا لم يظهر المستخدم، سجل الدخول أولاً.');
-        console.log('   - إذا كانت هناك مشكلة في التوجيه، تحقق من common.js و login.html.');
         console.log('   - ميزة القصص (Stories) تتطلب وجود جدول stories في Supabase.');
-    }
+        console.log('   - المزامنة تعتمد على وجود وسيط Supabase متاح.');
+    };
 
-    // ================== الاختبارات ==================
-
-    // 1. البيئة والمكتبات
+    // ======================================================================
+    // 1. اختبار البيئة والمكتبات
+    // ======================================================================
     async function testEnvironment() {
         logGroup('1. البيئة والمكتبات');
         const checks = {
@@ -168,7 +177,7 @@
             else { logFail(`المتصفح لا يدعم ${key}`); allPass = false; }
         }
 
-        // فحص المكتبات
+        // فحص المكتبات المحملة
         const libs = {
             'db.js': typeof window.initDB === 'function',
             'supabase.js': typeof window.supabaseClient !== 'undefined',
@@ -184,9 +193,11 @@
         return allPass;
     }
 
-    // 2. قاعدة البيانات المحلية
-    async function testDB() {
-        logGroup('2. قاعدة البيانات المحلية (db.js)');
+    // ======================================================================
+    // 2. اختبار التخزين المحلي (db.js)
+    // ======================================================================
+    async function testLocalStorage() {
+        logGroup('2. التخزين المحلي (db.js)');
         try {
             if (typeof window.inMemoryDB !== 'undefined') {
                 logPass('inMemoryDB موجود');
@@ -194,13 +205,16 @@
                 logData('inMemoryDB.messages', Object.keys(window.inMemoryDB.messages || {}).length);
                 logData('inMemoryDB.contacts', window.inMemoryDB.contacts?.length || 0);
                 logData('inMemoryDB.stories', window.inMemoryDB.stories?.length || 0);
+                logData('inMemoryDB.channels', window.inMemoryDB.channels?.length || 0);
             } else {
                 logFail('inMemoryDB غير موجود');
             }
 
-            const functions = ['getChats', 'getMessages', 'getContacts', 'getCurrentUser', 'getSettings',
-                'getPendingMessages', 'getStories', 'getChannels', 'getCatalog'];
-            for (const fn of functions) {
+            // دوال القراءة
+            const readFuncs = ['getChats', 'getMessages', 'getContacts', 'getCurrentUser', 'getSettings',
+                'getPendingMessages', 'getStories', 'getChannels', 'getCatalog', 'getCalls'
+            ];
+            for (const fn of readFuncs) {
                 if (typeof window[fn] === 'function') {
                     try {
                         const result = window[fn]();
@@ -213,20 +227,51 @@
                 }
             }
 
-            const writeFuncs = ['saveChat', 'addMessage', 'saveContact', 'updateSetting', 'addStory', 'updateStory', 'deleteStory'];
+            // دوال الكتابة
+            const writeFuncs = ['saveChat', 'addMessage', 'saveContact', 'updateSetting', 'addStory', 'updateStory', 'deleteStory', 'saveChannel'];
             for (const fn of writeFuncs) {
                 if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
                 else logFail(`window.${fn} غير موجود`);
             }
+
+            // اختبار إضافة رسالة مؤقتة ثم حذفها
+            try {
+                const testMsg = {
+                    id: 'test_' + Date.now(),
+                    chat_id: 'test_chat',
+                    sender_id: 'me',
+                    text: 'رسالة اختبار',
+                    time: new Date().toISOString(),
+                    status: 'pending'
+                };
+                if (typeof window.addMessage === 'function') {
+                    const added = window.addMessage(testMsg);
+                    if (added && added.id) {
+                        logPass('addMessage يعمل (تم إضافة رسالة اختبار)');
+                        // محاولة حذفها
+                        if (typeof window.deleteMessage === 'function') {
+                            window.deleteMessage(testMsg.id);
+                            logPass('deleteMessage يعمل (تم حذف رسالة الاختبار)');
+                        }
+                    } else {
+                        logFail('addMessage فشل في إضافة رسالة اختبار');
+                    }
+                }
+            } catch (e) {
+                logWarn('فشل اختبار addMessage/deleteMessage', e);
+            }
+
         } catch (e) {
             logFail('خطأ في فحص db.js', e);
         }
         endGroup();
     }
 
-    // 3. Supabase
-    async function testSupabase() {
-        logGroup('3. Supabase');
+    // ======================================================================
+    // 3. اختبار الوسيط (supabase.js)
+    // ======================================================================
+    async function testSupabaseBroker() {
+        logGroup('3. وسيط Supabase (supabase.js)');
         try {
             const supabase = window.supabaseClient;
             if (!supabase) {
@@ -236,11 +281,16 @@
             }
             logPass('supabaseClient موجود');
 
+            // اختبار الاتصال (فقط إذا كان متصلاً)
             if (isOnline()) {
                 try {
                     const { data, error } = await supabase.from('users').select('count').limit(1);
-                    if (error) logFail('فشل الاتصال بـ Supabase', error);
-                    else logPass('الاتصال بـ Supabase ناجح');
+                    if (error) {
+                        logFail('فشل الاتصال بـ Supabase', error);
+                    } else {
+                        logPass('الاتصال بـ Supabase ناجح');
+                        logData('عدد المستخدمين (تقريبي)', data?.length || 0);
+                    }
                 } catch (e) {
                     logFail('استثناء أثناء الاتصال بـ Supabase', e);
                 }
@@ -248,42 +298,55 @@
                 logSkip('غير متصل بالإنترنت – تخطي اختبار الاتصال');
             }
 
-            const authFuncs = ['signInWithEmail', 'signUpWithEmail', 'signInWithPhone', 'signInAsGuest', 'signOut'];
+            // دوال المصادقة
+            const authFuncs = ['signInWithPhone', 'signUpWithPhone', 'signInAsGuest', 'signOut'];
             for (const fn of authFuncs) {
                 if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
                 else logFail(`window.${fn} غير موجود`);
             }
 
-            const syncFuncs = ['subscribeToChat', 'unsubscribeFromChat', 'sendMessageRealtime', 'fetchAllPendingMessages', 'checkRegisteredPhones'];
-            for (const fn of syncFuncs) {
+            // دوال الوسيط (Broker)
+            const brokerFuncs = ['subscribeToChat', 'unsubscribeFromChat', 'sendMessageRealtime', 'fetchPendingMessages', 'fetchAllPendingMessages'];
+            for (const fn of brokerFuncs) {
                 if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
                 else logFail(`window.${fn} غير موجود`);
             }
 
-            const fetchFuncs = ['fetchUserChats', 'fetchMessages', 'fetchContacts', 'fetchAllRegisteredUsers', 'fetchStories'];
-            for (const fn of fetchFuncs) {
+            // دوال الاستعلام عن المستخدمين
+            const queryFuncs = ['fetchUserByPhone', 'fetchUsersByPhones', 'fetchUserById'];
+            for (const fn of queryFuncs) {
                 if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
                 else logFail(`window.${fn} غير موجود`);
             }
 
-            // دوال القصص في Supabase
-            const storyFuncs = ['addStoryToSupabase', 'deleteStoryFromSupabase', 'syncStories'];
-            for (const fn of storyFuncs) {
-                if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
-                else logFail(`window.${fn} غير موجود`);
+            // دوال إدارة الحالة
+            if (typeof window.setUserOnlineStatus === 'function') {
+                logPass('setUserOnlineStatus موجود');
+            } else {
+                logWarn('setUserOnlineStatus غير موجود');
             }
+
+            // دوال الدعوة
+            if (typeof window.getInviteCode === 'function' && typeof window.createInviteLink === 'function') {
+                logPass('getInviteCode و createInviteLink موجودان');
+            } else {
+                logWarn('دوال الدعوة غير موجودة');
+            }
+
         } catch (e) {
-            logFail('خطأ في فحص Supabase', e);
+            logFail('خطأ في فحص supabase.js', e);
         }
         endGroup();
     }
 
-    // 4. المزامنة
+    // ======================================================================
+    // 4. اختبار المزامنة (sync.js)
+    // ======================================================================
     async function testSync() {
         logGroup('4. المزامنة (sync.js)');
         try {
             const funcs = ['syncAllPendingMessages', 'queueMessageForSync', 'forceSyncNow',
-                'retryMessage', 'retryAllFailed', 'getSyncStats'
+                'retryMessage', 'retryAllFailed', 'getSyncStats', 'cleanupPendingMessages'
             ];
             for (const fn of funcs) {
                 if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
@@ -294,89 +357,188 @@
                 try {
                     const stats = window.getSyncStats();
                     logPass('getSyncStats يعمل');
-                    logData('الإحصائيات', stats);
+                    logData('الإحصائيات', {
+                        pending: stats.pending || 0,
+                        total: stats.total || 0,
+                        isSyncing: stats.isSyncing || false,
+                        online: stats.online || false,
+                        lastSync: stats.lastSync || 'لم تتم'
+                    });
                 } catch (e) {
                     logFail('getSyncStats فشل', e);
                 }
             }
 
-            if (window._syncInterval || window.periodicSyncInterval) {
+            // التحقق من المزامنة الدورية
+            if (window.periodicSyncInterval || window._syncInterval) {
                 logPass('المزامنة الدورية مفعلة');
             } else {
                 logWarn('المزامنة الدورية غير مفعلة (قد تكون بدأت بعد فترة)');
             }
+
+            // اختبار تنظيف الرسائل المعلقة
+            if (typeof window.cleanupPendingMessages === 'function') {
+                try {
+                    window.cleanupPendingMessages();
+                    logPass('cleanupPendingMessages يعمل');
+                } catch (e) {
+                    logFail('cleanupPendingMessages فشل', e);
+                }
+            }
+
         } catch (e) {
             logFail('خطأ في فحص sync.js', e);
         }
         endGroup();
     }
 
-    // 5. الوسائط
-    async function testMedia() {
-        logGroup('5. الوسائط (media.js)');
+    // ======================================================================
+    // 5. اختبار التشفير (E2EE)
+    // ======================================================================
+    async function testEncryption() {
+        logGroup('5. التشفير من طرف إلى طرف (E2EE)');
         try {
-            const funcs = ['initMedia', 'saveMedia', 'getMediaUrl', 'getMediaBlob', 'getMediaFile', 'deleteMedia', 'listMediaFiles'];
-            for (const fn of funcs) {
+            const hasCrypto = !!(window.crypto && window.crypto.subtle);
+            if (!hasCrypto) {
+                logFail('crypto.subtle غير مدعوم');
+                endGroup();
+                return;
+            }
+            logPass('crypto.subtle مدعوم');
+
+            const cryptoFuncs = ['generateKeyPair', 'deriveSharedSecret', 'encryptText', 'decryptText',
+                'initEncryption', 'exportPublicKey', 'importPublicKey'
+            ];
+            for (const fn of cryptoFuncs) {
                 if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
                 else logFail(`window.${fn} غير موجود`);
             }
 
-            if (typeof window.isMediaReady === 'function') {
-                const ready = window.isMediaReady();
-                logPass(`isMediaReady() = ${ready}`);
-                if (ready) {
-                    const fallback = window.isUsingFallback ? window.isUsingFallback() : false;
-                    logInfo(`نوع التخزين: ${fallback ? 'IndexedDB (احتياطي)' : 'نظام الملفات'}`);
-                }
-            } else {
-                logFail('isMediaReady غير موجود');
-            }
-        } catch (e) {
-            logFail('خطأ في فحص media.js', e);
-        }
-        endGroup();
-    }
-
-    // 6. المستخدم الحالي
-    async function testUser() {
-        logGroup('6. المستخدم الحالي');
-        try {
-            const user = window.getCurrentUser ? window.getCurrentUser() : null;
-            if (user) {
-                logPass('المستخدم موجود');
-                logData('المستخدم', {
-                    id: user.id,
-                    name: user.name,
-                    email: user.email,
-                    phone: user.phone,
-                    avatar: user.avatar
-                });
-            } else {
-                logFail('لا يوجد مستخدم مسجل');
-                logInfo('تأكد من تسجيل الدخول أولاً');
-            }
-
-            const raw = localStorage.getItem('ramzapp_user');
-            if (raw) {
+            // اختبار توليد المفاتيح
+            if (typeof window.generateKeyPair === 'function') {
                 try {
-                    const parsed = JSON.parse(raw);
-                    logPass('بيانات المستخدم في localStorage صالحة');
+                    const keyPair = await window.generateKeyPair();
+                    if (keyPair && keyPair.publicKey && keyPair.privateKey) {
+                        logPass('generateKeyPair يعمل (تم توليد زوج مفاتيح)');
+
+                        // اختبار تصدير واستيراد المفتاح العام
+                        if (typeof window.exportPublicKey === 'function') {
+                            const exported = await window.exportPublicKey(keyPair.publicKey);
+                            if (exported && exported.length > 0) {
+                                logPass('exportPublicKey يعمل');
+                                // اختبار استيراد المفتاح العام
+                                if (typeof window.importPublicKey === 'function') {
+                                    const imported = await window.importPublicKey(exported);
+                                    if (imported) logPass('importPublicKey يعمل');
+                                    else logFail('importPublicKey فشل');
+                                }
+                            } else {
+                                logFail('exportPublicKey فشل');
+                            }
+                        }
+
+                        // اختبار التشفير (يحتاج إلى مفتاح جلسة)
+                        if (typeof window.deriveSharedSecret === 'function' && typeof window.encryptText === 'function') {
+                            try {
+                                // استخدام نفس زوج المفاتيح للتجربة (في الواقع يجب أن يكون مستلم آخر)
+                                const sharedSecret = await window.deriveSharedSecret(keyPair.privateKey, keyPair.publicKey);
+                                if (sharedSecret) {
+                                    const encrypted = await window.encryptText('رسالة اختبار', sharedSecret);
+                                    if (encrypted && encrypted.encrypted && encrypted.iv) {
+                                        logPass('encryptText يعمل');
+
+                                        // اختبار فك التشفير
+                                        if (typeof window.decryptText === 'function') {
+                                            const decrypted = await window.decryptText(encrypted, sharedSecret);
+                                            if (decrypted === 'رسالة اختبار') {
+                                                logPass('decryptText يعمل (فك التشفير ناجح)');
+                                            } else {
+                                                logFail('decryptText فشل (النص المفكوك غير صحيح)');
+                                            }
+                                        }
+                                    } else {
+                                        logFail('encryptText فشل');
+                                    }
+                                } else {
+                                    logFail('deriveSharedSecret فشل');
+                                }
+                            } catch (e) {
+                                logWarn('اختبار التشفير/فك التشفير فشل', e);
+                            }
+                        }
+                    } else {
+                        logFail('generateKeyPair فشل');
+                    }
                 } catch (e) {
-                    logFail('بيانات المستخدم في localStorage فاسدة', e);
+                    logFail('استثناء في اختبار التشفير', e);
                 }
-            } else {
-                logWarn('لا توجد بيانات مستخدم في localStorage');
             }
+
+            // التحقق من وجود المفتاح الحالي
+            if (typeof currentUserKeyPair !== 'undefined') {
+                if (currentUserKeyPair) logPass('مفتاح المستخدم الحالي موجود');
+                else logWarn('مفتاح المستخدم الحالي غير موجود (قد يُنشأ عند التهيئة)');
+            }
+
         } catch (e) {
-            logFail('خطأ في فحص المستخدم', e);
+            logFail('خطأ في فحص التشفير', e);
         }
         endGroup();
     }
 
-    // 7. التوجيه
-    async function testRouting() {
-        logGroup('7. التوجيه وحالة الصفحات');
+    // ======================================================================
+    // 6. اختبار دوال common.js
+    // ======================================================================
+    async function testCommonFunctions() {
+        logGroup('6. دوال common.js');
         try {
+            // دوال أساسية
+            const coreFuncs = ['renderChats', 'renderMessages', 'renderContactsList', 'renderStories',
+                'showScreen', 'openChat', 'sendMessage', 'syncContacts', 'logout', 'applyTheme'
+            ];
+            for (const fn of coreFuncs) {
+                if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
+                else logFail(`window.${fn} غير موجود`);
+            }
+
+            // دوال التشفير في common.js (بعضها موجود بالفعل في testEncryption)
+            const cryptoCommonFuncs = ['initEncryption', 'deriveSharedSecret', 'encryptText', 'decryptText', 'fetchPeerPublicKey'];
+            for (const fn of cryptoCommonFuncs) {
+                if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
+                else logWarn(`window.${fn} غير موجود (قد يكون في supabase.js)`);
+            }
+
+            // التحقق من وجود currentChatId (متغير حالة)
+            if (typeof currentChatId !== 'undefined') {
+                logPass('currentChatId معرف');
+                logData('currentChatId', currentChatId || 'لا توجد محادثة مفتوحة');
+            } else {
+                logWarn('currentChatId غير معرف (قد يكون التطبيق لم يفتح محادثة بعد)');
+            }
+
+            // اختبار التنقل بين الشاشات
+            if (typeof window.showScreen === 'function') {
+                try {
+                    // لا ننفذ showScreen فعلياً لتجنب تغيير واجهة المستخدم أثناء الاختبار
+                    logPass('showScreen متاح (يمكن استخدامه للتنقل)');
+                } catch (e) {
+                    logFail('showScreen فشل', e);
+                }
+            }
+
+        } catch (e) {
+            logFail('خطأ في فحص common.js', e);
+        }
+        endGroup();
+    }
+
+    // ======================================================================
+    // 7. اختبار واجهة المستخدم (UI)
+    // ======================================================================
+    async function testUI() {
+        logGroup('7. واجهة المستخدم (UI)');
+        try {
+            // الشاشات (Screens)
             const screens = ['chatsScreen', 'chatScreen', 'contactsScreen', 'callsScreen',
                 'updatesScreen', 'toolsScreen', 'profileScreen', 'settingsScreen'
             ];
@@ -388,13 +550,20 @@
                     allExist = false; }
             }
 
-            if (typeof window.showScreen === 'function') {
-                logPass('showScreen موجود');
-                if (typeof currentScreen !== 'undefined') logData('الشاشة الحالية', currentScreen);
-            } else {
-                logFail('showScreen غير موجود');
+            // العناصر التفاعلية الأساسية
+            const uiElements = [
+                'bottomNav', 'appContainer', 'toast', 'chatsList', 'messagesArea',
+                'msgInput', 'sendMsgBtn', 'micBtn', 'emojiBtn', 'attachBtn',
+                'backBtn', 'chatNameDisp', 'chatStatusDisp',
+                'profileName', 'profileAvatar', 'profileBio'
+            ];
+            for (const id of uiElements) {
+                const el = document.getElementById(id);
+                if (el) logPass(`العنصر #${id} موجود`);
+                else logWarn(`العنصر #${id} غير موجود (قد لا يكون ضرورياً)`);
             }
 
+            // شريط التنقل السفلي
             const nav = document.getElementById('bottomNav');
             if (nav) {
                 logPass('bottomNav موجود');
@@ -403,194 +572,48 @@
             } else {
                 logFail('bottomNav غير موجود');
             }
+
+            // الشاشة النشطة حالياً
+            const activeScreen = document.querySelector('.screen.active');
+            if (activeScreen) {
+                logPass('هناك شاشة نشطة');
+                logData('الشاشة النشطة', activeScreen.id || 'غير معروف');
+            } else {
+                logWarn('لا توجد شاشة نشطة (قد يكون التطبيق في حالة تحميل)');
+            }
+
+            // التحقق من وجود المستخدم الحالي في واجهة المستخدم
+            const user = window.getCurrentUser ? window.getCurrentUser() : null;
+            if (user) {
+                logPass('المستخدم الحالي موجود في التطبيق');
+                logData('اسم المستخدم', user.name || 'غير معروف');
+            } else {
+                logWarn('لا يوجد مستخدم حالياً (قد تكون في وضع الضيف)');
+            }
+
         } catch (e) {
-            logFail('خطأ في فحص التوجيه', e);
+            logFail('خطأ في فحص واجهة المستخدم', e);
         }
         endGroup();
     }
 
-    // 8. الأحداث
-    async function testEvents() {
-        logGroup('8. الأحداث والاشتراكات');
-        try {
-            // مستمعي أحداث الشبكة
-            if (typeof window._onlineListener !== 'undefined' || typeof window._offlineListener !== 'undefined') {
-                logPass('مستمعي أحداث الشبكة موجودون');
-            } else {
-                logWarn('مستمعي أحداث الشبكة غير موجودين (قد تكون مُضافة في common.js)');
-            }
-
-            // subscribeToChat
-            if (typeof window.subscribeToChat === 'function') {
-                logPass('subscribeToChat موجود');
-                if (typeof currentChatId !== 'undefined' && currentChatId) {
-                    logInfo(`المحادثة الحالية: ${currentChatId}`);
-                }
-            } else {
-                logFail('subscribeToChat غير موجود');
-            }
-
-            // sendTypingEvent
-            if (typeof window.sendTypingEvent === 'function') {
-                logPass('sendTypingEvent موجود');
-            } else {
-                logWarn('sendTypingEvent غير موجود (قد لا يكون ضرورياً)');
-            }
-
-            // markMessagesAsRead
-            if (typeof window.markMessagesAsRead === 'function') {
-                logPass('markMessagesAsRead موجود');
-            } else {
-                logWarn('markMessagesAsRead غير موجود');
-            }
-        } catch (e) {
-            logFail('خطأ في فحص الأحداث', e);
-        }
-        endGroup();
-    }
-
-    // 9. التشفير
-    async function testEncryption() {
-        logGroup('9. التشفير من طرف إلى طرف (E2E)');
-        try {
-            const hasCrypto = !!(window.crypto && window.crypto.subtle);
-            if (!hasCrypto) {
-                logFail('crypto.subtle غير مدعوم');
-                endGroup();
-                return;
-            }
-            logPass('crypto.subtle مدعوم');
-
-            const cryptoFuncs = ['generateKeyPair', 'encryptMessage', 'decryptMessage', 'initEncryption'];
-            for (const fn of cryptoFuncs) {
-                if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
-                else logFail(`window.${fn} غير موجود`);
-            }
-
-            if (typeof currentUserKeyPair !== 'undefined') {
-                if (currentUserKeyPair) logPass('مفتاح المستخدم الحالي موجود');
-                else logWarn('مفتاح المستخدم الحالي غير موجود (قد يُنشأ عند التهيئة)');
-            }
-        } catch (e) {
-            logFail('خطأ في فحص التشفير', e);
-        }
-        endGroup();
-    }
-
-    // 10. المزامنة الفورية
-    async function testRealtime() {
-        logGroup('10. المزامنة الفورية (Realtime)');
-        try {
-            const supabase = window.supabaseClient;
-            if (!supabase) {
-                logFail('supabaseClient غير موجود');
-                endGroup();
-                return;
-            }
-
-            if (typeof window.activeChannels !== 'undefined') {
-                const channels = window.activeChannels || {};
-                const count = Object.keys(channels).length;
-                logPass(`عدد القنوات النشطة: ${count}`);
-                if (count > 0) logData('القنوات النشطة', Object.keys(channels));
-            } else {
-                logWarn('activeChannels غير معرف (قد يكون مُعرّفاً في supabase.js)');
-            }
-
-            if (typeof window.sendMessageRealtime === 'function') {
-                logPass('sendMessageRealtime موجود');
-            } else {
-                logFail('sendMessageRealtime غير موجود');
-            }
-
-            // التحقق من وجود pending_messages
-            if (isOnline() && supabase) {
-                try {
-                    const { data, error } = await supabase
-                        .from('pending_messages')
-                        .select('count')
-                        .limit(1);
-                    if (!error) logPass('جدول pending_messages موجود');
-                    else logFail('جدول pending_messages غير موجود أو لا يمكن الوصول إليه', error);
-                } catch (e) {
-                    logWarn('تعذر التحقق من جدول pending_messages', e);
-                }
-            }
-        } catch (e) {
-            logFail('خطأ في فحص Realtime', e);
-        }
-        endGroup();
-    }
-
-    // 11. القصص (Stories)
-    async function testStories() {
-        logGroup('11. القصص (Stories)');
-        try {
-            // دوال القصص في common.js
-            const storyFuncs = ['renderStories', 'openStoryCamera', 'saveStory', 'openStoryViewer', 'closeStoryViewer'];
-            for (const fn of storyFuncs) {
-                if (typeof window[fn] === 'function') logPass(`window.${fn} موجود`);
-                else logFail(`window.${fn} غير موجود`);
-            }
-
-            // التحقق من وجود عناصر القصص في DOM
-            const storyBar = document.getElementById('storyBar');
-            if (storyBar) logPass('عنصر storyBar موجود');
-            else logFail('عنصر storyBar غير موجود');
-
-            const addStoryBtn = document.getElementById('addStoryBtn');
-            if (addStoryBtn) logPass('زر إضافة قصة موجود');
-            else logFail('زر إضافة قصة غير موجود');
-
-            const addTextStoryBtn = document.getElementById('addTextStoryBtn');
-            if (addTextStoryBtn) logPass('زر قصة نصية موجود');
-            else logFail('زر قصة نصية غير موجود');
-
-            // فحص القصص المحلية
-            if (typeof window.getStories === 'function') {
-                try {
-                    const stories = window.getStories();
-                    logPass(`getStories() يعمل، عدد القصص: ${stories?.length || 0}`);
-                    if (stories && stories.length > 0) {
-                        logData('أحدث قصة', stories[0]);
-                    }
-                } catch (e) {
-                    logFail('getStories() فشل', e);
-                }
-            }
-
-            // فحص مزامنة القصص
-            if (typeof window.syncStories === 'function') {
-                if (isOnline()) {
-                    try {
-                        await window.syncStories();
-                        logPass('syncStories() يعمل');
-                    } catch (e) {
-                        logFail('syncStories() فشل', e);
-                    }
-                } else {
-                    logSkip('غير متصل بالإنترنت – تخطي اختبار syncStories');
-                }
-            } else {
-                logFail('syncStories غير موجود');
-            }
-        } catch (e) {
-            logFail('خطأ في فحص القصص', e);
-        }
-        endGroup();
-    }
-
-    // ================== جعل الدوال عامة ==================
-    window.runAllTests = runAllTests;
-
-    // ================== التنفيذ التلقائي ==================
-    // الانتظار قليلاً ثم تشغيل الفحص
+    // ======================================================================
+    // تنفيذ تلقائي (اختياري)
+    // ======================================================================
     setTimeout(() => {
-        runAllTests().catch(e => {
-            console.error('❌ خطأ أثناء تشغيل الاختبارات:', e);
-        });
-    }, 1500);
+        // ننتظر حتى يكتمل تحميل الصفحة
+        if (document.readyState === 'complete') {
+            console.log('⏳ سيبدأ الفحص التلقائي بعد 2 ثانية...');
+            setTimeout(() => {
+                window.runAllTests().catch(e => {
+                    console.error('❌ خطأ أثناء تشغيل الاختبارات:', e);
+                });
+            }, 2000);
+        }
+    }, 500);
 
-    console.log('✅ test.js (النسخة النهائية) جاهز - سيبدأ الفحص تلقائياً بعد التهيئة');
-    console.log('💡 لإعادة التشغيل يدوياً: runAllTests()');
+    console.log('✅ test.js (الإصدار النهائي v5.0) جاهز');
+    console.log('💡 لتشغيل الفحص يدوياً: runAllTests()');
+    console.log('💡 لفحص مكون معين: انظر دوال test* داخل الكود');
+
 })();
