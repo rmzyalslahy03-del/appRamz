@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>القناة | RamzApp</title>
+
+    <!-- ===== تحميل Supabase ===== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- ===== Font Awesome ===== -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
         /* ======================================================================
-                   الأنماط الأساسية
+                   الأنماط الأساسية – متوافقة مع RamzApp v5.0
                    ====================================================================== */
         :root {
             --bg: #0d0d0d;
@@ -85,7 +89,7 @@
             white-space: nowrap;
         }
 
-        /* ===== معلومات القناة (قابلة للنقر) ===== */
+        /* ===== معلومات القناة ===== */
         .channel-header {
             background: var(--surface);
             padding: 16px;
@@ -125,15 +129,8 @@
             border-radius: 12px;
             border: 2px solid var(--bg);
         }
-        .channel-name-lg {
-            font-size: 22px;
-            font-weight: 700;
-        }
-        .channel-desc-lg {
-            font-size: 13px;
-            color: var(--text3);
-            text-align: center;
-        }
+        .channel-name-lg { font-size: 22px; font-weight: 700; }
+        .channel-desc-lg { font-size: 13px; color: var(--text3); text-align: center; }
         .channel-stats {
             display: flex;
             gap: 20px;
@@ -174,10 +171,8 @@
         .btn-admin { background: var(--green); color: #fff; }
         .btn-post { background: var(--accent2); color: #fff; }
 
-        /* ================================================================
-                   قائمة إعدادات القناة (Bottom Sheet)
-                   ================================================================ */
-        .channel-settings-overlay {
+        /* ===== قائمة الإعدادات (Bottom Sheet) ===== */
+        .settings-overlay {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.7);
@@ -188,9 +183,8 @@
             justify-content: center;
             animation: fadeIn 0.2s ease;
         }
-        .channel-settings-overlay.active { display: flex; }
-
-        .channel-settings-sheet {
+        .settings-overlay.active { display: flex; }
+        .settings-sheet {
             background: var(--surface);
             border-radius: 28px 28px 0 0;
             width: 100%;
@@ -209,7 +203,6 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
-
         .settings-handle {
             width: 40px;
             height: 4px;
@@ -217,7 +210,6 @@
             border-radius: 4px;
             margin: 0 auto 16px;
         }
-
         .settings-header {
             display: flex;
             align-items: center;
@@ -238,17 +230,9 @@
             flex-shrink: 0;
             border: 2px solid var(--accent);
         }
-        .settings-header .info {
-            flex: 1;
-        }
-        .settings-header .info .name {
-            font-size: 17px;
-            font-weight: 700;
-        }
-        .settings-header .info .sub {
-            font-size: 12px;
-            color: var(--text3);
-        }
+        .settings-header .info { flex: 1; }
+        .settings-header .info .name { font-size: 17px; font-weight: 700; }
+        .settings-header .info .sub { font-size: 12px; color: var(--text3); }
         .settings-header .close-btn {
             background: none;
             border: none;
@@ -257,11 +241,7 @@
             cursor: pointer;
             padding: 4px 8px;
         }
-
-        /* ===== عناصر الإعدادات ===== */
-        .settings-section {
-            margin-bottom: 12px;
-        }
+        .settings-section { margin-bottom: 12px; }
         .settings-section-title {
             font-size: 11px;
             color: var(--text3);
@@ -270,7 +250,6 @@
             font-weight: 600;
             letter-spacing: 0.5px;
         }
-
         .settings-item {
             display: flex;
             align-items: center;
@@ -285,7 +264,6 @@
         .settings-item:last-child { border-bottom: none; }
         .settings-item:hover { background: var(--surface2); }
         .settings-item:active { background: var(--surface3); transform: scale(0.98); }
-
         .settings-item .icon {
             width: 32px;
             font-size: 18px;
@@ -293,17 +271,9 @@
             color: var(--text3);
             flex-shrink: 0;
         }
-        .settings-item .content {
-            flex: 1;
-        }
-        .settings-item .content .title {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .settings-item .content .desc {
-            font-size: 11px;
-            color: var(--text3);
-        }
+        .settings-item .content { flex: 1; }
+        .settings-item .content .title { font-size: 14px; font-weight: 500; }
+        .settings-item .content .desc { font-size: 11px; color: var(--text3); }
         .settings-item .badge {
             background: var(--accent);
             color: #fff;
@@ -312,10 +282,7 @@
             border-radius: 12px;
             font-weight: 600;
         }
-        .settings-item .chevron {
-            color: var(--text3);
-            font-size: 14px;
-        }
+        .settings-item .chevron { color: var(--text3); font-size: 14px; }
         .settings-item .toggle {
             width: 44px;
             height: 24px;
@@ -326,9 +293,7 @@
             transition: 0.3s;
             flex-shrink: 0;
         }
-        .settings-item .toggle.active {
-            background: var(--accent);
-        }
+        .settings-item .toggle.active { background: var(--accent); }
         .settings-item .toggle::after {
             content: '';
             position: absolute;
@@ -340,9 +305,7 @@
             right: 3px;
             transition: 0.3s;
         }
-        .settings-item .toggle.active::after {
-            right: 23px;
-        }
+        .settings-item .toggle.active::after { right: 23px; }
         .settings-item.danger .title { color: #ff4444; }
         .settings-item.danger .icon { color: #ff4444; }
 
@@ -449,7 +412,7 @@
         .post-form .form-actions .cancel-btn { background: var(--surface3); color: var(--text); }
 
         /* ===== Toast ===== */
-        .global-toast {
+        .toast {
             position: fixed;
             bottom: 90px;
             left: 50%;
@@ -467,7 +430,7 @@
             box-shadow: var(--shadow);
             white-space: nowrap;
         }
-        .global-toast.show { opacity: 1; }
+        .toast.show { opacity: 1; }
 
         .empty-state {
             text-align: center;
@@ -475,8 +438,7 @@
             color: var(--text3);
         }
         .empty-state i { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
-
-        .loading-spinner {
+        .spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
@@ -488,6 +450,52 @@
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ===== مودال المعلومات ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 6000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: var(--surface);
+            border-radius: 24px;
+            width: 340px;
+            max-width: 92%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            animation: popIn 0.3s ease;
+        }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-card h3 { font-size: 18px; margin-bottom: 12px; text-align: center; }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .info-row .label { color: var(--text3); }
+        .info-row .value { color: var(--text); font-weight: 500; }
+        .close-modal {
+            float: left;
+            background: none;
+            border: none;
+            color: var(--text3);
+            font-size: 20px;
+            cursor: pointer;
+        }
 
         @media (max-width: 400px) {
             .channel-avatar-lg { font-size: 48px; width: 64px; height: 64px; }
@@ -507,7 +515,7 @@
         <button class="menu-btn" id="menuBtn"><i class="fas fa-ellipsis-v"></i></button>
     </div>
 
-    <!-- ===== معلومات القناة (قابلة للنقر) ===== -->
+    <!-- ===== معلومات القناة ===== -->
     <div class="channel-header" id="channelHeader">
         <div class="channel-avatar-lg" id="channelAvatar">
             📢
@@ -531,25 +539,18 @@
         <button class="promo-btn btn-post" id="postBtn" style="display:none;"><i class="fas fa-plus"></i> منشور</button>
     </div>
 
-    <!-- ================================================================
-         قائمة إعدادات القناة (تظهر عند النقر على أيقونة القناة)
-         ================================================================ -->
-    <div class="channel-settings-overlay" id="settingsOverlay">
-        <div class="channel-settings-sheet" id="settingsSheet">
-            <!-- مقبض السحب -->
+    <!-- ===== قائمة الإعدادات ===== -->
+    <div class="settings-overlay" id="settingsOverlay">
+        <div class="settings-sheet" id="settingsSheet">
             <div class="settings-handle"></div>
-
-            <!-- رأس الإعدادات -->
             <div class="settings-header">
                 <div class="avatar" id="settingsAvatar">📢</div>
                 <div class="info">
-                    <div class="name" id="settingsName">حراج ابو خطاب الصنعاني</div>
-                    <div class="sub" id="settingsSub">قناة · <span id="settingsFollowers">3,625</span> متابعاً</div>
+                    <div class="name" id="settingsName">...</div>
+                    <div class="sub" id="settingsSub">قناة · <span id="settingsFollowers">0</span> متابع</div>
                 </div>
                 <button class="close-btn" id="closeSettingsBtn"><i class="fas fa-times"></i></button>
             </div>
-
-            <!-- قسم البحث والمشاركة -->
             <div class="settings-section">
                 <div class="settings-item" id="settingsSearch">
                     <div class="icon"><i class="fas fa-search"></i></div>
@@ -567,17 +568,7 @@
                     </div>
                     <div class="chevron"><i class="fas fa-chevron-left"></i></div>
                 </div>
-                <div class="settings-item" id="settingsForward">
-                    <div class="icon"><i class="fas fa-forward"></i></div>
-                    <div class="content">
-                        <div class="title">إعادة توجيه</div>
-                        <div class="desc">إعادة توجيه القناة لشخص آخر</div>
-                    </div>
-                    <div class="chevron"><i class="fas fa-chevron-left"></i></div>
-                </div>
             </div>
-
-            <!-- قسم الإشعارات والنجمة -->
             <div class="settings-section">
                 <div class="settings-section-title">الإعدادات</div>
                 <div class="settings-item" id="settingsMute">
@@ -597,8 +588,6 @@
                     <div class="toggle" id="starToggle"></div>
                 </div>
             </div>
-
-            <!-- قسم معلومات القناة -->
             <div class="settings-section">
                 <div class="settings-section-title">معلومات القناة</div>
                 <div class="settings-item" id="settingsInfo">
@@ -606,14 +595,6 @@
                     <div class="content">
                         <div class="title">معلومات القناة</div>
                         <div class="desc" id="settingsInfoDesc">عرض تفاصيل القناة</div>
-                    </div>
-                    <div class="chevron"><i class="fas fa-chevron-left"></i></div>
-                </div>
-                <div class="settings-item" id="settingsMedia">
-                    <div class="icon"><i class="fas fa-photo-video"></i></div>
-                    <div class="content">
-                        <div class="title">الوسائط والروابط</div>
-                        <div class="desc" id="settingsMediaCount">0 صورة، 0 فيديو، 0 رابط</div>
                     </div>
                     <div class="chevron"><i class="fas fa-chevron-left"></i></div>
                 </div>
@@ -626,18 +607,8 @@
                     <div class="chevron"><i class="fas fa-chevron-left"></i></div>
                 </div>
             </div>
-
-            <!-- قسم الخصوصية والإجراءات -->
             <div class="settings-section">
                 <div class="settings-section-title">الخصوصية والإجراءات</div>
-                <div class="settings-item" id="settingsPrivacy">
-                    <div class="icon"><i class="fas fa-lock"></i></div>
-                    <div class="content">
-                        <div class="title">قناة عامة</div>
-                        <div class="desc">يمكن لأي شخص العثور على هذه القناة</div>
-                    </div>
-                    <div class="badge">عامة</div>
-                </div>
                 <div class="settings-item danger" id="settingsUnfollow">
                     <div class="icon"><i class="fas fa-times-circle"></i></div>
                     <div class="content">
@@ -654,7 +625,6 @@
                     </div>
                     <div class="chevron"><i class="fas fa-chevron-left"></i></div>
                 </div>
-                <!-- زر حذف القناة (للمشرف فقط) -->
                 <div class="settings-item danger" id="settingsDelete" style="display:none;">
                     <div class="icon"><i class="fas fa-trash-alt"></i></div>
                     <div class="content">
@@ -664,8 +634,6 @@
                     <div class="chevron"><i class="fas fa-chevron-left"></i></div>
                 </div>
             </div>
-
-            <!-- زر إغلاق -->
             <div style="margin-top: 12px;">
                 <button class="promo-btn" id="closeSettingsBottomBtn" style="width:100%; background:var(--surface3); color:var(--text);">إغلاق</button>
             </div>
@@ -687,825 +655,865 @@
     </div>
 
     <!-- ===== مودال معلومات القناة ===== -->
-    <div class="modal-overlay" id="infoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:6000;align-items:center;justify-content:center;">
-        <div class="modal-card" style="background:var(--surface);border-radius:24px;width:340px;max-width:92%;max-height:80vh;overflow-y:auto;padding:20px;box-shadow:var(--shadow);animation:popIn 0.3s ease;">
-            <button class="close-modal" id="closeInfoModalBtn" style="float:left;background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;"><i class="fas fa-times"></i></button>
-            <h3 style="font-size:18px;margin-bottom:12px;text-align:center;">📋 معلومات القناة</h3>
+    <div class="modal-overlay" id="infoModal">
+        <div class="modal-card">
+            <button class="close-modal" id="closeInfoModalBtn"><i class="fas fa-times"></i></button>
+            <h3>📋 معلومات القناة</h3>
             <div id="infoContent">
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;"><span style="color:var(--text3);">الاسم</span><span style="color:var(--text);font-weight:500;" id="infoName">-</span></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;"><span style="color:var(--text3);">الوصف</span><span style="color:var(--text);font-weight:500;" id="infoDesc">-</span></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;"><span style="color:var(--text3);">المتابعون</span><span style="color:var(--text);font-weight:500;" id="infoFollowers">0</span></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;"><span style="color:var(--text3);">المنشورات</span><span style="color:var(--text);font-weight:500;" id="infoPosts">0</span></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;"><span style="color:var(--text3);">رمز الدعوة</span><span style="color:var(--text);font-weight:500;" id="infoCode">-</span></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px;"><span style="color:var(--text3);">تاريخ الإنشاء</span><span style="color:var(--text);font-weight:500;" id="infoCreated">-</span></div>
+                <div class="info-row"><span class="label">الاسم</span><span class="value" id="infoName">-</span></div>
+                <div class="info-row"><span class="label">الوصف</span><span class="value" id="infoDesc">-</span></div>
+                <div class="info-row"><span class="label">المتابعون</span><span class="value" id="infoFollowers">0</span></div>
+                <div class="info-row"><span class="label">المنشورات</span><span class="value" id="infoPosts">0</span></div>
+                <div class="info-row"><span class="label">رمز الدعوة</span><span class="value" id="infoCode">-</span></div>
+                <div class="info-row"><span class="label">تاريخ الإنشاء</span><span class="value" id="infoCreated">-</span></div>
+                <div class="info-row"><span class="label">المشرف</span><span class="value" id="infoAdmin">-</span></div>
             </div>
         </div>
     </div>
 
     <!-- ===== Toast ===== -->
-    <div class="global-toast" id="toastMsg"></div>
+    <div class="toast" id="toast"></div>
 
+    <!-- ===== تحميل السكربتات (ترتيب مهم) ===== -->
+    <script src="db.js"></script>
     <script src="supabase.js"></script>
+    <script src="common.js"></script>
+
     <script>
-        // ================================================================
-        // دوال مساعدة
-        // ================================================================
-        function toast(msg, duration = 2500) {
-            const el = document.getElementById('toastMsg');
-            if (!el) return;
-            el.textContent = msg;
-            el.classList.add('show');
-            clearTimeout(el._hideTimer);
-            el._hideTimer = setTimeout(() => { el.classList.remove('show'); }, duration);
-        }
+        (function() {
+            'use strict';
 
-        function getCurrentUser() {
-            try {
-                const raw = localStorage.getItem('ramzapp_user');
-                if (raw) return JSON.parse(raw);
-            } catch(e) { return null; }
-            return null;
-        }
-
-        function getSupabase() {
-            if (window.supabaseClient) return window.supabaseClient;
-            if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
-                const client = supabaseJs.createClient(
-                    'https://serlegwdzjulfcxabxzv.supabase.co',
-                    'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx'
-                );
-                window.supabaseClient = client;
-                return client;
+            // ================================================================
+            // دوال مساعدة (مستقلة عن common.js لتجنب التعارض)
+            // ================================================================
+            function toast(msg, duration = 2500) {
+                const el = document.getElementById('toast');
+                if (!el) return;
+                el.textContent = msg;
+                el.classList.add('show');
+                clearTimeout(el._hideTimer);
+                el._hideTimer = setTimeout(() => el.classList.remove('show'), duration);
             }
-            return null;
-        }
 
-        function timeAgo(d) {
-            if (!d) return '';
-            const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
-            if (diff < 60) return 'الآن';
-            if (diff < 3600) return Math.floor(diff/60)+' د';
-            if (diff < 86400) return Math.floor(diff/3600)+' س';
-            return Math.floor(diff/86400)+' يوم';
-        }
+            function esc(s) { return s ? s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
 
-        function formatDate(d) {
-            if (!d) return '-';
-            return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-        }
+            function timeAgo(d) {
+                if (!d) return '';
+                const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+                if (diff < 60) return 'الآن';
+                if (diff < 3600) return Math.floor(diff/60)+' د';
+                if (diff < 86400) return Math.floor(diff/3600)+' س';
+                return Math.floor(diff/86400)+' يوم';
+            }
 
-        function esc(s) { return s ? s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]) : ''; }
+            function formatDate(d) {
+                if (!d) return '-';
+                return new Date(d).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
 
-        // ================================================================
-        // متغيرات الحالة
-        // ================================================================
-        let channelId = null;
-        let channelData = null;
-        let isAdmin = false;
-        let isSubscribed = false;
-        let isMuted = false;
-        let isStarred = false;
-        let posts = [];
+            function getCurrentUser() {
+                try {
+                    const raw = localStorage.getItem('ramzapp_user');
+                    return raw ? JSON.parse(raw) : null;
+                } catch(e) { return null; }
+            }
 
-        // ================================================================
-        // قراءة معامل الرابط
-        // ================================================================
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const id = urlParams.get('id');
-        const targetId = id || code;
-
-        if (!targetId) {
-            toast('⚠️ رابط غير صالح');
-            document.getElementById('channelName').textContent = 'رابط غير صالح';
-            document.getElementById('postsContainer').innerHTML = `
-                <div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>رابط القناة غير صالح</p></div>
-            `;
-            throw new Error('رابط غير صالح');
-        }
-
-        // ================================================================
-        // جلب بيانات القناة
-        // ================================================================
-        async function loadChannel() {
-            const supabase = getSupabase();
-            if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
-
-            try {
-                let query = supabase.from('channels').select('*');
-                if (id) {
-                    query = query.eq('id', id);
-                } else {
-                    query = query.eq('invite_code', code);
+            function getSupabase() {
+                if (window.supabaseClient) return window.supabaseClient;
+                if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
+                    const client = supabaseJs.createClient(
+                        'https://serlegwdzjulfcxabxzv.supabase.co',
+                        'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx'
+                    );
+                    window.supabaseClient = client;
+                    return client;
                 }
-                const { data, error } = await query.single();
+                return null;
+            }
 
-                if (error || !data) {
-                    toast('⚠️ القناة غير موجودة');
-                    document.getElementById('channelName').textContent = 'غير موجودة';
-                    document.getElementById('postsContainer').innerHTML = `
-                        <div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>القناة غير موجودة أو تم حذفها</p></div>
+            // دوال التخزين المحلي (تعتمد على db.js)
+            function DB_getChannels() { return window.getChannels ? window.getChannels() : []; }
+            function DB_getChannel(channelId) { return DB_getChannels().find(c => c.id === channelId); }
+            function DB_saveChannel(ch) { if (window.saveChannel) window.saveChannel(ch); }
+            function DB_getMessages(chatId) { return window.getMessages ? window.getMessages(chatId) : []; }
+            function DB_addMessage(msg) { return window.addMessage ? window.addMessage(msg) : msg; }
+            function DB_updateMessage(msgId, updates) { if (window.updateMessage) window.updateMessage(msgId, updates); }
+            function DB_deleteMessage(msgId) { if (window.deleteMessage) window.deleteMessage(msgId); }
+            function DB_getContacts() { return window.getContacts ? window.getContacts() : []; }
+
+            // ================================================================
+            // متغيرات الحالة
+            // ================================================================
+            let channelId = null;
+            let channelData = null;
+            let isAdmin = false;
+            let isSubscribed = false;
+            let isMuted = false;
+            let isStarred = false;
+            let posts = [];
+
+            // ================================================================
+            // قراءة معامل الرابط
+            // ================================================================
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const id = urlParams.get('id');
+            const targetId = id || code;
+
+            if (!targetId) {
+                toast('⚠️ رابط غير صالح');
+                document.getElementById('channelName').textContent = 'رابط غير صالح';
+                document.getElementById('postsContainer').innerHTML = `
+                    <div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>رابط القناة غير صالح</p></div>
+                `;
+                throw new Error('رابط غير صالح');
+            }
+
+            // ================================================================
+            // جلب بيانات القناة (محلياً + Supabase)
+            // ================================================================
+            async function loadChannel() {
+                const supabase = getSupabase();
+                if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
+
+                try {
+                    // 1. البحث عن القناة في التخزين المحلي أولاً
+                    let localChannel = DB_getChannel(targetId);
+                    let channelFromDB = null;
+
+                    // 2. إذا لم توجد محلياً، نجلب من Supabase
+                    if (!localChannel) {
+                        let query = supabase.from('channels').select('*');
+                        if (id) {
+                            query = query.eq('id', id);
+                        } else {
+                            query = query.eq('invite_code', code);
+                        }
+                        const { data, error } = await query.single();
+                        if (error || !data) {
+                            toast('⚠️ القناة غير موجودة');
+                            document.getElementById('channelName').textContent = 'غير موجودة';
+                            document.getElementById('postsContainer').innerHTML = `
+                                <div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>القناة غير موجودة أو تم حذفها</p></div>
+                            `;
+                            return;
+                        }
+                        channelFromDB = data;
+                        // حفظ في التخزين المحلي
+                        const newChannel = {
+                            id: data.id,
+                            name: data.name,
+                            avatar: data.avatar || '📢',
+                            description: data.description || '',
+                            followers: data.followers || 0,
+                            invite_code: data.invite_code,
+                            created_by: data.created_by,
+                            created_at: data.created_at,
+                            subscribers: [],
+                            is_subscribed: false
+                        };
+                        DB_saveChannel(newChannel);
+                        localChannel = newChannel;
+                    }
+
+                    channelData = localChannel;
+                    channelId = localChannel.id;
+
+                    // تحديث بيانات القناة من Supabase (إذا كانت أحدث)
+                    if (!channelFromDB) {
+                        try {
+                            const { data } = await supabase
+                                .from('channels')
+                                .select('*')
+                                .eq('id', channelId)
+                                .single();
+                            if (data) {
+                                // تحديث المحلي
+                                const updated = { ...localChannel, ...data };
+                                DB_saveChannel(updated);
+                                channelData = updated;
+                            }
+                        } catch(e) { /* ignore */ }
+                    }
+
+                    // عرض معلومات القناة
+                    document.getElementById('channelTitle').textContent = channelData.name;
+                    document.getElementById('channelAvatar').textContent = channelData.avatar || '📢';
+                    document.getElementById('channelName').textContent = channelData.name;
+                    document.getElementById('channelDesc').textContent = channelData.description || '';
+                    document.getElementById('followersCount').innerHTML = `<i class="fas fa-users"></i> ${channelData.followers || 0} متابع`;
+                    document.getElementById('createdDate').innerHTML = `<i class="fas fa-calendar-alt"></i> ${formatDate(channelData.created_at)}`;
+
+                    // تحديث إعدادات القناة
+                    document.getElementById('settingsAvatar').textContent = channelData.avatar || '📢';
+                    document.getElementById('settingsName').textContent = channelData.name;
+                    document.getElementById('settingsFollowers').textContent = channelData.followers || 0;
+                    document.getElementById('settingsCreatedDate').textContent = formatDate(channelData.created_at);
+
+                    // التحقق من صلاحيات المستخدم
+                    const user = getCurrentUser();
+                    if (user && user.id) {
+                        // التحقق من الاشتراك
+                        const subscribers = channelData.subscribers || [];
+                        isSubscribed = subscribers.includes(user.id);
+
+                        // التحقق من الصلاحيات (منشئ القناة)
+                        isAdmin = channelData.created_by === user.id;
+
+                        // إذا كان مشتركاً في التخزين المحلي لكنه غير مسجل في Supabase، نقوم بتسجيله
+                        if (isSubscribed) {
+                            // التأكد من وجوده في Supabase
+                            try {
+                                await supabase
+                                    .from('channel_subscribers')
+                                    .upsert({
+                                        channel_id: channelId,
+                                        user_id: user.id,
+                                        role: 'member'
+                                    });
+                            } catch(e) { /* ignore */ }
+                        }
+
+                        updateButtons();
+                        await loadPosts();
+                        loadUserChannelSettings();
+
+                    } else {
+                        document.getElementById('joinBtn').textContent = '🔐 تسجيل الدخول للانضمام';
+                        document.getElementById('joinBtn').onclick = () => {
+                            localStorage.setItem('ramzapp_deep_link_channel', channelId);
+                            window.location.href = 'login.html';
+                        };
+                        document.getElementById('leaveBtn').style.display = 'none';
+                        document.getElementById('adminBtn').style.display = 'none';
+                        document.getElementById('postBtn').style.display = 'none';
+                        document.getElementById('settingsDelete').style.display = 'none';
+                        await loadPosts();
+                    }
+
+                } catch (e) {
+                    console.error('❌ خطأ:', e);
+                    toast('⚠️ حدث خطأ أثناء تحميل القناة');
+                }
+            }
+
+            // ================================================================
+            // تحميل إعدادات المستخدم للقناة
+            // ================================================================
+            function loadUserChannelSettings() {
+                const user = getCurrentUser();
+                if (!user) return;
+                try {
+                    const key = `channel_${channelId}_settings`;
+                    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+                    isMuted = saved.muted || false;
+                    isStarred = saved.starred || false;
+                    updateToggleStates();
+                } catch(e) {}
+            }
+
+            function saveUserChannelSettings() {
+                const user = getCurrentUser();
+                if (!user) return;
+                try {
+                    const key = `channel_${channelId}_settings`;
+                    localStorage.setItem(key, JSON.stringify({ muted: isMuted, starred: isStarred }));
+                } catch(e) {}
+            }
+
+            function updateToggleStates() {
+                const muteToggle = document.getElementById('muteToggle');
+                const starToggle = document.getElementById('starToggle');
+                if (muteToggle) muteToggle.classList.toggle('active', isMuted);
+                if (starToggle) starToggle.classList.toggle('active', isStarred);
+            }
+
+            // ================================================================
+            // جلب المنشورات (محلياً)
+            // ================================================================
+            async function loadPosts() {
+                if (!channelId) return;
+                // المنشورات مخزنة محلياً في جدول messages مع chat_id = channelId
+                const msgs = DB_getMessages(channelId) || [];
+                posts = msgs;
+                renderPosts();
+                document.getElementById('postsCount').innerHTML = `<i class="fas fa-file-alt"></i> ${posts.length} منشور`;
+            }
+
+            // ================================================================
+            // عرض المنشورات
+            // ================================================================
+            function renderPosts() {
+                const container = document.getElementById('postsContainer');
+                document.getElementById('infoPosts').textContent = posts.length;
+
+                if (posts.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state"><i class="fas fa-newspaper"></i><p>لا توجد منشورات بعد</p></div>
                     `;
                     return;
                 }
 
-                channelData = data;
-                channelId = data.id;
+                let html = '';
+                posts.forEach(p => {
+                    const isMe = p.sender_id === getCurrentUser()?.id;
+                    const hasImg = p.img && !p.voice_blob;
+                    const hasVoice = p.voice_blob;
+                    html += `
+                        <div class="post-card" id="post-${p.id}">
+                            <div class="post-header">
+                                <div class="post-avatar" style="background:${p.color || '#ff0050'};">${p.sender_name || '👤'}</div>
+                                <div class="post-author">${esc(p.sender_name || 'مستخدم')}</div>
+                                <div class="post-time">${timeAgo(p.time)}</div>
+                            </div>
+                            <div class="post-content">${esc(p.text || '')}</div>
+                            ${hasImg ? `<img src="${p.img}" class="post-image" onclick="window.open('${p.img}','_blank')">` : ''}
+                            ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" onclick="playAudio('${p.voice_blob}')"><i class="fas fa-play"></i></button> 🎤 رسالة صوتية</div>` : ''}
+                            <div class="post-actions">
+                                <button onclick="likePost('${p.id}')"><i class="fas fa-heart"></i> ${p.likes || 0}</button>
+                                <button onclick="sharePost('${p.id}')"><i class="fas fa-share-alt"></i> مشاركة</button>
+                                ${isMe ? `<button onclick="deletePost('${p.id}')" style="color:#ff4444;"><i class="fas fa-trash-alt"></i> حذف</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            }
 
-                // عرض معلومات القناة
-                document.getElementById('channelTitle').textContent = data.name;
-                document.getElementById('channelAvatar').textContent = data.avatar || '📢';
-                document.getElementById('channelName').textContent = data.name;
-                document.getElementById('channelDesc').textContent = data.description || '';
-                document.getElementById('followersCount').innerHTML = `<i class="fas fa-users"></i> ${data.followers || 0} متابع`;
-                document.getElementById('createdDate').innerHTML = `<i class="fas fa-calendar-alt"></i> ${formatDate(data.created_at)}`;
+            // ================================================================
+            // تحديث الأزرار
+            // ================================================================
+            function updateButtons() {
+                const joinBtn = document.getElementById('joinBtn');
+                const leaveBtn = document.getElementById('leaveBtn');
+                const adminBtn = document.getElementById('adminBtn');
+                const postBtn = document.getElementById('postBtn');
+                const deleteBtn = document.getElementById('settingsDelete');
 
-                // تحديث إعدادات القناة
-                document.getElementById('settingsAvatar').textContent = data.avatar || '📢';
-                document.getElementById('settingsName').textContent = data.name;
-                document.getElementById('settingsFollowers').textContent = data.followers || 0;
-                document.getElementById('settingsCreatedDate').textContent = formatDate(data.created_at);
-
-                // التحقق من صلاحيات المستخدم
-                const user = getCurrentUser();
-                if (user && user.id) {
-                    const { data: sub } = await supabase
-                        .from('channel_subscribers')
-                        .select('role')
-                        .eq('channel_id', channelId)
-                        .eq('user_id', user.id)
-                        .maybeSingle();
-
-                    isSubscribed = !!sub;
-                    isAdmin = sub?.role === 'admin' || data.created_by === user.id;
-                    updateButtons();
-                    await loadPosts();
-
-                    // تحميل إعدادات المستخدم للقناة
-                    loadUserChannelSettings();
-
+                if (isSubscribed) {
+                    joinBtn.style.display = 'none';
+                    leaveBtn.style.display = 'flex';
+                    leaveBtn.textContent = '🚪 مغادرة';
+                    leaveBtn.onclick = leaveChannel;
                 } else {
-                    document.getElementById('joinBtn').textContent = '🔐 تسجيل الدخول للانضمام';
-                    document.getElementById('joinBtn').onclick = () => {
-                        localStorage.setItem('ramzapp_deep_link_channel', channelId);
-                        window.location.href = 'login.html';
-                    };
-                    document.getElementById('leaveBtn').style.display = 'none';
-                    document.getElementById('adminBtn').style.display = 'none';
-                    document.getElementById('postBtn').style.display = 'none';
-                    document.getElementById('settingsDelete').style.display = 'none';
-                    await loadPosts();
+                    joinBtn.style.display = 'flex';
+                    joinBtn.textContent = '📢 انضمام إلى القناة';
+                    joinBtn.onclick = joinChannel;
+                    leaveBtn.style.display = 'none';
                 }
 
-            } catch (e) {
-                console.error('❌ خطأ:', e);
-                toast('⚠️ حدث خطأ أثناء تحميل القناة');
-            }
-        }
+                if (isAdmin) {
+                    adminBtn.style.display = 'flex';
+                    adminBtn.onclick = () => { window.location.href = `edit-channel.html?id=${channelId}`; };
+                    postBtn.style.display = 'flex';
+                    postBtn.onclick = togglePostForm;
+                    deleteBtn.style.display = 'flex';
+                } else {
+                    adminBtn.style.display = 'none';
+                    postBtn.style.display = 'none';
+                    deleteBtn.style.display = 'none';
+                }
 
-        // ================================================================
-        // تحميل إعدادات المستخدم للقناة
-        // ================================================================
-        function loadUserChannelSettings() {
-            const user = getCurrentUser();
-            if (!user) return;
-            try {
-                const key = `channel_${channelId}_settings`;
-                const saved = JSON.parse(localStorage.getItem(key) || '{}');
-                isMuted = saved.muted || false;
-                isStarred = saved.starred || false;
-                updateToggleStates();
-            } catch(e) {}
-        }
-
-        function saveUserChannelSettings() {
-            const user = getCurrentUser();
-            if (!user) return;
-            try {
-                const key = `channel_${channelId}_settings`;
-                localStorage.setItem(key, JSON.stringify({ muted: isMuted, starred: isStarred }));
-            } catch(e) {}
-        }
-
-        function updateToggleStates() {
-            const muteToggle = document.getElementById('muteToggle');
-            const starToggle = document.getElementById('starToggle');
-            if (muteToggle) muteToggle.classList.toggle('active', isMuted);
-            if (starToggle) starToggle.classList.toggle('active', isStarred);
-        }
-
-        // ================================================================
-        // جلب المنشورات
-        // ================================================================
-        async function loadPosts() {
-            const supabase = getSupabase();
-            if (!supabase || !channelId) return;
-
-            try {
-                const { data, error } = await supabase
-                    .from('messages')
-                    .select('*')
-                    .eq('chat_id', channelId)
-                    .order('time', { ascending: false });
-
-                if (error) throw error;
-                posts = data || [];
-                renderPosts();
-                updateMediaStats();
-
-            } catch (e) {
-                console.warn('⚠️ فشل جلب المنشورات:', e);
-                posts = [];
-                renderPosts();
-            }
-        }
-
-        // ================================================================
-        // تحديث إحصائيات الوسائط
-        // ================================================================
-        function updateMediaStats() {
-            let images = 0, videos = 0, links = 0;
-            posts.forEach(p => {
-                if (p.img) images++;
-                if (p.voice_blob) videos++;
-                if (p.text && (p.text.includes('http://') || p.text.includes('https://'))) links++;
-            });
-            document.getElementById('settingsMediaCount').textContent =
-                `${images} صورة، ${videos} فيديو، ${links} رابط`;
-        }
-
-        // ================================================================
-        // عرض المنشورات
-        // ================================================================
-        function renderPosts() {
-            const container = document.getElementById('postsContainer');
-            document.getElementById('postsCount').innerHTML = `<i class="fas fa-file-alt"></i> ${posts.length} منشور`;
-            document.getElementById('infoPosts').textContent = posts.length;
-
-            if (posts.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state"><i class="fas fa-newspaper"></i><p>لا توجد منشورات بعد</p></div>
-                `;
-                return;
+                document.getElementById('shareBtn').onclick = shareChannel;
             }
 
-            let html = '';
-            posts.forEach(p => {
-                const isMe = p.sender_id === getCurrentUser()?.id;
-                const hasImg = p.img && !p.voice_blob;
-                const hasVoice = p.voice_blob;
-                html += `
-                    <div class="post-card" id="post-${p.id}">
-                        <div class="post-header">
-                            <div class="post-avatar" style="background:${p.color || '#ff0050'};">${p.sender_name || '👤'}</div>
-                            <div class="post-author">${esc(p.sender_name || 'مستخدم')}</div>
-                            <div class="post-time">${timeAgo(p.time)}</div>
-                        </div>
-                        <div class="post-content">${esc(p.text || '')}</div>
-                        ${hasImg ? `<img src="${p.img}" class="post-image" onclick="window.open('${p.img}','_blank')">` : ''}
-                        ${hasVoice ? `<div class="voice-msg"><button class="voice-play-btn" onclick="playAudio('${p.voice_blob}')"><i class="fas fa-play"></i></button> 🎤 رسالة صوتية</div>` : ''}
-                        <div class="post-actions">
-                            <button onclick="likePost('${p.id}')"><i class="fas fa-heart"></i> ${p.likes || 0}</button>
-                            <button onclick="sharePost('${p.id}')"><i class="fas fa-share-alt"></i> مشاركة</button>
-                            ${isMe ? `<button onclick="deletePost('${p.id}')" style="color:#ff4444;"><i class="fas fa-trash-alt"></i> حذف</button>` : ''}
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
+            // ================================================================
+            // الانضمام إلى القناة
+            // ================================================================
+            async function joinChannel() {
+                const supabase = getSupabase();
+                if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
+                const user = getCurrentUser();
+                if (!user || !user.id) {
+                    toast('⚠️ يجب تسجيل الدخول أولاً');
+                    return;
+                }
 
-        // ================================================================
-        // تحديث الأزرار
-        // ================================================================
-        function updateButtons() {
-            const joinBtn = document.getElementById('joinBtn');
-            const leaveBtn = document.getElementById('leaveBtn');
-            const adminBtn = document.getElementById('adminBtn');
-            const postBtn = document.getElementById('postBtn');
-            const deleteBtn = document.getElementById('settingsDelete');
+                const joinBtn = document.getElementById('joinBtn');
+                joinBtn.disabled = true;
+                joinBtn.innerHTML = '<span class="spinner"></span> جاري...';
 
-            if (isSubscribed) {
-                joinBtn.style.display = 'none';
-                leaveBtn.style.display = 'flex';
-                leaveBtn.textContent = '🚪 مغادرة';
-                leaveBtn.onclick = leaveChannel;
-            } else {
-                joinBtn.style.display = 'flex';
-                joinBtn.textContent = '📢 انضمام إلى القناة';
-                joinBtn.onclick = joinChannel;
-                leaveBtn.style.display = 'none';
+                try {
+                    // 1. تحديث Supabase
+                    const { error } = await supabase
+                        .from('channel_subscribers')
+                        .insert({ channel_id: channelId, user_id: user.id, role: 'member' });
+
+                    if (error) throw error;
+                    await supabase.rpc('increment_channel_followers', { channel_id: channelId });
+
+                    // 2. تحديث التخزين المحلي
+                    const channel = DB_getChannel(channelId);
+                    if (channel) {
+                        if (!channel.subscribers) channel.subscribers = [];
+                        if (!channel.subscribers.includes(user.id)) {
+                            channel.subscribers.push(user.id);
+                            channel.followers = (channel.followers || 0) + 1;
+                        }
+                        channel.is_subscribed = true;
+                        DB_saveChannel(channel);
+                        channelData = channel;
+                    }
+
+                    toast('✅ تم الانضمام إلى القناة');
+                    isSubscribed = true;
+                    updateButtons();
+                    loadChannel();
+
+                } catch (e) {
+                    console.error('❌ فشل الانضمام:', e);
+                    toast('⚠️ فشل الانضمام: ' + (e.message || 'خطأ غير معروف'));
+                    joinBtn.disabled = false;
+                    joinBtn.innerHTML = '📢 انضمام إلى القناة';
+                }
             }
 
-            if (isAdmin) {
-                adminBtn.style.display = 'flex';
-                adminBtn.onclick = () => { window.location.href = `edit-channel.html?id=${channelId}`; };
-                postBtn.style.display = 'flex';
-                postBtn.onclick = togglePostForm;
-                deleteBtn.style.display = 'flex';
-            } else {
-                adminBtn.style.display = 'none';
-                postBtn.style.display = 'none';
-                deleteBtn.style.display = 'none';
+            // ================================================================
+            // مغادرة القناة
+            // ================================================================
+            async function leaveChannel() {
+                if (!confirm('⚠️ هل تريد مغادرة هذه القناة؟')) return;
+
+                const supabase = getSupabase();
+                if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
+                const user = getCurrentUser();
+                if (!user || !user.id) return;
+
+                try {
+                    // 1. حذف من Supabase
+                    const { error } = await supabase
+                        .from('channel_subscribers')
+                        .delete()
+                        .eq('channel_id', channelId)
+                        .eq('user_id', user.id);
+
+                    if (error) throw error;
+
+                    // 2. تحديث التخزين المحلي
+                    const channel = DB_getChannel(channelId);
+                    if (channel && channel.subscribers) {
+                        channel.subscribers = channel.subscribers.filter(id => id !== user.id);
+                        channel.followers = Math.max(0, (channel.followers || 0) - 1);
+                        channel.is_subscribed = false;
+                        DB_saveChannel(channel);
+                        channelData = channel;
+                    }
+
+                    toast('✅ تمت مغادرة القناة');
+                    isSubscribed = false;
+                    updateButtons();
+                    loadChannel();
+
+                } catch (e) {
+                    console.error('❌ فشل المغادرة:', e);
+                    toast('⚠️ فشل المغادرة: ' + (e.message || 'خطأ غير معروف'));
+                }
             }
 
-            document.getElementById('shareBtn').onclick = shareChannel;
-        }
-
-        // ================================================================
-        // الانضمام إلى القناة
-        // ================================================================
-        async function joinChannel() {
-            const supabase = getSupabase();
-            if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
-            const user = getCurrentUser();
-            if (!user || !user.id) {
-                toast('⚠️ يجب تسجيل الدخول أولاً');
-                return;
+            // ================================================================
+            // مشاركة القناة
+            // ================================================================
+            function shareChannel() {
+                const link = `${window.location.origin}/channel.html?code=${channelData.invite_code}`;
+                if (navigator.share) {
+                    navigator.share({
+                        title: `انضم إلى قناة ${channelData.name}`,
+                        text: `انضم إلى قناة "${channelData.name}" على RamzApp: ${link}`,
+                        url: link
+                    }).catch(() => {});
+                } else {
+                    navigator.clipboard.writeText(link).then(() => toast('📋 تم نسخ رابط القناة'));
+                }
             }
 
-            const joinBtn = document.getElementById('joinBtn');
-            joinBtn.disabled = true;
-            joinBtn.innerHTML = '<span class="loading-spinner"></span> جاري...';
-
-            try {
-                const { error } = await supabase
-                    .from('channel_subscribers')
-                    .insert({ channel_id: channelId, user_id: user.id, role: 'member' });
-
-                if (error) throw error;
-                await supabase.rpc('increment_channel_followers', { channel_id: channelId });
-
-                toast('✅ تم الانضمام إلى القناة');
-                isSubscribed = true;
-                updateButtons();
-                loadChannel();
-
-            } catch (e) {
-                console.error('❌ فشل الانضمام:', e);
-                toast('⚠️ فشل الانضمام: ' + (e.message || 'خطأ غير معروف'));
-                joinBtn.disabled = false;
-                joinBtn.innerHTML = '📢 انضمام إلى القناة';
+            // ================================================================
+            // نموذج المنشور
+            // ================================================================
+            function togglePostForm() {
+                const form = document.getElementById('postForm');
+                form.classList.toggle('show');
+                if (form.classList.contains('show')) {
+                    document.getElementById('postContent').focus();
+                }
             }
-        }
 
-        // ================================================================
-        // مغادرة القناة
-        // ================================================================
-        async function leaveChannel() {
-            if (!confirm('⚠️ هل تريد مغادرة هذه القناة؟')) return;
+            // ================================================================
+            // إضافة منشور
+            // ================================================================
+            document.getElementById('submitPostBtn').addEventListener('click', async function() {
+                const content = document.getElementById('postContent').value.trim();
+                if (!content) { toast('⚠️ اكتب محتوى المنشور'); return; }
 
-            const supabase = getSupabase();
-            if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
-            const user = getCurrentUser();
-            if (!user || !user.id) return;
+                const supabase = getSupabase();
+                if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
+                const user = getCurrentUser();
+                if (!user || !user.id) return;
 
-            try {
-                const { error } = await supabase
-                    .from('channel_subscribers')
-                    .delete()
-                    .eq('channel_id', channelId)
-                    .eq('user_id', user.id);
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner"></span> جاري...';
 
-                if (error) throw error;
-                toast('✅ تمت مغادرة القناة');
-                isSubscribed = false;
-                updateButtons();
-                loadChannel();
-
-            } catch (e) {
-                console.error('❌ فشل المغادرة:', e);
-                toast('⚠️ فشل المغادرة: ' + (e.message || 'خطأ غير معروف'));
-            }
-        }
-
-        // ================================================================
-        // مشاركة القناة
-        // ================================================================
-        function shareChannel() {
-            const link = `${window.location.origin}/channel.html?code=${channelData.invite_code}`;
-            if (navigator.share) {
-                navigator.share({
-                    title: `انضم إلى قناة ${channelData.name}`,
-                    text: `انضم إلى قناة "${channelData.name}" على RamzApp: ${link}`,
-                    url: link
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(link).then(() => toast('📋 تم نسخ رابط القناة'));
-            }
-        }
-
-        // ================================================================
-        // إظهار/إخفاء نموذج المنشور
-        // ================================================================
-        function togglePostForm() {
-            const form = document.getElementById('postForm');
-            form.classList.toggle('show');
-            if (form.classList.contains('show')) {
-                document.getElementById('postContent').focus();
-            }
-        }
-
-        // ================================================================
-        // إضافة منشور
-        // ================================================================
-        document.getElementById('submitPostBtn').addEventListener('click', async function() {
-            const content = document.getElementById('postContent').value.trim();
-            if (!content) { toast('⚠️ اكتب محتوى المنشور'); return; }
-
-            const supabase = getSupabase();
-            if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
-            const user = getCurrentUser();
-            if (!user || !user.id) return;
-
-            this.disabled = true;
-            this.innerHTML = '<span class="loading-spinner"></span> جاري...';
-
-            try {
-                const { data, error } = await supabase
-                    .from('messages')
-                    .insert({
+                try {
+                    const msg = {
+                        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
                         chat_id: channelId,
                         sender_id: user.id,
                         text: content,
                         sender_name: user.name || 'مستخدم',
                         time: new Date().toISOString(),
                         status: 'sent',
-                        sync_status: 'sent'
-                    })
-                    .select()
-                    .single();
+                        sync_status: 'sent',
+                        likes: 0,
+                        liked: false,
+                        img: null,
+                        voice_blob: null
+                    };
 
-                if (error) throw error;
-                toast('✅ تم نشر المنشور');
-                document.getElementById('postContent').value = '';
+                    // 1. تخزين محلياً
+                    DB_addMessage(msg);
+
+                    // 2. إرسال عبر Supabase كوسيط (للمشتركين الآخرين)
+                    // نستخدم sendMessageRealtime إذا كانت متاحة
+                    if (window.sendMessageRealtime) {
+                        const result = await window.sendMessageRealtime(msg);
+                        if (!result.success) {
+                            toast('⚠️ تم النشر محلياً، لكن فشل المزامنة مع المشتركين');
+                        }
+                    } else {
+                        // محاولة إدراج في جدول منشورات القناة (إذا كان موجوداً)
+                        try {
+                            await supabase
+                                .from('channel_posts')
+                                .insert({
+                                    id: msg.id,
+                                    channel_id: channelId,
+                                    sender_id: user.id,
+                                    text: content,
+                                    sender_name: user.name || 'مستخدم',
+                                    time: msg.time,
+                                    likes: 0
+                                });
+                        } catch(e) { /* ignore */ }
+                    }
+
+                    toast('✅ تم نشر المنشور');
+                    document.getElementById('postContent').value = '';
+                    document.getElementById('postForm').classList.remove('show');
+                    await loadPosts();
+
+                } catch (e) {
+                    console.error('❌ فشل النشر:', e);
+                    toast('⚠️ فشل نشر المنشور: ' + (e.message || 'خطأ غير معروف'));
+                }
+
+                this.disabled = false;
+                this.innerHTML = 'نشر';
+            });
+
+            document.getElementById('cancelPostBtn').addEventListener('click', () => {
                 document.getElementById('postForm').classList.remove('show');
-                await loadPosts();
-
-            } catch (e) {
-                console.error('❌ فشل النشر:', e);
-                toast('⚠️ فشل نشر المنشور: ' + (e.message || 'خطأ غير معروف'));
-            }
-
-            this.disabled = false;
-            this.innerHTML = 'نشر';
-        });
-
-        document.getElementById('cancelPostBtn').addEventListener('click', () => {
-            document.getElementById('postForm').classList.remove('show');
-            document.getElementById('postContent').value = '';
-        });
-
-        // ================================================================
-        // حذف منشور
-        // ================================================================
-        window.deletePost = async function(postId) {
-            if (!confirm('⚠️ هل تريد حذف هذا المنشور؟')) return;
-
-            const supabase = getSupabase();
-            if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
-
-            try {
-                const { error } = await supabase.from('messages').delete().eq('id', postId);
-                if (error) throw error;
-                toast('🗑️ تم حذف المنشور');
-                await loadPosts();
-            } catch (e) {
-                console.error('❌ فشل الحذف:', e);
-                toast('⚠️ فشل حذف المنشور');
-            }
-        };
-
-        // ================================================================
-        // الإعجاب بمنشور
-        // ================================================================
-        window.likePost = async function(postId) {
-            const supabase = getSupabase();
-            if (!supabase) return;
-            const user = getCurrentUser();
-            if (!user) { toast('⚠️ سجل الدخول أولاً'); return; }
-
-            try {
-                const post = posts.find(p => p.id === postId);
-                if (!post) return;
-                const newLikes = (post.likes || 0) + 1;
-
-                const { error } = await supabase
-                    .from('messages')
-                    .update({ likes: newLikes })
-                    .eq('id', postId);
-
-                if (error) throw error;
-                await loadPosts();
-            } catch (e) {
-                console.warn('⚠️ فشل الإعجاب:', e);
-            }
-        };
-
-        // ================================================================
-        // تشغيل الصوت
-        // ================================================================
-        window.playAudio = function(url) {
-            const audio = new Audio(url);
-            audio.play();
-        };
-
-        // ================================================================
-        // ===== قائمة إعدادات القناة (تظهر عند النقر على أيقونة القناة) =====
-        // ================================================================
-        const settingsOverlay = document.getElementById('settingsOverlay');
-        const settingsSheet = document.getElementById('settingsSheet');
-
-        // فتح القائمة عند النقر على أيقونة القناة أو اسمها
-        document.getElementById('channelHeader').addEventListener('click', function(e) {
-            // منع الفتح إذا كان المستخدم ينقر على زر أو عنصر تفاعلي آخر
-            if (e.target.closest('button')) return;
-            openChannelSettings();
-        });
-
-        // فتح القائمة أيضاً من زر القائمة العلوي
-        document.getElementById('menuBtn').addEventListener('click', function(e) {
-            e.stopPropagation();
-            openChannelSettings();
-        });
-
-        function openChannelSettings() {
-            settingsOverlay.classList.add('active');
-            // منع تمرير الخلفية
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeChannelSettings() {
-            settingsOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
-
-        // إغلاق القائمة
-        document.getElementById('closeSettingsBtn').addEventListener('click', closeChannelSettings);
-        document.getElementById('closeSettingsBottomBtn').addEventListener('click', closeChannelSettings);
-        settingsOverlay.addEventListener('click', function(e) {
-            if (e.target === this) closeChannelSettings();
-        });
-
-        // ================================================================
-        // معالج أحداث عناصر القائمة
-        // ================================================================
-
-        // البحث
-        document.getElementById('settingsSearch').addEventListener('click', function() {
-            closeChannelSettings();
-            // فتح البحث في القناة (نستخدم مودال بحث بسيط)
-            const searchModal = document.createElement('div');
-            searchModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:7000;display:flex;align-items:center;justify-content:center;';
-            searchModal.innerHTML = `
-                <div style="background:var(--surface);border-radius:24px;width:340px;max-width:92%;padding:20px;">
-                    <h3 style="margin-bottom:12px;text-align:center;">🔍 بحث في القناة</h3>
-                    <input type="text" id="searchInputQuick" placeholder="ابحث عن منشور..." style="width:100%;padding:12px 16px;border-radius:25px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:14px;outline:none;">
-                    <div id="searchResultsQuick" style="margin-top:12px;max-height:200px;overflow-y:auto;">
-                        <div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">اكتب للبحث</div>
-                    </div>
-                    <button onclick="this.closest('div[style]').remove()" style="margin-top:12px;width:100%;padding:10px;border-radius:25px;border:none;background:var(--surface3);color:var(--text);cursor:pointer;font-family:inherit;font-weight:600;">إلغاء</button>
-                </div>
-            `;
-            document.body.appendChild(searchModal);
-
-            const input = searchModal.querySelector('#searchInputQuick');
-            const resultsDiv = searchModal.querySelector('#searchResultsQuick');
-
-            input.addEventListener('input', function() {
-                const q = this.value.trim().toLowerCase();
-                if (!q) {
-                    resultsDiv.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">ابحث عن منشورات في القناة</div>';
-                    return;
-                }
-                const filtered = posts.filter(p =>
-                    (p.text && p.text.toLowerCase().includes(q)) ||
-                    (p.sender_name && p.sender_name.toLowerCase().includes(q))
-                );
-                if (!filtered.length) {
-                    resultsDiv.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">لا توجد نتائج</div>';
-                } else {
-                    resultsDiv.innerHTML = filtered.map(p => `
-                        <div onclick="document.querySelector('div[style*="z-index:7000"]').remove(); scrollToPost('${p.id}')" style="padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:0.15s;border-radius:8px;">
-                            <div style="font-weight:600;">${esc(p.sender_name || 'مستخدم')}</div>
-                            <div style="color:var(--text3);font-size:12px;">${esc((p.text || '').substring(0, 60))}${p.text && p.text.length > 60 ? '...' : ''}</div>
-                            <div style="color:var(--text3);font-size:10px;">${timeAgo(p.time)}</div>
-                        </div>
-                    `).join('');
-                }
+                document.getElementById('postContent').value = '';
             });
 
-            setTimeout(() => input.focus(), 100);
-        });
+            // ================================================================
+            // حذف منشور
+            // ================================================================
+            window.deletePost = async function(postId) {
+                if (!confirm('⚠️ هل تريد حذف هذا المنشور؟')) return;
 
-        // مشاركة
-        document.getElementById('settingsShare').addEventListener('click', function() {
-            closeChannelSettings();
-            shareChannel();
-        });
+                const supabase = getSupabase();
+                if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
 
-        // إعادة توجيه
-        document.getElementById('settingsForward').addEventListener('click', function() {
-            closeChannelSettings();
-            const link = `${window.location.origin}/channel.html?code=${channelData.invite_code}`;
-            if (navigator.share) {
-                navigator.share({
-                    title: `انضم إلى قناة ${channelData.name}`,
-                    text: `انضم إلى قناة "${channelData.name}" على RamzApp: ${link}`,
-                    url: link
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(link).then(() => toast('📋 تم نسخ رابط القناة'));
-            }
-        });
+                try {
+                    // 1. حذف محلياً
+                    DB_deleteMessage(postId);
 
-        // كتم الإشعارات
-        document.getElementById('settingsMute').addEventListener('click', function(e) {
-            if (e.target.closest('.toggle')) return;
-            const toggle = document.getElementById('muteToggle');
-            isMuted = !isMuted;
-            toggle.classList.toggle('active', isMuted);
-            saveUserChannelSettings();
-            toast(isMuted ? '🔕 تم كتم إشعارات القناة' : '🔔 تم إلغاء كتم الإشعارات');
-        });
-        document.getElementById('muteToggle').addEventListener('click', function(e) {
-            e.stopPropagation();
-            isMuted = !isMuted;
-            this.classList.toggle('active', isMuted);
-            saveUserChannelSettings();
-            toast(isMuted ? '🔕 تم كتم إشعارات القناة' : '🔔 تم إلغاء كتم الإشعارات');
-        });
+                    // 2. حذف من Supabase (إذا كان موجوداً)
+                    try {
+                        await supabase
+                            .from('messages')
+                            .delete()
+                            .eq('id', postId);
+                    } catch(e) { /* ignore */ }
 
-        // مميزة بنجمة
-        document.getElementById('settingsStar').addEventListener('click', function(e) {
-            if (e.target.closest('.toggle')) return;
-            const toggle = document.getElementById('starToggle');
-            isStarred = !isStarred;
-            toggle.classList.toggle('active', isStarred);
-            saveUserChannelSettings();
-            toast(isStarred ? '⭐ تمت إضافة القناة إلى المفضلة' : '☆ تمت إزالة القناة من المفضلة');
-        });
-        document.getElementById('starToggle').addEventListener('click', function(e) {
-            e.stopPropagation();
-            isStarred = !isStarred;
-            this.classList.toggle('active', isStarred);
-            saveUserChannelSettings();
-            toast(isStarred ? '⭐ تمت إضافة القناة إلى المفضلة' : '☆ تمت إزالة القناة من المفضلة');
-        });
-
-        // معلومات القناة
-        document.getElementById('settingsInfo').addEventListener('click', function() {
-            closeChannelSettings();
-            document.getElementById('infoModal').style.display = 'flex';
-            document.getElementById('infoName').textContent = channelData.name;
-            document.getElementById('infoDesc').textContent = channelData.description || 'لا يوجد وصف';
-            document.getElementById('infoFollowers').textContent = channelData.followers || 0;
-            document.getElementById('infoPosts').textContent = posts.length;
-            document.getElementById('infoCode').textContent = channelData.invite_code || '-';
-            document.getElementById('infoCreated').textContent = formatDate(channelData.created_at);
-        });
-
-        // الوسائط والروابط
-        document.getElementById('settingsMedia').addEventListener('click', function() {
-            closeChannelSettings();
-            let images = 0, videos = 0, links = 0;
-            const mediaPosts = [];
-            posts.forEach(p => {
-                if (p.img) { images++; mediaPosts.push({ type: 'image', url: p.img }); }
-                if (p.voice_blob) { videos++; mediaPosts.push({ type: 'video', url: p.voice_blob }); }
-                if (p.text && (p.text.includes('http://') || p.text.includes('https://'))) {
-                    links++;
-                    const linkMatch = p.text.match(/(https?:\/\/[^\s]+)/g);
-                    if (linkMatch) linkMatch.forEach(l => mediaPosts.push({ type: 'link', url: l }));
+                    toast('🗑️ تم حذف المنشور');
+                    await loadPosts();
+                } catch (e) {
+                    console.error('❌ فشل الحذف:', e);
+                    toast('⚠️ فشل حذف المنشور');
                 }
+            };
+
+            // ================================================================
+            // الإعجاب بمنشور
+            // ================================================================
+            window.likePost = async function(postId) {
+                const supabase = getSupabase();
+                if (!supabase) return;
+                const user = getCurrentUser();
+                if (!user) { toast('⚠️ سجل الدخول أولاً'); return; }
+
+                try {
+                    const post = posts.find(p => p.id === postId);
+                    if (!post) return;
+                    const newLikes = (post.likes || 0) + 1;
+
+                    // 1. تحديث محلياً
+                    DB_updateMessage(postId, { likes: newLikes });
+
+                    // 2. تحديث في Supabase (إن وجد)
+                    try {
+                        await supabase
+                            .from('messages')
+                            .update({ likes: newLikes })
+                            .eq('id', postId);
+                    } catch(e) { /* ignore */ }
+
+                    await loadPosts();
+                } catch (e) {
+                    console.warn('⚠️ فشل الإعجاب:', e);
+                }
+            };
+
+            // ================================================================
+            // تشغيل الصوت
+            // ================================================================
+            window.playAudio = function(url) {
+                const audio = new Audio(url);
+                audio.play();
+            };
+
+            // ================================================================
+            // قائمة الإعدادات
+            // ================================================================
+            const settingsOverlay = document.getElementById('settingsOverlay');
+
+            document.getElementById('channelHeader').addEventListener('click', function(e) {
+                if (e.target.closest('button')) return;
+                openChannelSettings();
             });
 
-            const modal = document.createElement('div');
-            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:7000;display:flex;align-items:center;justify-content:center;';
-            modal.innerHTML = `
-                <div style="background:var(--surface);border-radius:24px;width:340px;max-width:92%;max-height:80vh;overflow-y:auto;padding:20px;">
-                    <h3 style="margin-bottom:12px;text-align:center;">📷 الوسائط والروابط</h3>
-                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-                        <span style="background:var(--surface3);padding:4px 12px;border-radius:12px;font-size:12px;">🖼️ ${images} صورة</span>
-                        <span style="background:var(--surface3);padding:4px 12px;border-radius:12px;font-size:12px;">🎥 ${videos} فيديو</span>
-                        <span style="background:var(--surface3);padding:4px 12px;border-radius:12px;font-size:12px;">🔗 ${links} رابط</span>
+            document.getElementById('menuBtn').addEventListener('click', function(e) {
+                e.stopPropagation();
+                openChannelSettings();
+            });
+
+            function openChannelSettings() {
+                settingsOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeChannelSettings() {
+                settingsOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+
+            document.getElementById('closeSettingsBtn').addEventListener('click', closeChannelSettings);
+            document.getElementById('closeSettingsBottomBtn').addEventListener('click', closeChannelSettings);
+            settingsOverlay.addEventListener('click', function(e) {
+                if (e.target === this) closeChannelSettings();
+            });
+
+            // ================================================================
+            // أحداث عناصر القائمة
+            // ================================================================
+
+            // بحث
+            document.getElementById('settingsSearch').addEventListener('click', function() {
+                closeChannelSettings();
+                const searchModal = document.createElement('div');
+                searchModal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);z-index:7000;display:flex;align-items:center;justify-content:center;';
+                searchModal.innerHTML = `
+                    <div style="background:var(--surface);border-radius:24px;width:340px;max-width:92%;padding:20px;">
+                        <h3 style="margin-bottom:12px;text-align:center;">🔍 بحث في القناة</h3>
+                        <input type="text" id="searchInputQuick" placeholder="ابحث عن منشور..." style="width:100%;padding:12px 16px;border-radius:25px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:14px;outline:none;">
+                        <div id="searchResultsQuick" style="margin-top:12px;max-height:200px;overflow-y:auto;"><div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">اكتب للبحث</div></div>
+                        <button onclick="this.closest('div[style]').remove()" style="margin-top:12px;width:100%;padding:10px;border-radius:25px;border:none;background:var(--surface3);color:var(--text);cursor:pointer;font-family:inherit;font-weight:600;">إلغاء</button>
                     </div>
-                    <div style="max-height:300px;overflow-y:auto;">
-                        ${mediaPosts.map(m => `
-                            <div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">
-                                ${m.type === 'image' ? `<i class="fas fa-image" style="color:var(--accent);"></i> <a href="${m.url}" target="_blank" style="color:var(--text2);">${m.url.substring(0, 50)}...</a>` :
-                                m.type === 'video' ? `<i class="fas fa-video" style="color:var(--green);"></i> <a href="${m.url}" target="_blank" style="color:var(--text2);">تسجيل صوتي</a>` :
-                                `<i class="fas fa-link" style="color:#34b7f1;"></i> <a href="${m.url}" target="_blank" style="color:var(--text2);">${m.url.substring(0, 50)}...</a>`}
+                `;
+                document.body.appendChild(searchModal);
+                const input = searchModal.querySelector('#searchInputQuick');
+                const resultsDiv = searchModal.querySelector('#searchResultsQuick');
+                input.addEventListener('input', function() {
+                    const q = this.value.trim().toLowerCase();
+                    if (!q) {
+                        resultsDiv.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">ابحث عن منشورات في القناة</div>';
+                        return;
+                    }
+                    const filtered = posts.filter(p =>
+                        (p.text && p.text.toLowerCase().includes(q)) ||
+                        (p.sender_name && p.sender_name.toLowerCase().includes(q))
+                    );
+                    if (!filtered.length) {
+                        resultsDiv.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px;">لا توجد نتائج</div>';
+                    } else {
+                        resultsDiv.innerHTML = filtered.map(p => `
+                            <div onclick="document.querySelector('div[style*="z-index:7000"]').remove(); scrollToPost('${p.id}')" style="padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:0.15s;border-radius:8px;">
+                                <div style="font-weight:600;">${esc(p.sender_name || 'مستخدم')}</div>
+                                <div style="color:var(--text3);font-size:12px;">${esc((p.text || '').substring(0, 60))}${p.text && p.text.length > 60 ? '...' : ''}</div>
+                                <div style="color:var(--text3);font-size:10px;">${timeAgo(p.time)}</div>
                             </div>
-                        `).join('')}
-                        ${mediaPosts.length === 0 ? '<div style="color:var(--text3);text-align:center;padding:20px;">لا توجد وسائط أو روابط</div>' : ''}
-                    </div>
-                    <button onclick="this.closest('div[style*="z-index:7000"]').remove()" style="margin-top:12px;width:100%;padding:10px;border-radius:25px;border:none;background:var(--surface3);color:var(--text);cursor:pointer;font-family:inherit;font-weight:600;">إغلاق</button>
-                </div>
-            `;
-            document.body.appendChild(modal);
-        });
-
-        // إلغاء متابعة القناة
-        document.getElementById('settingsUnfollow').addEventListener('click', function() {
-            closeChannelSettings();
-            if (isSubscribed) {
-                leaveChannel();
-            } else {
-                toast('⚠️ أنت لست مشتركاً في هذه القناة');
-            }
-        });
-
-        // الإبلاغ عن القناة
-        document.getElementById('settingsReport').addEventListener('click', function() {
-            closeChannelSettings();
-            const reasons = ['محتوى غير مناسب', 'رسائل مزعجة', 'انتحال شخصية', 'مخالفة قانونية', 'أخرى'];
-            let choices = reasons.map((r, i) => `${i+1}. ${r}`).join('\n');
-            const choice = prompt(`اختر سبب الإبلاغ:\n${choices}\n\n(أدخل رقم السبب أو اكتب السبب مباشرة):`);
-            if (!choice) return;
-
-            const reason = reasons[parseInt(choice) - 1] || choice;
-            const supabase = getSupabase();
-            const user = getCurrentUser();
-            if (supabase && user) {
-                supabase.from('reports').insert({
-                    reporter_id: user.id,
-                    reported_id: channelId,
-                    reason: reason,
-                    type: 'channel',
-                    created_at: new Date().toISOString()
-                }).then(() => {
-                    toast('✅ تم إرسال البلاغ، شكراً لك');
-                }).catch(() => {
-                    toast('⚠️ فشل إرسال البلاغ، لكن تم تسجيله محلياً');
+                        `).join('');
+                    }
                 });
-            } else {
-                toast('✅ تم تسجيل البلاغ، شكراً لك');
-            }
-        });
-
-        // حذف القناة (للمشرف فقط)
-        document.getElementById('settingsDelete').addEventListener('click', function() {
-            closeChannelSettings();
-            if (!isAdmin) { toast('⚠️ فقط المشرف يمكنه حذف القناة'); return; }
-            if (!confirm('⚠️ هل أنت متأكد من حذف هذه القناة وجميع محتوياتها نهائياً؟')) return;
-
-            const supabase = getSupabase();
-            if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
-
-            supabase.from('channels').delete().eq('id', channelId).then(() => {
-                toast('🗑️ تم حذف القناة');
-                setTimeout(() => window.location.href = 'index.html', 1500);
-            }).catch(() => {
-                toast('⚠️ فشل حذف القناة');
+                setTimeout(() => input.focus(), 100);
             });
-        });
 
-        // ================================================================
-        // إغلاق مودال المعلومات
-        // ================================================================
-        document.getElementById('closeInfoModalBtn').addEventListener('click', () => {
-            document.getElementById('infoModal').style.display = 'none';
-        });
-        document.getElementById('infoModal').addEventListener('click', function(e) {
-            if (e.target === this) this.style.display = 'none';
-        });
+            // مشاركة
+            document.getElementById('settingsShare').addEventListener('click', function() {
+                closeChannelSettings();
+                shareChannel();
+            });
 
-        // ================================================================
-        // التمرير إلى منشور
-        // ================================================================
-        function scrollToPost(postId) {
-            const el = document.getElementById('post-' + postId);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                el.style.borderColor = 'var(--accent)';
-                setTimeout(() => { el.style.borderColor = 'var(--border)'; }, 2000);
-            }
-        }
+            // كتم الإشعارات
+            document.getElementById('settingsMute').addEventListener('click', function(e) {
+                if (e.target.closest('.toggle')) return;
+                const toggle = document.getElementById('muteToggle');
+                isMuted = !isMuted;
+                toggle.classList.toggle('active', isMuted);
+                saveUserChannelSettings();
+                toast(isMuted ? '🔕 تم كتم إشعارات القناة' : '🔔 تم إلغاء كتم الإشعارات');
+            });
+            document.getElementById('muteToggle').addEventListener('click', function(e) {
+                e.stopPropagation();
+                isMuted = !isMuted;
+                this.classList.toggle('active', isMuted);
+                saveUserChannelSettings();
+                toast(isMuted ? '🔕 تم كتم إشعارات القناة' : '🔔 تم إلغاء كتم الإشعارات');
+            });
 
-        // ================================================================
-        // الرجوع إلى الصفحة الرئيسية
-        // ================================================================
-        document.getElementById('backBtn').addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
+            // مميزة بنجمة
+            document.getElementById('settingsStar').addEventListener('click', function(e) {
+                if (e.target.closest('.toggle')) return;
+                const toggle = document.getElementById('starToggle');
+                isStarred = !isStarred;
+                toggle.classList.toggle('active', isStarred);
+                saveUserChannelSettings();
+                toast(isStarred ? '⭐ تمت إضافة القناة إلى المفضلة' : '☆ تمت إزالة القناة من المفضلة');
+            });
+            document.getElementById('starToggle').addEventListener('click', function(e) {
+                e.stopPropagation();
+                isStarred = !isStarred;
+                this.classList.toggle('active', isStarred);
+                saveUserChannelSettings();
+                toast(isStarred ? '⭐ تمت إضافة القناة إلى المفضلة' : '☆ تمت إزالة القناة من المفضلة');
+            });
 
-        // ================================================================
-        // التهيئة
-        // ================================================================
-        document.addEventListener('DOMContentLoaded', loadChannel);
+            // معلومات القناة
+            document.getElementById('settingsInfo').addEventListener('click', function() {
+                closeChannelSettings();
+                document.getElementById('infoModal').classList.add('active');
+                document.getElementById('infoName').textContent = channelData.name;
+                document.getElementById('infoDesc').textContent = channelData.description || 'لا يوجد وصف';
+                document.getElementById('infoFollowers').textContent = channelData.followers || 0;
+                document.getElementById('infoPosts').textContent = posts.length;
+                document.getElementById('infoCode').textContent = channelData.invite_code || '-';
+                document.getElementById('infoCreated').textContent = formatDate(channelData.created_at);
+                // جلب اسم المشرف
+                if (channelData.created_by) {
+                    const adminContact = DB_getContacts().find(c => c.id === channelData.created_by);
+                    document.getElementById('infoAdmin').textContent = adminContact ? adminContact.name : channelData.created_by;
+                } else {
+                    document.getElementById('infoAdmin').textContent = '-';
+                }
+            });
 
-        // لوحة المفاتيح: ESC لإغلاق القائمة
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (settingsOverlay.classList.contains('active')) closeChannelSettings();
-                if (document.getElementById('infoModal').style.display === 'flex') {
-                    document.getElementById('infoModal').style.display = 'none';
+            // إلغاء متابعة القناة
+            document.getElementById('settingsUnfollow').addEventListener('click', function() {
+                closeChannelSettings();
+                if (isSubscribed) {
+                    leaveChannel();
+                } else {
+                    toast('⚠️ أنت لست مشتركاً في هذه القناة');
+                }
+            });
+
+            // الإبلاغ عن القناة
+            document.getElementById('settingsReport').addEventListener('click', function() {
+                closeChannelSettings();
+                const reasons = ['محتوى غير مناسب', 'رسائل مزعجة', 'انتحال شخصية', 'مخالفة قانونية', 'أخرى'];
+                let choices = reasons.map((r, i) => `${i+1}. ${r}`).join('\n');
+                const choice = prompt(`اختر سبب الإبلاغ:\n${choices}\n\n(أدخل رقم السبب أو اكتب السبب مباشرة):`);
+                if (!choice) return;
+                const reason = reasons[parseInt(choice) - 1] || choice;
+                const supabase = getSupabase();
+                const user = getCurrentUser();
+                if (supabase && user) {
+                    supabase.from('reports').insert({
+                        reporter_id: user.id,
+                        reported_id: channelId,
+                        reason: reason,
+                        type: 'channel',
+                        created_at: new Date().toISOString()
+                    }).then(() => toast('✅ تم إرسال البلاغ، شكراً لك'))
+                    .catch(() => toast('⚠️ فشل إرسال البلاغ، لكن تم تسجيله محلياً'));
+                } else {
+                    toast('✅ تم تسجيل البلاغ، شكراً لك');
+                }
+            });
+
+            // حذف القناة (للمشرف فقط)
+            document.getElementById('settingsDelete').addEventListener('click', function() {
+                closeChannelSettings();
+                if (!isAdmin) { toast('⚠️ فقط المشرف يمكنه حذف القناة'); return; }
+                if (!confirm('⚠️ هل أنت متأكد من حذف هذه القناة وجميع محتوياتها نهائياً؟')) return;
+
+                const supabase = getSupabase();
+                if (!supabase) { toast('⚠️ تعذر الاتصال بقاعدة البيانات'); return; }
+
+                supabase.from('channels').delete().eq('id', channelId).then(() => {
+                    toast('🗑️ تم حذف القناة');
+                    setTimeout(() => window.location.href = 'index.html', 1500);
+                }).catch(() => toast('⚠️ فشل حذف القناة'));
+            });
+
+            // ================================================================
+            // إغلاق مودال المعلومات
+            // ================================================================
+            document.getElementById('closeInfoModalBtn').addEventListener('click', () => {
+                document.getElementById('infoModal').classList.remove('active');
+            });
+            document.getElementById('infoModal').addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+
+            // ================================================================
+            // التمرير إلى منشور
+            // ================================================================
+            function scrollToPost(postId) {
+                const el = document.getElementById('post-' + postId);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    el.style.borderColor = 'var(--accent)';
+                    setTimeout(() => { el.style.borderColor = 'var(--border)'; }, 2000);
                 }
             }
-        });
+            window.scrollToPost = scrollToPost;
 
-        console.log('✅ channel-feed.html (صفحة القناة مع قائمة إعدادات متقدمة) جاهز');
+            // ================================================================
+            // الرجوع إلى الصفحة الرئيسية
+            // ================================================================
+            document.getElementById('backBtn').addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+
+            // ================================================================
+            // التهيئة
+            // ================================================================
+            document.addEventListener('DOMContentLoaded', loadChannel);
+
+            // لوحة المفاتيح: ESC لإغلاق القائمة
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    if (settingsOverlay.classList.contains('active')) closeChannelSettings();
+                    if (document.getElementById('infoModal').classList.contains('active')) {
+                        document.getElementById('infoModal').classList.remove('active');
+                    }
+                }
+            });
+
+            console.log('✅ channel-feed.html (الإصدار النهائي v5.0) جاهز');
+        })();
     </script>
+
 </body>
-                          </html>
+</html>
