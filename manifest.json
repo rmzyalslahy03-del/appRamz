@@ -1,7 +1,7 @@
 {
   "name": "RamzApp",
   "short_name": "RamzApp",
-  "description": "تطبيق مراسلة آمن ومتكامل",
+  "description": "تطبيق مراسلة آمن ومتكامل - الهاتف هو المصدر",
   "start_url": "/index.html",
   "display": "standalone",
   "orientation": "portrait",
@@ -9,6 +9,8 @@
   "theme_color": "#ff0050",
   "dir": "rtl",
   "lang": "ar",
+  "scope": "/",
+  "categories": ["social", "communication", "messaging"],
   "icons": [
     {
       "src": "/assets/icons/icon-72x72.png",
@@ -64,24 +66,94 @@
       "src": "/assets/screenshots/screenshot1.png",
       "sizes": "1080x1920",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "شاشة المحادثات الرئيسية"
+    },
+    {
+      "src": "/assets/screenshots/screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "شاشة الدردشة والمحادثة"
+    },
+    {
+      "src": "/assets/screenshots/screenshot3.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "شاشة جهات الاتصال والقنوات"
     }
   ],
-  "categories": ["social", "communication"],
   "shortcuts": [
     {
       "name": "الدردشات",
       "short_name": "دردشات",
       "description": "فتح قائمة الدردشات",
       "url": "/index.html?action=chats",
-      "icons": [{ "src": "/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/assets/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "جهات الاتصال",
       "short_name": "جهات اتصال",
       "description": "فتح جهات الاتصال",
       "url": "/index.html?action=contacts",
-      "icons": [{ "src": "/assets/icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [
+        {
+          "src": "/assets/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "محادثة جديدة",
+      "short_name": "محادثة جديدة",
+      "description": "بدء محادثة جديدة مع أحد جهات الاتصال",
+      "url": "/index.html?action=newChat",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "إضافة قصة",
+      "short_name": "إضافة قصة",
+      "description": "إضافة قصة جديدة للمتابعين",
+      "url": "/index.html?action=addStory",
+      "icons": [
+        {
+          "src": "/assets/icons/icon-96x96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/index.html?action=share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "window-controls-overlay"],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
