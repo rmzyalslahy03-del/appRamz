@@ -2,11 +2,19 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>انضمام إلى قناة | RamzApp</title>
+
+    <!-- ===== تحميل Supabase ===== -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- ===== Font Awesome ===== -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+
     <style>
+        /* ======================================================================
+                   الأنماط الأساسية – متوافقة مع RamzApp v5.0
+                   ====================================================================== */
         :root {
             --bg: #0d0d0d;
             --surface: #1a1a1a;
@@ -63,25 +71,11 @@
             from { opacity: 0; transform: scale(0.9) translateY(30px); }
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
-        .channel-icon {
-            font-size: 64px;
-            margin-bottom: 8px;
-        }
-        .channel-name {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-        .channel-desc {
-            color: var(--text3);
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-        .channel-followers {
-            color: var(--text3);
-            font-size: 12px;
-            margin-bottom: 22px;
-        }
+        .channel-icon { font-size: 64px; margin-bottom: 8px; }
+        .channel-name { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+        .channel-desc { color: var(--text3); font-size: 14px; margin-bottom: 4px; }
+        .channel-followers { color: var(--text3); font-size: 12px; margin-bottom: 22px; }
+
         .btn {
             width: 100%;
             padding: 14px;
@@ -95,26 +89,20 @@
             cursor: pointer;
             transition: all 0.25s;
         }
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 0, 80, 0.35);
-        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 0, 80, 0.35); }
         .btn:active { transform: scale(0.96); }
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+        .btn-secondary {
+            background: transparent !important;
+            border: 2px solid var(--accent) !important;
+            color: var(--accent) !important;
         }
-        .btn.secondary {
-            background: transparent;
-            border: 2px solid var(--accent);
-            color: var(--accent);
+        .btn-secondary:hover {
+            background: var(--accent) !important;
+            color: #fff !important;
         }
-        .btn.secondary:hover {
-            background: var(--accent);
-            color: #fff;
-        }
-        .loading-spinner {
+
+        .spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
@@ -126,18 +114,18 @@
             vertical-align: middle;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
         .hidden { display: none !important; }
-        .error-msg {
-            color: #ff4444;
-            font-size: 14px;
-            margin-top: 12px;
-        }
+        .error-msg { color: #ff4444; font-size: 14px; margin-top: 12px; }
+
         .footer {
             color: var(--text3);
             font-size: 11px;
             text-align: center;
         }
-        .global-toast {
+
+        /* ===== Toast ===== */
+        .toast {
             position: fixed;
             bottom: 30px;
             left: 50%;
@@ -151,25 +139,35 @@
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
+            white-space: nowrap;
             font-family: var(--font);
             box-shadow: var(--shadow);
-            white-space: nowrap;
         }
-        .global-toast.show { opacity: 1; }
+        .toast.show { opacity: 1; }
+
+        @media (max-width: 400px) {
+            .logo { font-size: 36px; }
+            .card { padding: 24px 18px; }
+            .channel-icon { font-size: 48px; }
+            .channel-name { font-size: 18px; }
+        }
     </style>
 </head>
 <body>
 
+    <!-- ===== الشعار ===== -->
     <div class="logo">💬 RamzApp</div>
 
+    <!-- ===== البطاقة الرئيسية ===== -->
     <div class="card" id="card">
+
         <!-- حالة التحميل -->
         <div id="loadingState">
-            <span class="loading-spinner"></span>
+            <span class="spinner"></span>
             <span style="color: var(--text3);">جاري التحقق من القناة...</span>
         </div>
 
-        <!-- المحتوى الرئيسي -->
+        <!-- المحتوى الرئيسي (يظهر بعد التحميل) -->
         <div id="contentState" class="hidden">
             <div class="channel-icon" id="channelIcon">📢</div>
             <div class="channel-name" id="channelName">...</div>
@@ -180,252 +178,265 @@
                 <i class="fas fa-plus-circle"></i> انضمام إلى القناة
             </button>
 
-            <button class="btn secondary" id="loginFirstBtn" style="display:none;">
+            <button class="btn btn-secondary" id="loginFirstBtn" style="display:none;">
                 <i class="fas fa-sign-in-alt"></i> تسجيل الدخول أولاً
             </button>
 
             <button class="btn" id="loadingBtn" style="display:none;" disabled>
-                <span class="loading-spinner"></span> جاري...
+                <span class="spinner"></span> جاري...
             </button>
 
             <div class="error-msg" id="errorMsg"></div>
         </div>
     </div>
 
-    <div class="footer">© 2026 RamzApp v4.0</div>
-    <div class="global-toast" id="toastMsg"></div>
+    <div class="footer">© 2026 RamzApp v5.0 | جميع الحقوق محفوظة</div>
 
+    <!-- ===== Toast Container ===== -->
+    <div class="toast" id="toast"></div>
+
+    <!-- ===== تحميل السكربتات (ترتيب مهم) ===== -->
+    <script src="db.js"></script>
     <script src="supabase.js"></script>
+    <script src="common.js"></script>
+
     <script>
-        // ================================================================
-        // دوال مساعدة
-        // ================================================================
-        function showToast(msg, duration = 2500) {
-            const el = document.getElementById('toastMsg');
-            if (!el) return;
-            el.textContent = msg;
-            el.classList.add('show');
-            clearTimeout(el._hideTimer);
-            el._hideTimer = setTimeout(() => { el.classList.remove('show'); }, duration);
-        }
+        (function() {
+            'use strict';
 
-        function getCurrentUser() {
-            try {
-                const raw = localStorage.getItem('ramzapp_user');
-                if (raw) return JSON.parse(raw);
-            } catch(e) { return null; }
-            return null;
-        }
-
-        function getSupabase() {
-            if (window.supabaseClient) return window.supabaseClient;
-            if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
-                const client = supabaseJs.createClient(
-                    'https://serlegwdzjulfcxabxzv.supabase.co',
-                    'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx'
-                );
-                window.supabaseClient = client;
-                return client;
+            // ================================================================
+            // دوال مساعدة
+            // ================================================================
+            function toast(message, duration = 2500) {
+                const el = document.getElementById('toast');
+                el.textContent = message;
+                el.classList.add('show');
+                clearTimeout(el._hideTimer);
+                el._hideTimer = setTimeout(() => el.classList.remove('show'), duration);
             }
-            return null;
-        }
 
-        // ================================================================
-        // قراءة معامل الرابط
-        // ================================================================
-        const urlParams = new URLSearchParams(window.location.search);
-        const inviteCode = urlParams.get('code');
+            function getCurrentUser() {
+                try {
+                    const raw = localStorage.getItem('ramzapp_user');
+                    return raw ? JSON.parse(raw) : null;
+                } catch(e) { return null; }
+            }
 
-        // ================================================================
-        // عناصر DOM
-        // ================================================================
-        const loadingState = document.getElementById('loadingState');
-        const contentState = document.getElementById('contentState');
-        const channelIcon = document.getElementById('channelIcon');
-        const channelName = document.getElementById('channelName');
-        const channelDesc = document.getElementById('channelDesc');
-        const channelFollowers = document.getElementById('channelFollowers');
-        const joinBtn = document.getElementById('joinBtn');
-        const loginFirstBtn = document.getElementById('loginFirstBtn');
-        const loadingBtn = document.getElementById('loadingBtn');
-        const errorMsg = document.getElementById('errorMsg');
+            function getSupabase() {
+                if (window.supabaseClient) return window.supabaseClient;
+                if (typeof supabaseJs !== 'undefined' && supabaseJs.createClient) {
+                    const client = supabaseJs.createClient(
+                        'https://serlegwdzjulfcxabxzv.supabase.co',
+                        'sb_publishable_4_c97KxnG_7HTvfv-pKeNQ_FTlnK6Yx'
+                    );
+                    window.supabaseClient = client;
+                    return client;
+                }
+                return null;
+            }
 
-        // ================================================================
-        // التحقق من صحة الرابط
-        // ================================================================
-        if (!inviteCode) {
-            loadingState.innerHTML = `
-                <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">❌</span>
-                <span style="color: var(--text3);">رابط غير صالح</span>
-                <button class="btn secondary" onclick="window.location.href='index.html'" style="margin-top:16px;">
-                    <i class="fas fa-home"></i> العودة للرئيسية
-                </button>
-            `;
-            throw new Error('رابط غير صالح');
-        }
+            // ================================================================
+            // قراءة معامل الرابط
+            // ================================================================
+            const urlParams = new URLSearchParams(window.location.search);
+            const channelId = urlParams.get('id') || urlParams.get('code');
 
-        // ================================================================
-        // جلب بيانات القناة
-        // ================================================================
-        async function loadChannel() {
-            try {
+            // ================================================================
+            // عناصر DOM
+            // ================================================================
+            const loadingState = document.getElementById('loadingState');
+            const contentState = document.getElementById('contentState');
+            const channelIcon = document.getElementById('channelIcon');
+            const channelName = document.getElementById('channelName');
+            const channelDesc = document.getElementById('channelDesc');
+            const channelFollowers = document.getElementById('channelFollowers');
+            const joinBtn = document.getElementById('joinBtn');
+            const loginFirstBtn = document.getElementById('loginFirstBtn');
+            const loadingBtn = document.getElementById('loadingBtn');
+            const errorMsg = document.getElementById('errorMsg');
+
+            // ================================================================
+            // البحث عن القناة في Supabase (بيانات عامة)
+            // ================================================================
+            async function fetchChannel(channelId) {
                 const supabase = getSupabase();
-                if (!supabase) {
-                    throw new Error('تعذر الاتصال بقاعدة البيانات');
-                }
+                if (!supabase) throw new Error('تعذر الاتصال بقاعدة البيانات');
 
-                // جلب القناة عبر رمز الدعوة
-                const { data: channel, error } = await supabase
-                    .from('channels')
-                    .select('*')
-                    .eq('invite_code', inviteCode)
-                    .single();
-
-                if (error || !channel) {
-                    throw new Error('القناة غير موجودة أو تم حذفها');
-                }
-
-                // عرض بيانات القناة
-                loadingState.classList.add('hidden');
-                contentState.classList.remove('hidden');
-
-                channelIcon.textContent = channel.avatar || '📢';
-                channelName.textContent = channel.name || 'قناة';
-                channelDesc.textContent = channel.description || '';
-                channelFollowers.textContent = `${channel.followers || 0} متابع`;
-
-                // التحقق من حالة تسجيل الدخول
-                const currentUser = getCurrentUser();
-
-                if (currentUser && currentUser.id) {
-                    // مستخدم مسجل
-                    joinBtn.style.display = 'block';
-                    loginFirstBtn.style.display = 'none';
-
-                    // التحقق مما إذا كان المستخدم مشتركاً بالفعل
-                    const { data: subscription } = await supabase
-                        .from('channel_subscribers')
-                        .select('*')
-                        .eq('channel_id', channel.id)
-                        .eq('user_id', currentUser.id)
-                        .maybeSingle();
-
-                    if (subscription) {
-                        joinBtn.textContent = '✅ أنت مشترك بالفعل';
-                        joinBtn.disabled = true;
-                        joinBtn.style.opacity = '0.7';
-                    } else {
-                        joinBtn.textContent = '📢 انضمام إلى القناة';
-                        joinBtn.disabled = false;
-                        joinBtn.onclick = () => joinChannel(channel.id);
-                    }
+                // محاولة البحث عبر id أو invite_code
+                let query = supabase.from('channels').select('*');
+                if (channelId.startsWith('ch_')) {
+                    query = query.eq('id', channelId);
                 } else {
-                    // غير مسجل
-                    joinBtn.style.display = 'none';
-                    loginFirstBtn.style.display = 'block';
-                    loginFirstBtn.onclick = () => {
-                        localStorage.setItem('ramzapp_deep_link_channel', channel.id);
-                        window.location.href = 'login.html';
+                    query = query.eq('invite_code', channelId);
+                }
+                const { data, error } = await query.single();
+                if (error || !data) throw new Error('القناة غير موجودة');
+                return data;
+            }
+
+            // ================================================================
+            // الانضمام إلى القناة (تخزين محلي + تحديث Supabase)
+            // ================================================================
+            async function joinChannel(channelId) {
+                const supabase = getSupabase();
+                if (!supabase) throw new Error('تعذر الاتصال بقاعدة البيانات');
+                const user = getCurrentUser();
+                if (!user || !user.id) throw new Error('يجب تسجيل الدخول أولاً');
+
+                // 1. تخزين محلي: إضافة القناة إلى DB المحلية (إذا لم تكن موجودة)
+                let localChannels = window.getChannels ? window.getChannels() : [];
+                let channel = localChannels.find(c => c.id === channelId);
+                if (!channel) {
+                    // جلب بيانات القناة من Supabase (عامة)
+                    const channelData = await fetchChannel(channelId);
+                    channel = {
+                        id: channelData.id,
+                        name: channelData.name,
+                        avatar: channelData.avatar || '📢',
+                        description: channelData.description || '',
+                        followers: channelData.followers || 0,
+                        invite_code: channelData.invite_code,
+                        created_by: channelData.created_by,
+                        subscribers: [],
+                        is_subscribed: true
                     };
+                    window.addChannel ? window.addChannel(channel) : null;
+                } else {
+                    // تحديث الاشتراك
+                    channel.is_subscribed = true;
+                    if (!channel.subscribers) channel.subscribers = [];
+                    if (!channel.subscribers.includes(user.id)) {
+                        channel.subscribers.push(user.id);
+                        channel.followers = (channel.followers || 0) + 1;
+                    }
+                    window.saveChannel ? window.saveChannel(channel) : null;
                 }
 
-            } catch (e) {
-                console.error('❌ خطأ:', e);
-                loadingState.innerHTML = `
-                    <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">⚠️</span>
-                    <span style="color: var(--text3);">${e.message || 'حدث خطأ غير متوقع'}</span>
-                    <button class="btn secondary" onclick="location.reload()" style="margin-top:16px;">
-                        <i class="fas fa-redo"></i> إعادة المحاولة
-                    </button>
-                    <button class="btn secondary" onclick="window.location.href='index.html'" style="margin-top:8px;">
-                        <i class="fas fa-home"></i> العودة للرئيسية
-                    </button>
-                `;
-            }
-        }
-
-        // ================================================================
-        // الانضمام إلى القناة
-        // ================================================================
-        async function joinChannel(channelId) {
-            const supabase = getSupabase();
-            if (!supabase) {
-                showToast('⚠️ تعذر الاتصال بقاعدة البيانات');
-                return;
-            }
-
-            const currentUser = getCurrentUser();
-            if (!currentUser || !currentUser.id) {
-                showToast('⚠️ يجب تسجيل الدخول أولاً');
-                return;
-            }
-
-            joinBtn.disabled = true;
-            joinBtn.innerHTML = '<span class="loading-spinner"></span> جاري...';
-
-            try {
-                // إضافة الاشتراك
+                // 2. تحديث Supabase (إضافة المشترك)
                 const { error } = await supabase
                     .from('channel_subscribers')
-                    .insert({
+                    .upsert({
                         channel_id: channelId,
-                        user_id: currentUser.id,
+                        user_id: user.id,
                         role: 'member'
                     });
-
                 if (error) throw error;
 
-                // تحديث عدد المتابعين
+                // 3. زيادة عدد المتابعين في Supabase
                 await supabase.rpc('increment_channel_followers', { channel_id: channelId });
 
-                // تحديث المحلي (if exists)
-                if (window.inMemoryDB) {
-                    const channel = window.inMemoryDB.channels?.find(c => c.id === channelId);
-                    if (channel) {
-                        channel.followers = (channel.followers || 0) + 1;
-                        if (!channel.subscribers) channel.subscribers = [];
-                        channel.subscribers.push(currentUser.id);
+                toast('✅ تم الانضمام إلى القناة');
+                return true;
+            }
+
+            // ================================================================
+            // التهيئة الرئيسية
+            // ================================================================
+            (async function init() {
+                if (!channelId) {
+                    loadingState.innerHTML = `
+                        <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">❌</span>
+                        <span style="color: var(--text3);">رابط غير صالح</span>
+                        <button class="btn btn-secondary" onclick="window.location.href='index.html'" style="margin-top:16px;">
+                            <i class="fas fa-home"></i> العودة للرئيسية
+                        </button>
+                    `;
+                    return;
+                }
+
+                try {
+                    // 1. جلب بيانات القناة
+                    const channel = await fetchChannel(channelId);
+
+                    // 2. عرض البيانات
+                    loadingState.classList.add('hidden');
+                    contentState.classList.remove('hidden');
+
+                    channelIcon.textContent = channel.avatar || '📢';
+                    channelName.textContent = channel.name || 'قناة';
+                    channelDesc.textContent = channel.description || '';
+                    channelFollowers.textContent = `${channel.followers || 0} متابع`;
+
+                    // 3. التحقق من حالة تسجيل الدخول
+                    const currentUser = getCurrentUser();
+
+                    if (currentUser && currentUser.id) {
+                        // مستخدم مسجل
+                        joinBtn.style.display = 'block';
+                        loginFirstBtn.style.display = 'none';
+
+                        // التحقق مما إذا كان المستخدم مشتركاً بالفعل (محلياً أو عبر Supabase)
+                        let isSubscribed = false;
+                        const localChannels = window.getChannels ? window.getChannels() : [];
+                        const localChannel = localChannels.find(c => c.id === channel.id);
+                        if (localChannel && localChannel.is_subscribed) {
+                            isSubscribed = true;
+                        } else {
+                            // التحقق من Supabase
+                            const supabase = getSupabase();
+                            if (supabase) {
+                                const { data: sub } = await supabase
+                                    .from('channel_subscribers')
+                                    .select('*')
+                                    .eq('channel_id', channel.id)
+                                    .eq('user_id', currentUser.id)
+                                    .maybeSingle();
+                                isSubscribed = !!sub;
+                            }
+                        }
+
+                        if (isSubscribed) {
+                            joinBtn.textContent = '✅ أنت مشترك بالفعل';
+                            joinBtn.disabled = true;
+                            joinBtn.style.opacity = '0.7';
+                        } else {
+                            joinBtn.textContent = '📢 انضمام إلى القناة';
+                            joinBtn.disabled = false;
+                            joinBtn.onclick = async () => {
+                                try {
+                                    joinBtn.disabled = true;
+                                    joinBtn.innerHTML = '<span class="spinner"></span> جاري...';
+                                    await joinChannel(channel.id);
+                                    joinBtn.textContent = '✅ تم الانضمام';
+                                    joinBtn.disabled = true;
+                                    joinBtn.style.opacity = '0.7';
+                                    setTimeout(() => {
+                                        window.location.href = 'index.html';
+                                    }, 2000);
+                                } catch (err) {
+                                    toast('⚠️ ' + (err.message || 'فشل الانضمام'));
+                                    joinBtn.disabled = false;
+                                    joinBtn.innerHTML = '📢 انضمام إلى القناة';
+                                }
+                            };
+                        }
+                    } else {
+                        // غير مسجل
+                        joinBtn.style.display = 'none';
+                        loginFirstBtn.style.display = 'block';
+                        loginFirstBtn.onclick = () => {
+                            localStorage.setItem('ramzapp_deep_link_channel', channel.id);
+                            window.location.href = 'login.html';
+                        };
                     }
+
+                } catch (err) {
+                    console.error('❌ خطأ:', err);
+                    loadingState.innerHTML = `
+                        <span style="color: #ff4444; font-size: 32px; display: block; margin-bottom: 8px;">⚠️</span>
+                        <span style="color: var(--text3);">${err.message || 'حدث خطأ غير متوقع'}</span>
+                        <button class="btn btn-secondary" onclick="location.reload()" style="margin-top:16px;">
+                            <i class="fas fa-redo"></i> إعادة المحاولة
+                        </button>
+                        <button class="btn btn-secondary" onclick="window.location.href='index.html'" style="margin-top:8px;">
+                            <i class="fas fa-home"></i> العودة للرئيسية
+                        </button>
+                    `;
                 }
+            })();
 
-                showToast('✅ تم الانضمام إلى القناة بنجاح!');
-                joinBtn.textContent = '✅ أنت مشترك الآن';
-                joinBtn.disabled = true;
-                joinBtn.style.opacity = '0.7';
-
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 2000);
-
-            } catch (e) {
-                console.error('❌ فشل الانضمام:', e);
-                showToast('⚠️ فشل الانضمام: ' + (e.message || 'خطأ غير معروف'));
-                joinBtn.disabled = false;
-                joinBtn.innerHTML = '<i class="fas fa-plus-circle"></i> انضمام إلى القناة';
-            }
-        }
-
-        // ================================================================
-        // التحقق من deep link بعد تسجيل الدخول
-        // ================================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedChannel = localStorage.getItem('ramzapp_deep_link_channel');
-            if (savedChannel) {
-                localStorage.removeItem('ramzapp_deep_link_channel');
-                // المستخدم سجل الدخول للتو، نوجهه للانضمام
-                const currentUser = getCurrentUser();
-                if (currentUser && currentUser.id) {
-                    joinChannel(savedChannel);
-                }
-            }
-        });
-
-        // ================================================================
-        // بدء التحميل
-        // ================================================================
-        loadChannel();
-
-        console.log('✅ channel.html (الإصدار النهائي) جاهز');
+            console.log('✅ channel.html (الإصدار النهائي v5.0) جاهز');
+        })();
     </script>
 </body>
 </html>
