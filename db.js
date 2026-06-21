@@ -1,7 +1,5 @@
 // ======================================================================
-// db.js - الإصدار النهائي الكامل v4.0
-// طبقة التخزين الهجين: SQLite (OPFS/IndexedDB) + LocalStorage احتياطي
-// يدعم: المستخدم، المحادثات، الرسائل، جهات الاتصال، القصص، القنوات، المكالمات، الكتالوج، الإعدادات
+// db.js - الإصدار النهائي v5.0 (مستقر، جاهز للتشغيل)
 // ======================================================================
 
 (function() {
@@ -11,7 +9,7 @@
     // التكوين الأساسي
     // ======================================================================
     const DB_CONFIG = {
-        localStorageKey: 'ramzapp_v4_db_cache',
+        localStorageKey: 'ramzapp_v5_db_cache',
         userKey: 'ramzapp_user',
         sqliteFileName: 'ramzapp.db',
         sqlWasmUrl: 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.0/sql-wasm.wasm',
@@ -23,8 +21,9 @@
     let db = null;
     let dbReady = false;
     let useFallback = false;
-    let indexedDBReady = false;
     let initPromise = null;
+    let initAttempts = 0;
+    const MAX_INIT_ATTEMPTS = 5;
 
     // ======================================================================
     // الذاكرة المؤقتة (In-Memory) – تستخدم كطبقة وسيطة
@@ -40,7 +39,7 @@
         catalog: [],
         settings: { theme: 'dark', notifications: true }
     };
-    window.inMemoryDB = inMemoryDB; // للوصول من console
+    window.inMemoryDB = inMemoryDB;
 
     // ======================================================================
     // دوال مساعدة
@@ -55,17 +54,14 @@
     }
     window.currentTimestamp = currentTimestamp;
 
-    function isObject(obj) { return obj && typeof obj === 'object' && !Array.isArray(obj); }
-
     // ======================================================================
     // LocalStorage Cache (احتياطي سريع)
     // ======================================================================
     function saveToLocalStorageCache() {
         try {
             const cache = {
-                chats: inMemoryDB.chats.slice(0, 100).map(c => {
+                chats: inMemoryDB.chats.slice(0, 200).map(c => {
                     const copy = { ...c };
-                    // لا ننسخ الرسائل ضمن المحادثة (لأنها في messages)
                     delete copy._messages;
                     return copy;
                 }),
@@ -98,34 +94,43 @@
     }
 
     // ======================================================================
-    // SQL.js (WebAssembly) – تحميل المكتبة
+    // تحميل SQL.js (WebAssembly) – مع إعادة محاولة
     // ======================================================================
-    async function loadSqlJs() {
-        if (SQL) return SQL;
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
+    function loadSqlJs() {
+        return new Promise(function(resolve, reject) {
+            // إذا كان SQL موجوداً مسبقاً
+            if (SQL) {
+                resolve(SQL);
+                return;
+            }
+
+            // محاولة تحميل SQL.js عبر script tag
+            var script = document.createElement('script');
             script.src = DB_CONFIG.sqlJsUrl;
-            script.onload = () => {
+            script.onload = function() {
+                // محاولة تهيئة SQL.js
                 if (window.initSqlJs) {
-                    window.initSqlJs({ locateFile: file => DB_CONFIG.sqlWasmUrl })
-                        .then(sql => { SQL = sql; resolve(SQL); })
-                        .catch(reject);
-                } else {
-                    // محاولة تحميل من CDN مباشرة (ESM)
-                    import('https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.0/sql-wasm.js')
-                        .then(module => {
-                            // بعض الإصدارات تعرض default
-                            if (module.default) {
-                                SQL = module.default;
-                            } else {
-                                SQL = module;
-                            }
+                    window.initSqlJs({ locateFile: function(file) { return DB_CONFIG.sqlWasmUrl; } })
+                        .then(function(sql) {
+                            SQL = sql;
+                            console.log('✅ SQL.js loaded successfully');
                             resolve(SQL);
                         })
-                        .catch(reject);
+                        .catch(function(err) {
+                            console.warn('⚠️ SQL.js init failed:', err);
+                            reject(err);
+                        });
+                } else if (window.SQL) {
+                    SQL = window.SQL;
+                    console.log('✅ SQL.js loaded (global)');
+                    resolve(SQL);
+                } else {
+                    reject(new Error('SQL.js not found after loading'));
                 }
             };
-            script.onerror = reject;
+            script.onerror = function() {
+                reject(new Error('Failed to load SQL.js script'));
+            };
             document.head.appendChild(script);
         });
     }
@@ -134,7 +139,16 @@
     // فتح قاعدة البيانات (OPFS / IndexedDB)
     // ======================================================================
     async function openDatabase() {
-        if (!SQL) await loadSqlJs();
+        if (!SQL) {
+            try {
+                await loadSqlJs();
+            } catch (e) {
+                console.warn('⚠️ Failed to load SQL.js, using fallback');
+                useFallback = true;
+                dbReady = true;
+                return false;
+            }
+        }
 
         // 1. محاولة OPFS (File System Access API)
         try {
@@ -180,52 +194,52 @@
     // IndexedDB (لحفظ ملف SQLite كـ ArrayBuffer)
     // ======================================================================
     function saveToIndexedDB(data) {
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open('RamzAppDB', 2);
-            req.onupgradeneeded = (e) => {
-                const db = e.target.result;
+        return new Promise(function(resolve, reject) {
+            var req = indexedDB.open('RamzAppDB', 2);
+            req.onupgradeneeded = function(e) {
+                var db = e.target.result;
                 if (!db.objectStoreNames.contains('sqlite')) {
                     db.createObjectStore('sqlite');
                 }
             };
-            req.onsuccess = (e) => {
-                const db = e.target.result;
-                const tx = db.transaction('sqlite', 'readwrite');
-                const store = tx.objectStore('sqlite');
-                const putReq = store.put(data, 'db');
-                putReq.onsuccess = () => resolve();
-                putReq.onerror = () => reject(putReq.error);
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
+            req.onsuccess = function(e) {
+                var db = e.target.result;
+                var tx = db.transaction('sqlite', 'readwrite');
+                var store = tx.objectStore('sqlite');
+                var putReq = store.put(data, 'db');
+                putReq.onsuccess = function() { resolve(); };
+                putReq.onerror = function() { reject(putReq.error); };
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function() { reject(tx.error); };
             };
-            req.onerror = () => reject(req.error);
+            req.onerror = function() { reject(req.error); };
         });
     }
 
     function loadFromIndexedDB() {
-        return new Promise((resolve, reject) => {
-            const req = indexedDB.open('RamzAppDB', 2);
-            req.onupgradeneeded = (e) => {
-                const db = e.target.result;
+        return new Promise(function(resolve, reject) {
+            var req = indexedDB.open('RamzAppDB', 2);
+            req.onupgradeneeded = function(e) {
+                var db = e.target.result;
                 if (!db.objectStoreNames.contains('sqlite')) {
                     db.createObjectStore('sqlite');
                 }
             };
-            req.onsuccess = (e) => {
-                const db = e.target.result;
-                const tx = db.transaction('sqlite', 'readonly');
-                const store = tx.objectStore('sqlite');
-                const getReq = store.get('db');
-                getReq.onsuccess = () => resolve(getReq.result);
-                getReq.onerror = () => reject(getReq.error);
-                tx.onerror = () => reject(tx.error);
+            req.onsuccess = function(e) {
+                var db = e.target.result;
+                var tx = db.transaction('sqlite', 'readonly');
+                var store = tx.objectStore('sqlite');
+                var getReq = store.get('db');
+                getReq.onsuccess = function() { resolve(getReq.result); };
+                getReq.onerror = function() { reject(getReq.error); };
+                tx.onerror = function() { reject(tx.error); };
             };
-            req.onerror = () => reject(req.error);
+            req.onerror = function() { reject(req.error); };
         });
     }
 
     // ======================================================================
-    // استمرار البيانات (Persist)
+    // حفظ البيانات (Persist)
     // ======================================================================
     async function persistDatabase() {
         if (useFallback || !db) {
@@ -233,13 +247,13 @@
             return;
         }
         try {
-            const data = db.export();
+            var data = db.export();
             // محاولة OPFS أولاً
             try {
                 if ('storage' in navigator && 'getDirectory' in navigator.storage) {
-                    const opfsRoot = await navigator.storage.getDirectory();
-                    const fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
-                    const writable = await fileHandle.createWritable();
+                    var opfsRoot = await navigator.storage.getDirectory();
+                    var fileHandle = await opfsRoot.getFileHandle(DB_CONFIG.sqliteFileName, { create: true });
+                    var writable = await fileHandle.createWritable();
                     await writable.write(data.buffer);
                     await writable.close();
                 } else {
@@ -258,142 +272,138 @@
     function createTables() {
         if (useFallback || !db) return;
 
-        // جدول المستخدم
-        db.run(`CREATE TABLE IF NOT EXISTS user (
-            id TEXT PRIMARY KEY,
-            email TEXT,
-            name TEXT,
-            avatar TEXT,
-            phone TEXT,
-            is_guest INTEGER DEFAULT 0,
-            last_sync TEXT
-        )`);
+        try {
+            // جدول المستخدم
+            db.run(`CREATE TABLE IF NOT EXISTS user (
+                id TEXT PRIMARY KEY,
+                email TEXT,
+                name TEXT,
+                avatar TEXT,
+                phone TEXT,
+                is_guest INTEGER DEFAULT 0,
+                last_sync TEXT
+            )`);
 
-        // جدول المحادثات
-        db.run(`CREATE TABLE IF NOT EXISTS chats (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            avatar TEXT,
-            last_msg TEXT,
-            last_time TEXT,
-            unread INTEGER DEFAULT 0,
-            pinned INTEGER DEFAULT 0,
-            online INTEGER DEFAULT 0,
-            last_seen TEXT,
-            bio TEXT,
-            typing INTEGER DEFAULT 0,
-            typing_time TEXT,
-            is_group INTEGER DEFAULT 0,
-            user_id TEXT,
-            muted INTEGER DEFAULT 0,
-            blocked INTEGER DEFAULT 0,
-            disappear_time INTEGER DEFAULT 0,
-            created_by TEXT,
-            members TEXT
-        )`);
+            // جدول المحادثات
+            db.run(`CREATE TABLE IF NOT EXISTS chats (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                avatar TEXT,
+                last_msg TEXT,
+                last_time TEXT,
+                unread INTEGER DEFAULT 0,
+                pinned INTEGER DEFAULT 0,
+                online INTEGER DEFAULT 0,
+                last_seen TEXT,
+                bio TEXT,
+                typing INTEGER DEFAULT 0,
+                typing_time TEXT,
+                is_group INTEGER DEFAULT 0,
+                user_id TEXT,
+                muted INTEGER DEFAULT 0,
+                blocked INTEGER DEFAULT 0,
+                disappear_time INTEGER DEFAULT 0,
+                created_by TEXT,
+                members TEXT
+            )`);
 
-        // جدول الرسائل
-        db.run(`CREATE TABLE IF NOT EXISTS messages (
-            id TEXT PRIMARY KEY,
-            chat_id TEXT NOT NULL,
-            sender_id TEXT NOT NULL,
-            text TEXT,
-            img TEXT,
-            voice_blob TEXT,
-            voice_duration TEXT,
-            reply_to TEXT,
-            likes INTEGER DEFAULT 0,
-            liked INTEGER DEFAULT 0,
-            time TEXT NOT NULL,
-            status TEXT DEFAULT 'pending-send',
-            sync_status TEXT DEFAULT 'pending-send',
-            edit_time TEXT,
-            encrypted INTEGER DEFAULT 0,
-            encrypted_payload TEXT
-        )`);
-        db.run('CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id)');
-        db.run('CREATE INDEX IF NOT EXISTS idx_messages_time ON messages(time)');
+            // جدول الرسائل
+            db.run(`CREATE TABLE IF NOT EXISTS messages (
+                id TEXT PRIMARY KEY,
+                chat_id TEXT NOT NULL,
+                sender_id TEXT NOT NULL,
+                text TEXT,
+                img TEXT,
+                voice_blob TEXT,
+                voice_duration TEXT,
+                reply_to TEXT,
+                likes INTEGER DEFAULT 0,
+                liked INTEGER DEFAULT 0,
+                time TEXT NOT NULL,
+                status TEXT DEFAULT 'pending-send',
+                sync_status TEXT DEFAULT 'pending-send',
+                edit_time TEXT,
+                encrypted INTEGER DEFAULT 0,
+                encrypted_payload TEXT
+            )`);
+            db.run('CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id)');
+            db.run('CREATE INDEX IF NOT EXISTS idx_messages_time ON messages(time)');
 
-        // جدول جهات الاتصال
-        db.run(`CREATE TABLE IF NOT EXISTS contacts (
-            id TEXT PRIMARY KEY,
-            phone TEXT NOT NULL,
-            name TEXT,
-            registered INTEGER DEFAULT 0,
-            invite_code TEXT,
-            last_sync TEXT,
-            user_id TEXT
-        )`);
+            // جدول جهات الاتصال
+            db.run(`CREATE TABLE IF NOT EXISTS contacts (
+                id TEXT PRIMARY KEY,
+                phone TEXT NOT NULL,
+                name TEXT,
+                registered INTEGER DEFAULT 0,
+                invite_code TEXT,
+                last_sync TEXT,
+                user_id TEXT,
+                jid TEXT,
+                public_key TEXT
+            )`);
 
-        // جدول القصص
-        db.run(`CREATE TABLE IF NOT EXISTS stories (
-            id TEXT PRIMARY KEY,
-            user_id TEXT,
-            name TEXT,
-            avatar TEXT,
-            type TEXT,
-            content TEXT,
-            caption TEXT,
-            time TEXT,
-            expires_at TEXT,
-            isViewed INTEGER DEFAULT 0,
-            color TEXT
-        )`);
-        db.run('CREATE INDEX IF NOT EXISTS idx_stories_time ON stories(time)');
-        db.run('CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at)');
+            // جدول القصص
+            db.run(`CREATE TABLE IF NOT EXISTS stories (
+                id TEXT PRIMARY KEY,
+                user_id TEXT,
+                name TEXT,
+                avatar TEXT,
+                type TEXT,
+                content TEXT,
+                caption TEXT,
+                time TEXT,
+                expires_at TEXT,
+                isViewed INTEGER DEFAULT 0,
+                color TEXT
+            )`);
+            db.run('CREATE INDEX IF NOT EXISTS idx_stories_time ON stories(time)');
+            db.run('CREATE INDEX IF NOT EXISTS idx_stories_expires ON stories(expires_at)');
 
-        // جدول القنوات
-        db.run(`CREATE TABLE IF NOT EXISTS channels (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            avatar TEXT,
-            description TEXT,
-            followers INTEGER DEFAULT 0,
-            invite_code TEXT,
-            created_by TEXT,
-            created_at TEXT,
-            update_time TEXT,
-            user_id TEXT,
-            subscribers TEXT
-        )`);
+            // جدول القنوات
+            db.run(`CREATE TABLE IF NOT EXISTS channels (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                avatar TEXT,
+                description TEXT,
+                followers INTEGER DEFAULT 0,
+                invite_code TEXT,
+                created_by TEXT,
+                created_at TEXT,
+                update_time TEXT,
+                user_id TEXT,
+                subscribers TEXT
+            )`);
 
-        // جدول المكالمات
-        db.run(`CREATE TABLE IF NOT EXISTS calls (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            avatar TEXT,
-            time TEXT,
-            type TEXT,
-            user_id TEXT
-        )`);
+            // جدول المكالمات
+            db.run(`CREATE TABLE IF NOT EXISTS calls (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                avatar TEXT,
+                time TEXT,
+                type TEXT,
+                user_id TEXT
+            )`);
 
-        // جدول الكتالوج
-        db.run(`CREATE TABLE IF NOT EXISTS catalog (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            price TEXT,
-            icon TEXT,
-            user_id TEXT
-        )`);
+            // جدول الكتالوج
+            db.run(`CREATE TABLE IF NOT EXISTS catalog (
+                id TEXT PRIMARY KEY,
+                name TEXT,
+                price TEXT,
+                icon TEXT,
+                user_id TEXT
+            )`);
 
-        // جدول الإعدادات
-        db.run(`CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )`);
+            // جدول الإعدادات
+            db.run(`CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )`);
 
-        // جدول الرسائل المعلقة (يستخدمها sync.js)
-        db.run(`CREATE TABLE IF NOT EXISTS pending_messages (
-            id TEXT PRIMARY KEY,
-            chat_id TEXT,
-            sender_id TEXT,
-            recipient_chat_id TEXT,
-            payload TEXT,
-            created_at TEXT,
-            expires_at TEXT
-        )`);
-
-        persistDatabase();
+            persistDatabase();
+        } catch (e) {
+            console.warn('⚠️ Error creating tables:', e);
+            useFallback = true;
+        }
     }
 
     // ======================================================================
@@ -403,20 +413,19 @@
         if (useFallback || !db) return false;
         try {
             // تحميل المستخدم
-            const userRows = db.exec("SELECT * FROM user LIMIT 1");
+            var userRows = db.exec("SELECT * FROM user LIMIT 1");
             if (userRows.length && userRows[0].values.length) {
-                const u = {};
-                userRows[0].columns.forEach((c, i) => u[c] = userRows[0].values[0][i]);
+                var u = {};
+                userRows[0].columns.forEach(function(c, i) { u[c] = userRows[0].values[0][i]; });
                 inMemoryDB.user = u;
             }
 
             // تحميل المحادثات
-            const chatRows = db.exec("SELECT * FROM chats ORDER BY pinned DESC, last_time DESC");
+            var chatRows = db.exec("SELECT * FROM chats ORDER BY pinned DESC, last_time DESC");
             if (chatRows.length) {
-                inMemoryDB.chats = chatRows[0].values.map(r => {
-                    const c = {};
-                    chatRows[0].columns.forEach((col, i) => c[col] = r[i]);
-                    // معالجة members إذا كانت مخزنة كـ JSON
+                inMemoryDB.chats = chatRows[0].values.map(function(r) {
+                    var c = {};
+                    chatRows[0].columns.forEach(function(col, i) { c[col] = r[i]; });
                     if (c.members && typeof c.members === 'string') {
                         try { c.members = JSON.parse(c.members); } catch(e) { c.members = []; }
                     } else if (!c.members) {
@@ -428,36 +437,36 @@
 
             // تحميل الرسائل
             inMemoryDB.messages = {};
-            const msgRows = db.exec("SELECT * FROM messages ORDER BY time ASC");
+            var msgRows = db.exec("SELECT * FROM messages ORDER BY time ASC");
             if (msgRows.length) {
-                const all = msgRows[0].values.map(r => {
-                    const m = {};
-                    msgRows[0].columns.forEach((col, i) => m[col] = r[i]);
+                var all = msgRows[0].values.map(function(r) {
+                    var m = {};
+                    msgRows[0].columns.forEach(function(col, i) { m[col] = r[i]; });
                     return m;
                 });
-                all.forEach(m => {
+                all.forEach(function(m) {
                     if (!inMemoryDB.messages[m.chat_id]) inMemoryDB.messages[m.chat_id] = [];
                     inMemoryDB.messages[m.chat_id].push(m);
                 });
             }
 
             // تحميل جهات الاتصال
-            const contactRows = db.exec("SELECT * FROM contacts");
+            var contactRows = db.exec("SELECT * FROM contacts");
             if (contactRows.length) {
-                inMemoryDB.contacts = contactRows[0].values.map(r => {
-                    const c = {};
-                    contactRows[0].columns.forEach((col, i) => c[col] = r[i]);
+                inMemoryDB.contacts = contactRows[0].values.map(function(r) {
+                    var c = {};
+                    contactRows[0].columns.forEach(function(col, i) { c[col] = r[i]; });
                     return c;
                 });
             }
 
             // تحميل القصص (مع فلترة المنتهية)
-            const now = new Date().toISOString();
-            const storyRows = db.exec(`SELECT * FROM stories WHERE expires_at > datetime('${now}') ORDER BY time DESC`);
+            var now = new Date().toISOString();
+            var storyRows = db.exec("SELECT * FROM stories WHERE expires_at > datetime('" + now + "') ORDER BY time DESC");
             if (storyRows.length) {
-                inMemoryDB.stories = storyRows[0].values.map(r => {
-                    const s = {};
-                    storyRows[0].columns.forEach((col, i) => s[col] = r[i]);
+                inMemoryDB.stories = storyRows[0].values.map(function(r) {
+                    var s = {};
+                    storyRows[0].columns.forEach(function(col, i) { s[col] = r[i]; });
                     return s;
                 });
             } else {
@@ -465,11 +474,11 @@
             }
 
             // تحميل القنوات
-            const channelRows = db.exec("SELECT * FROM channels");
+            var channelRows = db.exec("SELECT * FROM channels");
             if (channelRows.length) {
-                inMemoryDB.channels = channelRows[0].values.map(r => {
-                    const ch = {};
-                    channelRows[0].columns.forEach((col, i) => ch[col] = r[i]);
+                inMemoryDB.channels = channelRows[0].values.map(function(r) {
+                    var ch = {};
+                    channelRows[0].columns.forEach(function(col, i) { ch[col] = r[i]; });
                     if (ch.subscribers && typeof ch.subscribers === 'string') {
                         try { ch.subscribers = JSON.parse(ch.subscribers); } catch(e) { ch.subscribers = []; }
                     } else if (!ch.subscribers) {
@@ -480,29 +489,29 @@
             }
 
             // تحميل المكالمات
-            const callRows = db.exec("SELECT * FROM calls ORDER BY time DESC");
+            var callRows = db.exec("SELECT * FROM calls ORDER BY time DESC");
             if (callRows.length) {
-                inMemoryDB.calls = callRows[0].values.map(r => {
-                    const c = {};
-                    callRows[0].columns.forEach((col, i) => c[col] = r[i]);
+                inMemoryDB.calls = callRows[0].values.map(function(r) {
+                    var c = {};
+                    callRows[0].columns.forEach(function(col, i) { c[col] = r[i]; });
                     return c;
                 });
             }
 
             // تحميل الكتالوج
-            const catalogRows = db.exec("SELECT * FROM catalog");
+            var catalogRows = db.exec("SELECT * FROM catalog");
             if (catalogRows.length) {
-                inMemoryDB.catalog = catalogRows[0].values.map(r => {
-                    const c = {};
-                    catalogRows[0].columns.forEach((col, i) => c[col] = r[i]);
+                inMemoryDB.catalog = catalogRows[0].values.map(function(r) {
+                    var c = {};
+                    catalogRows[0].columns.forEach(function(col, i) { c[col] = r[i]; });
                     return c;
                 });
             }
 
             // تحميل الإعدادات
-            const settingsRows = db.exec("SELECT * FROM settings");
+            var settingsRows = db.exec("SELECT * FROM settings");
             if (settingsRows.length) {
-                settingsRows[0].values.forEach(r => {
+                settingsRows[0].values.forEach(function(r) {
                     if (r[0] === 'theme') inMemoryDB.settings.theme = r[1];
                     if (r[0] === 'notifications') inMemoryDB.settings.notifications = r[1] === 'true';
                 });
@@ -524,7 +533,6 @@
             return;
         }
         try {
-            // حذف جميع البيانات الحالية
             db.run("DELETE FROM user");
             db.run("DELETE FROM messages");
             db.run("DELETE FROM chats");
@@ -549,9 +557,11 @@
             }
 
             // إدراج الرسائل
-            const insMsg = db.prepare("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-            for (const msgs of Object.values(inMemoryDB.messages)) {
-                for (const m of msgs) {
+            var insMsg = db.prepare("INSERT INTO messages VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            for (var chatId in inMemoryDB.messages) {
+                var msgs = inMemoryDB.messages[chatId];
+                for (var i = 0; i < msgs.length; i++) {
+                    var m = msgs[i];
                     insMsg.run([
                         m.id,
                         m.chat_id,
@@ -575,8 +585,9 @@
             insMsg.free();
 
             // إدراج المحادثات
-            const insChat = db.prepare("INSERT INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-            for (const c of inMemoryDB.chats) {
+            var insChat = db.prepare("INSERT INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            for (var j = 0; j < inMemoryDB.chats.length; j++) {
+                var c = inMemoryDB.chats[j];
                 insChat.run([
                     c.id,
                     c.name,
@@ -602,71 +613,78 @@
             insChat.free();
 
             // إدراج جهات الاتصال
-            const insCont = db.prepare("INSERT INTO contacts VALUES (?,?,?,?,?,?,?)");
-            for (const c of inMemoryDB.contacts) {
+            var insCont = db.prepare("INSERT INTO contacts VALUES (?,?,?,?,?,?,?,?,?)");
+            for (var k = 0; k < inMemoryDB.contacts.length; k++) {
+                var ct = inMemoryDB.contacts[k];
                 insCont.run([
-                    c.id,
-                    c.phone,
-                    c.name || '',
-                    c.registered ? 1 : 0,
-                    c.invite_code || null,
+                    ct.id,
+                    ct.phone,
+                    ct.name || '',
+                    ct.registered ? 1 : 0,
+                    ct.invite_code || null,
                     currentTimestamp(),
-                    c.user_id || null
+                    ct.user_id || null,
+                    ct.jid || null,
+                    ct.public_key || null
                 ]);
             }
             insCont.free();
 
             // إدراج القصص
-            const insStory = db.prepare("INSERT INTO stories VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-            const now = new Date().toISOString();
-            for (const s of inMemoryDB.stories) {
-                if (s.expires_at && s.expires_at < now) continue; // تجاهل المنتهية
+            var insStory = db.prepare("INSERT INTO stories VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+            var now = new Date().toISOString();
+            for (var s = 0; s < inMemoryDB.stories.length; s++) {
+                var st = inMemoryDB.stories[s];
+                if (st.expires_at && st.expires_at < now) continue;
                 insStory.run([
-                    s.id,
-                    s.user_id || null,
-                    s.name || 'مستخدم',
-                    s.avatar || '📷',
-                    s.type || 'image',
-                    s.content || '',
-                    s.caption || '',
-                    s.time || currentTimestamp(),
-                    s.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                    s.isViewed ? 1 : 0,
-                    s.color || '#ff0050'
+                    st.id,
+                    st.user_id || null,
+                    st.name || 'مستخدم',
+                    st.avatar || '📷',
+                    st.type || 'image',
+                    st.content || '',
+                    st.caption || '',
+                    st.time || currentTimestamp(),
+                    st.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    st.isViewed ? 1 : 0,
+                    st.color || '#ff0050'
                 ]);
             }
             insStory.free();
 
             // إدراج القنوات
-            const insCh = db.prepare("INSERT INTO channels VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-            for (const ch of inMemoryDB.channels) {
+            var insCh = db.prepare("INSERT INTO channels VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+            for (var ch = 0; ch < inMemoryDB.channels.length; ch++) {
+                var channel = inMemoryDB.channels[ch];
                 insCh.run([
-                    ch.id,
-                    ch.name,
-                    ch.avatar || '📢',
-                    ch.description || '',
-                    ch.followers || 0,
-                    ch.invite_code || '',
-                    ch.created_by || null,
-                    ch.created_at || currentTimestamp(),
-                    ch.update_time || currentTimestamp(),
-                    ch.user_id || null,
-                    ch.subscribers ? JSON.stringify(ch.subscribers) : '[]'
+                    channel.id,
+                    channel.name,
+                    channel.avatar || '📢',
+                    channel.description || '',
+                    channel.followers || 0,
+                    channel.invite_code || '',
+                    channel.created_by || null,
+                    channel.created_at || currentTimestamp(),
+                    channel.update_time || currentTimestamp(),
+                    channel.user_id || null,
+                    channel.subscribers ? JSON.stringify(channel.subscribers) : '[]'
                 ]);
             }
             insCh.free();
 
             // إدراج المكالمات
-            const insCall = db.prepare("INSERT INTO calls VALUES (?,?,?,?,?,?)");
-            for (const c of inMemoryDB.calls) {
-                insCall.run([c.id, c.name, c.avatar, c.time, c.type, c.user_id || null]);
+            var insCall = db.prepare("INSERT INTO calls VALUES (?,?,?,?,?,?)");
+            for (var cl = 0; cl < inMemoryDB.calls.length; cl++) {
+                var call = inMemoryDB.calls[cl];
+                insCall.run([call.id, call.name, call.avatar, call.time, call.type, call.user_id || null]);
             }
             insCall.free();
 
             // إدراج الكتالوج
-            const insCat = db.prepare("INSERT INTO catalog VALUES (?,?,?,?,?)");
-            for (const c of inMemoryDB.catalog) {
-                insCat.run([c.id, c.name, c.price || '', c.icon || '📦', c.user_id || null]);
+            var insCat = db.prepare("INSERT INTO catalog VALUES (?,?,?,?,?)");
+            for (var cat = 0; cat < inMemoryDB.catalog.length; cat++) {
+                var item = inMemoryDB.catalog[cat];
+                insCat.run([item.id, item.name, item.price || '', item.icon || '📦', item.user_id || null]);
             }
             insCat.free();
 
@@ -689,7 +707,7 @@
     function addMessageToMemory(msg) {
         if (!inMemoryDB.messages[msg.chat_id]) inMemoryDB.messages[msg.chat_id] = [];
         inMemoryDB.messages[msg.chat_id].push(msg);
-        const chat = inMemoryDB.chats.find(c => c.id === msg.chat_id);
+        var chat = inMemoryDB.chats.find(function(c) { return c.id === msg.chat_id; });
         if (chat) {
             chat.last_msg = msg.text || (msg.img ? '📷' : msg.voice_blob ? '🎤' : '📎');
             chat.last_time = msg.time;
@@ -702,40 +720,66 @@
     // ======================================================================
 
     // ----- التهيئة -----
-    async function initDB() {
+    window.initDB = async function() {
         if (initPromise) return initPromise;
-        initPromise = (async () => {
+        initPromise = (async function() {
             try {
-                await loadSqlJs();
-                await openDatabase();
+                // محاولة تحميل SQL.js
+                try {
+                    await loadSqlJs();
+                } catch (e) {
+                    console.warn('⚠️ SQL.js load failed, using fallback', e);
+                    useFallback = true;
+                }
+
+                // فتح قاعدة البيانات
                 if (!useFallback) {
-                    createTables();
-                    loadInMemoryFromSQLite();
-                } else {
+                    try {
+                        await openDatabase();
+                    } catch (e) {
+                        console.warn('⚠️ Database open failed, using fallback', e);
+                        useFallback = true;
+                    }
+                }
+
+                // إذا كانت قاعدة البيانات جاهزة، أنشئ الجداول وحمّل البيانات
+                if (!useFallback && db) {
+                    try {
+                        createTables();
+                        loadInMemoryFromSQLite();
+                    } catch (e) {
+                        console.warn('⚠️ Table creation failed, using fallback', e);
+                        useFallback = true;
+                    }
+                }
+
+                if (useFallback) {
                     loadFromLocalStorageCache();
                 }
-                const savedUser = localStorage.getItem(DB_CONFIG.userKey);
+
+                // تحميل المستخدم من localStorage
+                var savedUser = localStorage.getItem(DB_CONFIG.userKey);
                 if (savedUser) {
                     try { inMemoryDB.user = JSON.parse(savedUser); } catch (e) {}
                 }
-                console.log(`✅ db.js initialized: ${inMemoryDB.chats.length} chats, ${inMemoryDB.contacts.length} contacts`);
+
+                console.log('✅ db.js initialized: ' + inMemoryDB.chats.length + ' chats, ' + inMemoryDB.contacts.length + ' contacts');
+                dbReady = true;
                 return true;
             } catch (e) {
                 console.error('❌ db.js initialization failed:', e);
                 useFallback = true;
                 loadFromLocalStorageCache();
+                dbReady = true;
                 return false;
             }
         })();
         return initPromise;
-    }
-    window.initDB = initDB;
+    };
 
     // ----- المستخدم -----
-    function getCurrentUser() { return inMemoryDB.user; }
-    window.getCurrentUser = getCurrentUser;
-
-    function setCurrentUser(userData) {
+    window.getCurrentUser = function() { return inMemoryDB.user; };
+    window.setCurrentUser = function(userData) {
         inMemoryDB.user = userData;
         localStorage.setItem(DB_CONFIG.userKey, JSON.stringify(userData));
         if (!useFallback && db) {
@@ -752,25 +796,20 @@
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.setCurrentUser = setCurrentUser;
+    };
 
     // ----- المحادثات -----
-    function getChats() { return [...inMemoryDB.chats]; }
-    window.getChats = getChats;
-
-    function getChat(chatId) { return inMemoryDB.chats.find(c => c.id === chatId); }
-    window.getChat = getChat;
-
-    function saveChat(chatData) {
-        const idx = inMemoryDB.chats.findIndex(c => c.id === chatData.id);
+    window.getChats = function() { return [...inMemoryDB.chats]; };
+    window.getChat = function(chatId) { return inMemoryDB.chats.find(function(c) { return c.id === chatId; }); };
+    window.saveChat = function(chatData) {
+        var idx = inMemoryDB.chats.findIndex(function(c) { return c.id === chatData.id; });
         if (idx >= 0) {
             inMemoryDB.chats[idx] = { ...inMemoryDB.chats[idx], ...chatData };
         } else {
             inMemoryDB.chats.unshift(chatData);
         }
         if (!useFallback && db) {
-            const c = inMemoryDB.chats.find(c => c.id === chatData.id);
+            var c = inMemoryDB.chats.find(function(ch) { return ch.id === chatData.id; });
             if (c) {
                 db.run("INSERT OR REPLACE INTO chats VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [
                     c.id,
@@ -797,11 +836,9 @@
             }
         }
         saveToLocalStorageCache();
-    }
-    window.saveChat = saveChat;
-
-    function deleteChat(chatId) {
-        inMemoryDB.chats = inMemoryDB.chats.filter(c => c.id !== chatId);
+    };
+    window.deleteChat = function(chatId) {
+        inMemoryDB.chats = inMemoryDB.chats.filter(function(c) { return c.id !== chatId; });
         delete inMemoryDB.messages[chatId];
         if (!useFallback && db) {
             db.run("DELETE FROM chats WHERE id=?", [chatId]);
@@ -809,14 +846,11 @@
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.deleteChat = deleteChat;
+    };
 
     // ----- الرسائل -----
-    function getMessages(chatId) { return inMemoryDB.messages[chatId] || []; }
-    window.getMessages = getMessages;
-
-    function addMessage(msg) {
+    window.getMessages = function(chatId) { return inMemoryDB.messages[chatId] || []; };
+    window.addMessage = function(msg) {
         msg.id = msg.id || generateId();
         msg.chat_id = msg.chat_id || msg.sid;
         msg.sender_id = msg.sid || msg.sender_id;
@@ -849,16 +883,15 @@
         }
         saveToLocalStorageCache();
         return msg;
-    }
-    window.addMessage = addMessage;
-
-    function updateMessage(msgId, updates) {
-        for (const msgs of Object.values(inMemoryDB.messages)) {
-            const idx = msgs.findIndex(m => m.id === msgId);
+    };
+    window.updateMessage = function(msgId, updates) {
+        for (var chatId in inMemoryDB.messages) {
+            var msgs = inMemoryDB.messages[chatId];
+            var idx = msgs.findIndex(function(m) { return m.id === msgId; });
             if (idx >= 0) {
                 msgs[idx] = { ...msgs[idx], ...updates };
                 if (!useFallback && db) {
-                    const m = msgs[idx];
+                    var m = msgs[idx];
                     db.run("UPDATE messages SET text=?, img=?, voice_blob=?, voice_duration=?, reply_to=?, likes=?, liked=?, status=?, sync_status=?, edit_time=?, encrypted=?, encrypted_payload=? WHERE id=?", [
                         m.text || '',
                         m.img || null,
@@ -881,12 +914,11 @@
             }
         }
         return false;
-    }
-    window.updateMessage = updateMessage;
-
-    function deleteMessage(msgId) {
-        for (const msgs of Object.values(inMemoryDB.messages)) {
-            const idx = msgs.findIndex(m => m.id === msgId);
+    };
+    window.deleteMessage = function(msgId) {
+        for (var chatId in inMemoryDB.messages) {
+            var msgs = inMemoryDB.messages[chatId];
+            var idx = msgs.findIndex(function(m) { return m.id === msgId; });
             if (idx >= 0) {
                 msgs.splice(idx, 1);
                 if (!useFallback && db) {
@@ -898,55 +930,46 @@
             }
         }
         return false;
-    }
-    window.deleteMessage = deleteMessage;
+    };
 
     // ----- جهات الاتصال -----
-    function getContacts() { return [...inMemoryDB.contacts]; }
-    window.getContacts = getContacts;
-
-    function getRegisteredContacts() { return inMemoryDB.contacts.filter(c => c.registered); }
-    window.getRegisteredContacts = getRegisteredContacts;
-
-    function getUnregisteredContacts() { return inMemoryDB.contacts.filter(c => !c.registered); }
-    window.getUnregisteredContacts = getUnregisteredContacts;
-
-    function saveContact(contactData) {
-        const idx = inMemoryDB.contacts.findIndex(c => c.id === contactData.id);
+    window.getContacts = function() { return [...inMemoryDB.contacts]; };
+    window.getRegisteredContacts = function() { return inMemoryDB.contacts.filter(function(c) { return c.registered; }); };
+    window.getUnregisteredContacts = function() { return inMemoryDB.contacts.filter(function(c) { return !c.registered; }); };
+    window.saveContact = function(contactData) {
+        var idx = inMemoryDB.contacts.findIndex(function(c) { return c.id === contactData.id; });
         if (idx >= 0) {
             inMemoryDB.contacts[idx] = { ...inMemoryDB.contacts[idx], ...contactData };
         } else {
             inMemoryDB.contacts.push(contactData);
         }
         if (!useFallback && db) {
-            db.run("INSERT OR REPLACE INTO contacts VALUES (?,?,?,?,?,?,?)", [
+            db.run("INSERT OR REPLACE INTO contacts VALUES (?,?,?,?,?,?,?,?,?)", [
                 contactData.id,
                 contactData.phone,
                 contactData.name || '',
                 contactData.registered ? 1 : 0,
                 contactData.invite_code || null,
                 currentTimestamp(),
-                contactData.user_id || null
+                contactData.user_id || null,
+                contactData.jid || null,
+                contactData.public_key || null
             ]);
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.saveContact = saveContact;
+    };
 
     // ----- القصص -----
-    function getStories() { return [...inMemoryDB.stories]; }
-    window.getStories = getStories;
-
-    function addStory(storyData) {
+    window.getStories = function() { return [...inMemoryDB.stories]; };
+    window.addStory = function(storyData) {
         storyData.id = storyData.id || generateId();
         storyData.time = storyData.time || currentTimestamp();
         storyData.expires_at = storyData.expires_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         storyData.isViewed = storyData.isViewed || false;
         storyData.color = storyData.color || '#' + Math.floor(Math.random() * 16777215).toString(16);
-        // حذف القصص المنتهية قبل الإضافة
-        const now = new Date().toISOString();
-        inMemoryDB.stories = inMemoryDB.stories.filter(s => s.expires_at > now);
+        var now = new Date().toISOString();
+        inMemoryDB.stories = inMemoryDB.stories.filter(function(s) { return s.expires_at > now; });
         inMemoryDB.stories.unshift(storyData);
         if (!useFallback && db) {
             db.run("INSERT OR REPLACE INTO stories VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
@@ -965,15 +988,13 @@
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.addStory = addStory;
-
-    function updateStory(storyId, updates) {
-        const idx = inMemoryDB.stories.findIndex(s => s.id === storyId);
+    };
+    window.updateStory = function(storyId, updates) {
+        var idx = inMemoryDB.stories.findIndex(function(s) { return s.id === storyId; });
         if (idx !== -1) {
             inMemoryDB.stories[idx] = { ...inMemoryDB.stories[idx], ...updates };
             if (!useFallback && db) {
-                const s = inMemoryDB.stories[idx];
+                var s = inMemoryDB.stories[idx];
                 db.run("UPDATE stories SET user_id=?, name=?, avatar=?, type=?, content=?, caption=?, time=?, expires_at=?, isViewed=?, color=? WHERE id=?", [
                     s.user_id || null,
                     s.name || 'مستخدم',
@@ -993,24 +1014,19 @@
             return true;
         }
         return false;
-    }
-    window.updateStory = updateStory;
-
-    function deleteStory(storyId) {
-        inMemoryDB.stories = inMemoryDB.stories.filter(s => s.id !== storyId);
+    };
+    window.deleteStory = function(storyId) {
+        inMemoryDB.stories = inMemoryDB.stories.filter(function(s) { return s.id !== storyId; });
         if (!useFallback && db) {
             db.run("DELETE FROM stories WHERE id=?", [storyId]);
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.deleteStory = deleteStory;
+    };
 
     // ----- القنوات -----
-    function getChannels() { return [...inMemoryDB.channels]; }
-    window.getChannels = getChannels;
-
-    function addChannel(channelData) {
+    window.getChannels = function() { return [...inMemoryDB.channels]; };
+    window.addChannel = function(channelData) {
         channelData.id = channelData.id || generateId();
         channelData.created_at = channelData.created_at || currentTimestamp();
         channelData.subscribers = channelData.subscribers || [];
@@ -1033,18 +1049,16 @@
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.addChannel = addChannel;
-
-    function saveChannel(channelData) {
-        const idx = inMemoryDB.channels.findIndex(c => c.id === channelData.id);
+    };
+    window.saveChannel = function(channelData) {
+        var idx = inMemoryDB.channels.findIndex(function(c) { return c.id === channelData.id; });
         if (idx >= 0) {
             inMemoryDB.channels[idx] = { ...inMemoryDB.channels[idx], ...channelData };
         } else {
             inMemoryDB.channels.unshift(channelData);
         }
         if (!useFallback && db) {
-            const ch = inMemoryDB.channels.find(c => c.id === channelData.id);
+            var ch = inMemoryDB.channels.find(function(c) { return c.id === channelData.id; });
             if (ch) {
                 db.run("INSERT OR REPLACE INTO channels VALUES (?,?,?,?,?,?,?,?,?,?,?)", [
                     ch.id,
@@ -1063,24 +1077,19 @@
             }
         }
         saveToLocalStorageCache();
-    }
-    window.saveChannel = saveChannel;
-
-    function deleteChannel(channelId) {
-        inMemoryDB.channels = inMemoryDB.channels.filter(c => c.id !== channelId);
+    };
+    window.deleteChannel = function(channelId) {
+        inMemoryDB.channels = inMemoryDB.channels.filter(function(c) { return c.id !== channelId; });
         if (!useFallback && db) {
             db.run("DELETE FROM channels WHERE id=?", [channelId]);
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.deleteChannel = deleteChannel;
+    };
 
     // ----- المكالمات -----
-    function getCalls() { return [...inMemoryDB.calls]; }
-    window.getCalls = getCalls;
-
-    function addCall(callData) {
+    window.getCalls = function() { return [...inMemoryDB.calls]; };
+    window.addCall = function(callData) {
         callData.id = callData.id || generateId();
         callData.time = callData.time || currentTimestamp();
         inMemoryDB.calls.unshift(callData);
@@ -1096,14 +1105,11 @@
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.addCall = addCall;
+    };
 
     // ----- الكتالوج -----
-    function getCatalog() { return [...inMemoryDB.catalog]; }
-    window.getCatalog = getCatalog;
-
-    function addCatalogItem(item) {
+    window.getCatalog = function() { return [...inMemoryDB.catalog]; };
+    window.addCatalogItem = function(item) {
         item.id = item.id || generateId();
         inMemoryDB.catalog.unshift(item);
         if (!useFallback && db) {
@@ -1117,25 +1123,21 @@
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.addCatalogItem = addCatalogItem;
+    };
 
     // ----- الإعدادات -----
-    function getSettings() { return { ...inMemoryDB.settings }; }
-    window.getSettings = getSettings;
-
-    function updateSetting(key, value) {
+    window.getSettings = function() { return { ...inMemoryDB.settings }; };
+    window.updateSetting = function(key, value) {
         inMemoryDB.settings[key] = value;
         if (!useFallback && db) {
             db.run("INSERT OR REPLACE INTO settings VALUES (?,?)", [key, String(value)]);
             persistDatabase();
         }
         saveToLocalStorageCache();
-    }
-    window.updateSetting = updateSetting;
+    };
 
     // ----- تصدير/استيراد -----
-    function exportAllData() {
+    window.exportAllData = function() {
         return JSON.stringify({
             user: inMemoryDB.user,
             chats: inMemoryDB.chats,
@@ -1148,12 +1150,10 @@
             settings: inMemoryDB.settings,
             exportDate: currentTimestamp()
         }, null, 2);
-    }
-    window.exportAllData = exportAllData;
-
-    async function importAllData(json) {
+    };
+    window.importAllData = async function(json) {
         try {
-            const data = JSON.parse(json);
+            var data = JSON.parse(json);
             if (!data.chats || !data.messages) return false;
             inMemoryDB.user = data.user || null;
             inMemoryDB.chats = data.chats || [];
@@ -1170,11 +1170,10 @@
             console.error('❌ Import failed:', e);
             return false;
         }
-    }
-    window.importAllData = importAllData;
+    };
 
     // ----- تنظيف كامل -----
-    function clearAllData() {
+    window.clearAllData = function() {
         inMemoryDB.chats = [];
         inMemoryDB.messages = {};
         inMemoryDB.contacts = [];
@@ -1197,47 +1196,24 @@
         }
         localStorage.removeItem(DB_CONFIG.userKey);
         saveToLocalStorageCache();
-    }
-    window.clearAllData = clearAllData;
-
-    // ----- الرسائل المعلقة للمزامنة -----
-    function getPendingMessages() {
-        const pending = [];
-        for (const msgs of Object.values(inMemoryDB.messages)) {
-            for (const m of msgs) {
-                if (m.sync_status === 'pending-send' || m.sync_status === 'failed') {
-                    pending.push(m);
-                }
-            }
-        }
-        return pending;
-    }
-    window.getPendingMessages = getPendingMessages;
-
-    // ----- حفظ جميع البيانات (استدعاء يدوي) -----
-    async function saveAllData() {
-        await persistAllData();
-    }
-    window.saveAllData = saveAllData;
+    };
 
     // ----- حالة التخزين -----
-    function isUsingFallback() { return useFallback; }
-    window.isUsingFallback = isUsingFallback;
-
-    function isDbReady() { return dbReady; }
-    window.isDbReady = isDbReady;
+    window.isUsingFallback = function() { return useFallback; };
+    window.isDbReady = function() { return dbReady; };
+    window.saveAllData = function() { return persistAllData(); };
 
     // ======================================================================
-    // تهيئة أولية (عند تحميل الصفحة)
+    // تهيئة أولية
     // ======================================================================
-    console.log('✅ db.js (الإصدار النهائي الكامل) جاهز');
+    console.log('✅ db.js (الإصدار النهائي v5.0) جاهز');
+    console.log('💾 يدعم OPFS + IndexedDB + LocalStorage احتياطي');
 
-    // محاولة تهيئة تلقائية بعد تحميل الصفحة
     if (document.readyState === 'complete') {
-        setTimeout(() => initDB().catch(() => {}), 500);
+        setTimeout(function() { window.initDB().catch(function() {}); }, 500);
     } else {
-        window.addEventListener('load', () => {
-            setTimeout(() => initDB().catch(() => {}), 1000);
+        window.addEventListener('load', function() {
+            setTimeout(function() { window.initDB().catch(function() {}); }, 1000);
         });
     }
 
