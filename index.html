@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>💬 RamzApp | تطبيق المراسلة المتكامل</title>
+    <title> RamzApp |   </title>
 
     <!-- ===== PWA ===== -->
     <link rel="manifest" href="/manifest.json">
@@ -27,7 +27,7 @@
 
     <style>
         /* ======================================================================
-                   الأنماط الأساسية – نظام الألوان والثيمات
+                     –   
                    ====================================================================== */
         :root {
             --bg: #0d0d0d;
@@ -62,7 +62,7 @@
         }
 
         /* ======================================================================
-                   أنماط الاحتياطي للأيقونات
+                     
                    ====================================================================== */
         body.no-fontawesome .fa,
         body.no-fontawesome .fas,
@@ -81,7 +81,7 @@
         }
 
         /* ======================================================================
-                   الأنماط العامة
+                    
                    ====================================================================== */
         * {
             margin: 0;
@@ -103,7 +103,7 @@
             position: relative;
         }
 
-        /* ===== مؤشر الاتصال ===== */
+        /* =====   ===== */
         .connection-indicator {
             position: fixed;
             top: 10px;
@@ -125,7 +125,7 @@
             background: rgba(255, 0, 0, 0.8);
         }
 
-        /* ===== الحاوية الرئيسية ===== */
+        /* =====   ===== */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -133,7 +133,7 @@
             position: relative;
         }
 
-        /* ===== الشاشات ===== */
+        /* =====  ===== */
         .screen {
             display: none;
             flex-direction: column;
@@ -154,7 +154,7 @@
             bottom: 0;
         }
 
-        /* ===== رأس التطبيق ===== */
+        /* =====   ===== */
         .app-header {
             background: var(--surface);
             padding: 10px 16px;
@@ -200,7 +200,7 @@
             gap: 4px;
         }
 
-        /* ===== شريط البحث ===== */
+        /* =====   ===== */
         .search-bar {
             padding: 8px 14px;
             background: var(--surface);
@@ -222,7 +222,7 @@
             box-shadow: 0 0 0 3px rgba(255, 0, 80, 0.12);
         }
 
-        /* ===== قائمة المحادثات ===== */
+        /* =====   ===== */
         .chats-list {
             flex: 1;
             overflow-y: auto;
@@ -338,7 +338,7 @@
             }
         }
 
-        /* ===== رأس المحادثة ===== */
+        /* =====   ===== */
         .chat-header-bar {
             background: var(--surface);
             padding: 8px 12px;
@@ -383,7 +383,7 @@
             animation: pulse 1.2s infinite;
         }
 
-        /* ===== شريط التشفير ===== */
+        /* =====   ===== */
         .encryption-banner {
             background: #1f2c33;
             padding: 8px 12px;
@@ -399,7 +399,7 @@
             color: #25D366;
         }
 
-        /* ===== منطقة الرسائل ===== */
+        /* =====   ===== */
         .messages-area {
             flex: 1;
             overflow-y: auto;
@@ -562,7 +562,7 @@
             border-radius: 2px;
         }
 
-        /* ===== شريط الرد والإدخال ===== */
+        /* =====    ===== */
         .reply-bar {
             background: var(--surface);
             padding: 8px 14px;
@@ -643,7 +643,7 @@
             }
         }
 
-        /* ===== منتقي الإيموجي ===== */
+        /* =====   ===== */
         .emoji-picker {
             position: absolute;
             bottom: 75px;
@@ -676,7 +676,7 @@
             transform: scale(1.2);
         }
 
-        /* ===== صفحة المرفقات ===== */
+        /* =====   ===== */
         .attach-sheet {
             position: fixed;
             bottom: -100%;
@@ -738,7 +738,7 @@
             transform: scale(0.9);
         }
 
-        /* ===== عارض الصور ===== */
+        /* =====   ===== */
         .image-viewer {
             position: fixed;
             inset: 0;
@@ -785,7 +785,7 @@
             transition: 0.2s;
         }
 
-        /* ===== شاشة المكالمات ===== */
+        /* =====   ===== */
         .call-screen-overlay {
             position: fixed;
             inset: 0;
@@ -860,7 +860,7 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* ===== عارض القصص ===== */
+        /* =====   ===== */
         .story-viewer-active {
             position: fixed;
             top: 0;
@@ -971,7 +971,7 @@
             max-width: 80%;
         }
 
-        /* ===== النوافذ المنبثقة ===== */
+        /* =====   ===== */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -1077,7 +1077,7 @@
             z-index: 2001;
         }
 
-        /* ===== القائمة المنبثقة العامة ===== */
+        /* =====    ===== */
         .popup-overlay {
             position: fixed;
             inset: 0;
@@ -1138,7 +1138,7 @@
             color: #ff4444;
         }
 
-        /* ===== شاشة فارغة ===== */
+        /* =====   ===== */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -1150,7 +1150,7 @@
             opacity: 0.5;
         }
 
-        /* ===== شريط القصص ===== */
+        /* =====   ===== */
         .story-bar {
             padding: 12px 14px;
             border-bottom: 1px solid var(--border);
@@ -1221,7 +1221,7 @@
             white-space: nowrap;
         }
 
-        /* ===== قائمة القصص ===== */
+        /* =====   ===== */
         #storiesList {
             padding: 8px 16px 12px;
             display: flex;
@@ -1292,7 +1292,7 @@
             color: var(--text);
         }
 
-        /* ===== أقسام أخرى ===== */
+        /* =====   ===== */
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -1350,7 +1350,7 @@
             color: var(--text3);
         }
 
-        /* ===== الأدوات ===== */
+        /* =====  ===== */
         .tools-grid {
             padding: 16px;
             display: flex;
@@ -1447,7 +1447,7 @@
             color: var(--text3);
         }
 
-        /* ===== الملف الشخصي ===== */
+        /* =====   ===== */
         .profile-section {
             text-align: center;
             padding: 30px 20px;
@@ -1474,7 +1474,7 @@
             margin: 6px 0 16px;
         }
 
-        /* ===== الإعدادات ===== */
+        /* =====  ===== */
         .settings-list {
             padding: 16px;
         }
@@ -1535,7 +1535,7 @@
             right: 24px;
         }
 
-        /* ===== الشريط السفلي ===== */
+        /* =====   ===== */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -1597,7 +1597,7 @@
             opacity: 1;
         }
 
-        /* ===== القائمة المنبثقة للمحادثة ===== */
+        /* =====    ===== */
         .chat-popup-menu {
             width: 280px !important;
             max-height: 80vh;
@@ -1668,7 +1668,7 @@
             font-size: 12px !important;
         }
 
-        /* ===== مودال عرض جهة الاتصال ===== */
+        /* =====     ===== */
         .contact-modal .modal-card {
             max-width: 380px;
             text-align: right;
@@ -1724,7 +1724,7 @@
             color: var(--text3);
         }
 
-        /* ===== مودال الوسائط ===== */
+        /* =====   ===== */
         .media-modal .media-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -1768,7 +1768,7 @@
             border-radius: 10px;
         }
 
-        /* ===== البحث داخل المحادثة ===== */
+        /* =====    ===== */
         .in-chat-search.active {
             display: flex !important;
         }
@@ -1780,7 +1780,7 @@
             color: #fff !important;
         }
 
-        /* ===== زر تثبيت PWA ===== */
+        /* =====   PWA ===== */
         #installAppBtn {
             display: none;
             margin: 8px 16px;
@@ -1802,7 +1802,7 @@
             transform: scale(1.02);
         }
 
-        /* ===== توافق مع الشاشات الصغيرة ===== */
+        /* =====     ===== */
         @media (max-width: 380px) {
             .chat-name {
                 font-size: 14px;
@@ -1838,37 +1838,37 @@
 </head>
 <body>
 
-    <!-- ===== مؤشر الاتصال ===== -->
-    <div class="connection-indicator" id="connectionIndicator">📡 أنت غير متصل بالإنترنت</div>
+    <!-- =====   ===== -->
+    <div class="connection-indicator" id="connectionIndicator">    </div>
 
-    <!-- ===== الحاوية الرئيسية ===== -->
+    <!-- =====   ===== -->
     <div class="app-container" id="appContainer" style="display:none;">
 
         <!-- ============================================================
-             الشاشة: الدردشات
+             : 
              ============================================================ -->
         <div class="screen active" id="chatsScreen">
             <div class="app-header">
-                <h2>💬 RamzApp</h2>
+                <h2> RamzApp</h2>
                 <div class="header-actions">
                     <button class="header-btn" id="cameraBtn"><i class="fas fa-camera"></i></button>
                     <button class="header-btn" id="mainMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
-            <div class="search-bar"><input type="text" id="searchChatsInput" placeholder="🔍 بحث في المحادثات..."></div>
+            <div class="search-bar"><input type="text" id="searchChatsInput" placeholder="   ..."></div>
             <div class="chats-list" id="chatsList"></div>
         </div>
 
         <!-- ============================================================
-             الشاشة: المحادثة
+             : 
              ============================================================ -->
         <div class="screen no-nav" id="chatScreen">
             <div class="chat-header-bar">
                 <button class="header-btn" id="backBtn"><i class="fas fa-arrow-right"></i></button>
-                <div class="avatar" id="chatAvatar">م</div>
+                <div class="avatar" id="chatAvatar"></div>
                 <div class="chat-header-info" id="chatHeaderInfo">
-                    <div class="chat-header-name" id="chatNameDisp">محمد</div>
-                    <div class="chat-header-status online" id="chatStatusDisp">متصل الآن</div>
+                    <div class="chat-header-name" id="chatNameDisp"></div>
+                    <div class="chat-header-status online" id="chatStatusDisp"> </div>
                 </div>
                 <div class="header-actions">
                     <button class="header-btn" id="voiceCallBtn"><i class="fas fa-phone"></i></button>
@@ -1877,294 +1877,294 @@
                 </div>
             </div>
 
-            <!-- بحث داخل المحادثة -->
+            <!--    -->
             <div class="in-chat-search" id="inChatSearch">
-                <input type="text" placeholder="بحث في الرسائل..." id="inChatSearchInput">
+                <input type="text" placeholder="  ..." id="inChatSearchInput">
                 <button class="header-btn" id="closeInChatSearch">&times;</button>
             </div>
             <div class="search-results" id="searchResults" style="display:none;"></div>
 
-            <!-- شريط التشفير -->
+            <!--   -->
             <div class="encryption-banner">
                 <i class="fas fa-lock" style="color: #25D366;"></i>
-                <span>الرسائل والمكالمات مشفرة تمامًا بين الطرفين. ولا يمكن لأي شخص آخر قراءتها.</span>
+                <span>     .      .</span>
             </div>
 
-            <!-- منطقة الرسائل -->
+            <!--   -->
             <div class="messages-area" id="messagesArea"></div>
 
-            <!-- شريط الرد -->
+            <!--   -->
             <div class="reply-bar" id="replyBar">
                 <span><i class="fas fa-reply"></i> <span id="replyPreview"></span></span>
                 <button class="header-btn" id="cancelReplyBtn">&times;</button>
             </div>
 
-            <!-- شريط الإدخال -->
+            <!--   -->
             <div class="input-bar">
                 <button class="input-btn" id="emojiBtn"><i class="far fa-smile-wink"></i></button>
                 <button class="input-btn" id="attachBtn"><i class="fas fa-paperclip"></i></button>
-                <input type="text" id="msgInput" placeholder="اكتب رسالة..." autocomplete="off">
+                <input type="text" id="msgInput" placeholder=" ..." autocomplete="off">
                 <button class="input-btn send-btn" id="sendMsgBtn" style="display:none;"><i class="fas fa-paper-plane"></i></button>
                 <button class="input-btn mic-btn" id="micBtn" style="display:flex;"><i class="fas fa-microphone"></i></button>
             </div>
 
-            <!-- منتقي الإيموجي -->
+            <!--   -->
             <div class="emoji-picker" id="emojiPicker"></div>
 
-            <!-- صفحة المرفقات -->
+            <!--   -->
             <div class="attach-overlay" id="attachOverlay"></div>
             <div class="attach-sheet" id="attachSheet">
                 <button class="header-btn" id="closeAttachBtn" style="float:left;">&times;</button>
-                <h4 style="text-align:center;">إرفاق محتوى</h4>
+                <h4 style="text-align:center;"> </h4>
                 <div class="attach-grid">
-                    <div class="attach-option" data-type="gallery"><div class="circle"><i class="fas fa-image"></i></div><span>المعرض</span></div>
-                    <div class="attach-option" data-type="camera"><div class="circle"><i class="fas fa-camera"></i></div><span>كاميرا</span></div>
-                    <div class="attach-option" data-type="document"><div class="circle"><i class="fas fa-file-alt"></i></div><span>مستند</span></div>
-                    <div class="attach-option" data-type="contact"><div class="circle"><i class="fas fa-address-card"></i></div><span>جهة اتصال</span></div>
+                    <div class="attach-option" data-type="gallery"><div class="circle"><i class="fas fa-image"></i></div><span></span></div>
+                    <div class="attach-option" data-type="camera"><div class="circle"><i class="fas fa-camera"></i></div><span></span></div>
+                    <div class="attach-option" data-type="document"><div class="circle"><i class="fas fa-file-alt"></i></div><span></span></div>
+                    <div class="attach-option" data-type="contact"><div class="circle"><i class="fas fa-address-card"></i></div><span> </span></div>
                 </div>
                 <input type="file" id="hiddenFileInput" style="display:none;" multiple>
             </div>
         </div>
 
         <!-- ============================================================
-             الشاشة: جهات الاتصال
+             :  
              ============================================================ -->
         <div class="screen" id="contactsScreen">
             <div class="app-header">
                 <button class="header-btn" id="backFromContactsBtn"><i class="fas fa-arrow-right"></i></button>
-                <h2>📇 جهات الاتصال</h2>
+                <h2>  </h2>
                 <div class="header-actions">
-                    <button class="header-btn" id="syncContactsBtn" title="مزامنة"><i class="fas fa-sync-alt"></i></button>
+                    <button class="header-btn" id="syncContactsBtn" title=""><i class="fas fa-sync-alt"></i></button>
                     <button class="header-btn" id="contactsMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
             <div style="padding:8px 16px;">
-                <button class="promo-btn" id="syncContactsBtn" style="background:var(--accent);color:#fff;width:100%;">🔄 مزامنة جهات الاتصال</button>
+                <button class="promo-btn" id="syncContactsBtn" style="background:var(--accent);color:#fff;width:100%;">   </button>
             </div>
             <div class="contacts-list" id="contactsList"></div>
         </div>
 
         <!-- ============================================================
-             الشاشة: المكالمات
+             : 
              ============================================================ -->
         <div class="screen" id="callsScreen">
             <div class="app-header">
-                <h2>📞 المكالمات</h2>
+                <h2> </h2>
                 <button class="header-btn" id="callsMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
             <div class="chats-list" id="callsList"></div>
         </div>
 
         <!-- ============================================================
-             الشاشة: التحديثات (القصص والقنوات)
+             :  ( )
              ============================================================ -->
         <div class="screen" id="updatesScreen">
             <div class="app-header">
-                <h2>🔄 التحديثات</h2>
+                <h2> </h2>
                 <div class="header-actions">
                     <button class="header-btn" id="addStoryBtn"><i class="fas fa-plus-circle"></i></button>
                     <button class="header-btn" id="updatesMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
 
-            <!-- شريط القصص العلوي -->
+            <!--    -->
             <div class="story-bar" id="storyBar"></div>
 
-            <!-- زر إضافة قصة -->
+            <!--    -->
             <div style="padding: 8px 16px;">
                 <button class="promo-btn" id="addStoryBtn" style="background:var(--accent);color:#fff;width:100%;">
-                    <i class="fas fa-camera"></i> إضافة قصة جديدة
+                    <i class="fas fa-camera"></i>   
                 </button>
             </div>
 
-            <!-- قائمة القصص -->
+            <!--   -->
             <div class="section-header">
-                <h3>📖 القصص</h3>
-                <span style="color:var(--text3);font-size:12px;" id="storiesCount">0 قصة</span>
+                <h3> </h3>
+                <span style="color:var(--text3);font-size:12px;" id="storiesCount">0 </span>
             </div>
             <div id="storiesList"></div>
 
-            <!-- القنوات -->
+            <!--  -->
             <div class="section-header" style="padding-top: 8px; padding-bottom: 4px;">
-                <h3>📢 القنوات</h3>
+                <h3> </h3>
                 <button class="header-btn" id="createChannelBtn"><i class="fas fa-plus-circle"></i></button>
             </div>
             <div style="padding: 0 16px 8px;">
-                <input type="text" id="searchChannelsInput" placeholder="🔍 بحث في القنوات..." style="width:100%; padding:10px 16px; border-radius:25px; border:none; background:var(--surface3); color:var(--text); font-family:inherit; font-size:14px; outline:none; transition:all var(--transition);">
+                <input type="text" id="searchChannelsInput" placeholder="   ..." style="width:100%; padding:10px 16px; border-radius:25px; border:none; background:var(--surface3); color:var(--text); font-family:inherit; font-size:14px; outline:none; transition:all var(--transition);">
             </div>
             <div id="channelsList" style="flex:1;overflow-y:auto;"></div>
         </div>
 
         <!-- ============================================================
-             الشاشة: الأدوات
+             : 
              ============================================================ -->
         <div class="screen" id="toolsScreen">
             <div class="app-header">
-                <h2>🛠 الأدوات</h2>
+                <h2> </h2>
                 <button class="header-btn" id="toolsMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
             <div class="tools-grid">
                 <div class="stat-card">
-                    <div style="color:var(--text3);font-size:12px;margin-bottom:12px;">📊 الأداء في آخر 7 أيام</div>
+                    <div style="color:var(--text3);font-size:12px;margin-bottom:12px;">    7 </div>
                     <div class="stat-row">
-                        <div class="stat-box"><div class="stat-num" id="statViews">0</div><div class="stat-label">مشاهدات</div></div>
-                        <div class="stat-box"><div class="stat-num" id="statCatalog">0</div><div class="stat-label">الكتالوج</div></div>
-                        <div class="stat-box"><div class="stat-num" id="statChats">0</div><div class="stat-label">محادثات</div></div>
+                        <div class="stat-box"><div class="stat-num" id="statViews">0</div><div class="stat-label"></div></div>
+                        <div class="stat-box"><div class="stat-num" id="statCatalog">0</div><div class="stat-label"></div></div>
+                        <div class="stat-box"><div class="stat-num" id="statChats">0</div><div class="stat-label"></div></div>
                     </div>
                 </div>
-                <div class="promo-card"><h4>🌟 أنشئ أول إعلان لك</h4><p>يمكنك الوصول إلى عملاء جدد من خلال إعلانات Ramz-App.</p><button class="promo-btn" id="startAdBtn">بدء الاستخدام</button></div>
-                <div class="tool-row" id="catalogBtn"><div class="tool-icon"><i class="fas fa-boxes"></i></div><div class="tool-info"><div class="tool-name">الكتالوج</div><div class="tool-desc">عرض المنتجات والخدمات</div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
-                <div class="tool-row" id="broadcastBtn"><div class="tool-icon"><i class="fas fa-bullhorn"></i></div><div class="tool-info"><div class="tool-name">الرسائل الجماعية</div><div class="tool-desc">تواصل مع عملائك دفعة واحدة</div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
+                <div class="promo-card"><h4>    </h4><p>        Ramz-App.</p><button class="promo-btn" id="startAdBtn"> </button></div>
+                <div class="tool-row" id="catalogBtn"><div class="tool-icon"><i class="fas fa-boxes"></i></div><div class="tool-info"><div class="tool-name"></div><div class="tool-desc">  </div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
+                <div class="tool-row" id="broadcastBtn"><div class="tool-icon"><i class="fas fa-bullhorn"></i></div><div class="tool-info"><div class="tool-name"> </div><div class="tool-desc">    </div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
             </div>
         </div>
 
         <!-- ============================================================
-             الشاشة: الملف الشخصي
+             :  
              ============================================================ -->
         <div class="screen no-nav" id="profileScreen">
             <div class="app-header">
                 <button class="header-btn" id="backFromProfileBtn"><i class="fas fa-arrow-right"></i></button>
-                <h2>الملف الشخصي</h2>
+                <h2> </h2>
                 <button class="header-btn" id="profileMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
             <div class="profile-section">
-                <div class="profile-avatar-lg" id="profileAvatar">م</div>
+                <div class="profile-avatar-lg" id="profileAvatar"></div>
                 <div class="profile-name-lg" id="profileName"></div>
                 <div class="profile-bio-lg" id="profileBio"></div>
-                <button class="promo-btn" id="profileChatBtn" style="background:var(--accent);color:#fff;">💬 مراسلة</button>
+                <button class="promo-btn" id="profileChatBtn" style="background:var(--accent);color:#fff;"> </button>
             </div>
         </div>
 
         <!-- ============================================================
-             الشاشة: الإعدادات
+             : 
              ============================================================ -->
         <div class="screen no-nav" id="settingsScreen">
             <div class="app-header">
                 <button class="header-btn" id="closeSettingsBtn"><i class="fas fa-arrow-right"></i></button>
-                <h2>⚙️ الإعدادات</h2>
+                <h2> </h2>
                 <button class="header-btn" id="settingsMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
             <div class="settings-list">
-                <div class="setting-item" id="themeToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-moon"></i></div><span>الوضع الليلي</span></div><div class="toggle-sw active" id="themeSwitch"></div></div>
-                <div class="setting-item" id="notifToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-bell"></i></div><span>الإشعارات</span></div><div class="toggle-sw active" id="notifSwitch"></div></div>
-                <div class="setting-item" onclick="exportData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-download"></i></div><span>تصدير المحادثات</span></div><i class="fas fa-chevron-left"></i></div>
-                <div class="setting-item" onclick="importData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>استيراد النسخة الاحتياطية</span></div><i class="fas fa-chevron-left"></i></div>
-                <div class="setting-item" onclick="clearAllData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt"></i></div><span>حذف جميع المحادثات</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span>تسجيل الخروج</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v7.2 | جميع الحقوق محفوظة © 2026</p>
+                <div class="setting-item" id="themeToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-moon"></i></div><span> </span></div><div class="toggle-sw active" id="themeSwitch"></div></div>
+                <div class="setting-item" id="notifToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-bell"></i></div><span></span></div><div class="toggle-sw active" id="notifSwitch"></div></div>
+                <div class="setting-item" onclick="exportData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-download"></i></div><span> </span></div><i class="fas fa-chevron-left"></i></div>
+                <div class="setting-item" onclick="importData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>  </span></div><i class="fas fa-chevron-left"></i></div>
+                <div class="setting-item" onclick="clearAllData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt"></i></div><span>  </span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
+                <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span> </span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
+                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v7.2 |    © 2026</p>
             </div>
         </div>
 
-    </div> <!-- نهاية app-container -->
+    </div> <!--  app-container -->
 
     <!-- ================================================================
-         النوافذ المنبثقة العامة
+           
          ================================================================ -->
 
-    <!-- مودال المستخدم -->
+    <!--   -->
     <div class="modal-overlay" id="userModal">
         <button class="modal-close" id="closeModalBtn">&times;</button>
         <div class="modal-card">
-            <div class="modal-avatar" id="modalAvatar">م</div>
+            <div class="modal-avatar" id="modalAvatar"></div>
             <div class="modal-name" id="modalName"></div>
             <div class="modal-bio" id="modalBio"></div>
             <div class="modal-actions">
-                <button class="modal-action" id="modalChatBtn"><i class="fas fa-comment-dots"></i><span>محادثة</span></button>
-                <button class="modal-action" id="modalCallBtn"><i class="fas fa-phone"></i><span>اتصال</span></button>
-                <button class="modal-action" id="modalVideoBtn"><i class="fas fa-video"></i><span>مكالمة</span></button>
-                <button class="modal-action" id="modalInfoBtn"><i class="fas fa-info-circle"></i><span>معلومات</span></button>
+                <button class="modal-action" id="modalChatBtn"><i class="fas fa-comment-dots"></i><span></span></button>
+                <button class="modal-action" id="modalCallBtn"><i class="fas fa-phone"></i><span></span></button>
+                <button class="modal-action" id="modalVideoBtn"><i class="fas fa-video"></i><span></span></button>
+                <button class="modal-action" id="modalInfoBtn"><i class="fas fa-info-circle"></i><span></span></button>
             </div>
         </div>
     </div>
 
-    <!-- مودال إدارة المجموعة -->
+    <!--    -->
     <div class="modal-overlay" id="groupManagementModal">
         <button class="modal-close" id="closeGroupManagementBtn">&times;</button>
         <div class="modal-card" style="max-width: 400px; text-align: right;">
             <div id="groupManagementContent">
-                <!-- يتم ملؤه بواسطة JavaScript -->
+                <!--    JavaScript -->
             </div>
         </div>
     </div>
 
-    <!-- القائمة المنبثقة العامة -->
+    <!--    -->
     <div class="popup-overlay" id="popupOverlay">
         <div class="popup-menu" id="popupMenu"></div>
     </div>
 
-    <!-- القائمة المنبثقة للمحادثة -->
+    <!--    -->
     <div class="popup-overlay" id="chatPopupOverlay">
         <div class="popup-menu chat-popup-menu" id="chatPopupMenu">
-            <!-- القائمة الرئيسية -->
+            <!--   -->
             <div class="popup-section" id="popupMainSection">
                 <div class="popup-item" data-action="view-contact">
                     <i class="fas fa-address-card"></i>
-                    <span>عرض جهة الاتصال</span>
+                    <span>  </span>
                 </div>
                 <div class="popup-item" data-action="search">
                     <i class="fas fa-search"></i>
-                    <span>بحث</span>
+                    <span></span>
                 </div>
                 <div class="popup-item" data-action="media">
                     <i class="fas fa-photo-video"></i>
-                    <span>وسائط وروابط</span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="mute">
                     <i class="fas fa-bell-slash"></i>
-                    <span>كتم الإشعارات</span>
+                    <span> </span>
                     <span class="popup-badge" id="muteBadge"></span>
                 </div>
                 <div class="popup-item" data-action="disappear">
                     <i class="fas fa-clock"></i>
-                    <span>رسائل ذاتية الاختفاء</span>
-                    <span class="popup-badge" id="disappearBadge">إيقاف</span>
+                    <span>  </span>
+                    <span class="popup-badge" id="disappearBadge"></span>
                 </div>
                 <div class="popup-item" data-action="new-group">
                     <i class="fas fa-users"></i>
-                    <span>مجموعة جديدة</span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="theme">
                     <i class="fas fa-palette"></i>
-                    <span>سمة الدردشة</span>
-                    <span class="popup-badge" id="themeBadge">داكن</span>
+                    <span> </span>
+                    <span class="popup-badge" id="themeBadge"></span>
                 </div>
                 <div class="popup-item popup-more-item" data-action="more">
                     <i class="fas fa-ellipsis-h"></i>
-                    <span>المزيد</span>
+                    <span></span>
                     <i class="fas fa-chevron-left" style="margin-right:auto;font-size:12px;color:var(--text3);"></i>
                 </div>
             </div>
 
-            <!-- القائمة الفرعية (المزيد) -->
+            <!--   () -->
             <div class="popup-section" id="popupSubSection" style="display:none;">
                 <div class="popup-item popup-back-item" data-action="back-main">
                     <i class="fas fa-arrow-right"></i>
-                    <span>رجوع</span>
+                    <span></span>
                 </div>
                 <div class="popup-divider"></div>
                 <div class="popup-item" data-action="report">
                     <i class="fas fa-flag"></i>
-                    <span>إبلاغ</span>
+                    <span></span>
                 </div>
                 <div class="popup-item danger" data-action="block">
                     <i class="fas fa-ban"></i>
-                    <span>حظر</span>
+                    <span></span>
                 </div>
                 <div class="popup-item danger" data-action="clear-chat">
                     <i class="fas fa-trash-alt"></i>
-                    <span>مسح المحادثة</span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="transfer-chat">
                     <i class="fas fa-exchange-alt"></i>
-                    <span>نقل الدردشة</span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="add-shortcut">
                     <i class="fas fa-plus-square"></i>
-                    <span>إضافة اختصار</span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="more-options">
                     <i class="fas fa-ellipsis-h"></i>
-                    <span>المزيد (تجريبي)</span>
+                    <span> ()</span>
                 </div>
             </div>
         </div>
@@ -2173,16 +2173,16 @@
     <!-- Toast -->
     <div class="toast" id="toast"></div>
 
-    <!-- عارض الصور -->
+    <!--   -->
     <div class="image-viewer" id="imageViewer">
         <button class="image-viewer-close" id="closeImageViewer">&times;</button>
-        <img src="" alt="صورة" id="viewerImage">
+        <img src="" alt="" id="viewerImage">
     </div>
 
-    <!-- شاشة المكالمات -->
+    <!--   -->
     <div class="call-screen-overlay" id="callScreen">
-        <div class="call-avatar-lg" id="callAvatar">م</div>
-        <div class="call-status" id="callStatusText">جاري الاتصال...</div>
+        <div class="call-avatar-lg" id="callAvatar"></div>
+        <div class="call-status" id="callStatusText"> ...</div>
         <div class="call-timer" id="callTimer">00:00</div>
         <div class="call-actions-row">
             <button class="call-action-btn call-mute" id="callMuteBtn"><i class="fas fa-microphone"></i></button>
@@ -2195,22 +2195,22 @@
         </div>
     </div>
 
-    <!-- زر تثبيت PWA -->
-    <button id="installAppBtn"><i class="fas fa-download"></i> تثبيت التطبيق</button>
+    <!--   PWA -->
+    <button id="installAppBtn"><i class="fas fa-download"></i>  </button>
 
     <!-- ================================================================
-         الشريط السفلي
+          
          ================================================================ -->
     <div class="bottom-nav" id="bottomNav" style="display:none;">
-        <button class="nav-item active" data-nav="chats"><i class="fas fa-comment-dots"></i><span>الدردشات</span></button>
-        <button class="nav-item" data-nav="contacts"><i class="fas fa-address-book"></i><span>جهات الاتصال</span></button>
-        <button class="nav-item" data-nav="calls"><i class="fas fa-phone"></i><span>المكالمات</span></button>
-        <button class="nav-item" data-nav="updates"><i class="fas fa-sync-alt"></i><span>التحديثات</span></button>
-        <button class="nav-item" data-nav="tools"><i class="fas fa-tools"></i><span>الأدوات</span></button>
+        <button class="nav-item active" data-nav="chats"><i class="fas fa-comment-dots"></i><span></span></button>
+        <button class="nav-item" data-nav="contacts"><i class="fas fa-address-book"></i><span> </span></button>
+        <button class="nav-item" data-nav="calls"><i class="fas fa-phone"></i><span></span></button>
+        <button class="nav-item" data-nav="updates"><i class="fas fa-sync-alt"></i><span></span></button>
+        <button class="nav-item" data-nav="tools"><i class="fas fa-tools"></i><span></span></button>
     </div>
 
     <!-- ================================================================
-         تحميل السكربتات
+          
          ================================================================ -->
     <script src="db.js"></script>
     <script src="supabase.js"></script>
@@ -2218,7 +2218,7 @@
     <script src="common.js"></script>
 
     <!-- ================================================================
-         فحص المستخدم والتوجيه
+           
          ================================================================ -->
     <script>
         (function() {
@@ -2234,7 +2234,7 @@
                     window.location.href = 'login.html';
                     return;
                 }
-                console.log('✅ مستخدم موجود:', user.name);
+                console.log('  :', user.name);
             } catch (e) {
                 localStorage.removeItem('ramzapp_user');
                 window.location.href = 'login.html';
@@ -2248,10 +2248,10 @@
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js')
                     .then(function(registration) {
-                        console.log('✅ Service Worker registered successfully:', registration);
+                        console.log(' Service Worker registered successfully:', registration);
                     })
                     .catch(function(err) {
-                        console.warn('⚠️ Service Worker registration failed:', err);
+                        console.warn(' Service Worker registration failed:', err);
                     });
             });
         }
@@ -2268,8 +2268,8 @@
                         deferredPrompt.prompt();
                         deferredPrompt.userChoice.then((choiceResult) => {
                             if (choiceResult.outcome === 'accepted') {
-                                console.log('✅ تم تثبيت التطبيق');
-                                toast('✅ تم تثبيت RamzApp على جهازك');
+                                console.log('   ');
+                                toast('   RamzApp  ');
                             }
                             deferredPrompt = null;
                         });
@@ -2279,8 +2279,8 @@
         });
 
         window.addEventListener('appinstalled', (evt) => {
-            console.log('✅ RamzApp installed successfully');
-            toast('🎉 شكراً لتثبيت RamzApp!');
+            console.log(' RamzApp installed successfully');
+            toast('   RamzApp!');
         });
     </script>
 
