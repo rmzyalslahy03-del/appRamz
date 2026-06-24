@@ -1,84 +1,252 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- ======================================================================
-     sitemap.xml - خريطة الموقع لتطبيق RamzApp v7.4
-     إرشادات لمحركات البحث لفهرسة الصفحات العامة
+     sitemap.xml - الإصدار النهائي الكلي v1.0
+     خريطة الموقع لتطبيق RamzApp (PWA - مراسلة آمنة ومتكاملة)
+     تاريخ التحديث: 2026-06-25
+     رابط التطبيق: https://appramz.vercel.app/
      ====================================================================== -->
 
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml"
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
-        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0"
+        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+
+    <!-- ======================================================================
+         الصفحات الرئيسية (ذات الأولوية القصوى)
+         ====================================================================== -->
 
     <!-- ===== الصفحة الرئيسية ===== -->
     <url>
-        <loc>https://ramzapp.com/index.html</loc>
+        <loc>https://appramz.vercel.app/</loc>
         <lastmod>2026-06-25</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
-        <xhtml:link rel="alternate" hreflang="ar" href="https://ramzapp.com/index.html" />
-        <xhtml:link rel="alternate" hreflang="en" href="https://ramzapp.com/index.html" />
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/" />
         <image:image>
-            <image:loc>https://ramzapp.com/assets/icons/icon-512x512.png</image:loc>
+            <image:loc>https://appramz.vercel.app/assets/icons/icon-512x512.png</image:loc>
             <image:title>RamzApp - تطبيق مراسلة آمن ومتكامل</image:title>
+            <image:caption>تطبيق مراسلة فوري مع تشفير من طرف إلى طرف</image:caption>
+        </image:image>
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/screenshots/screenshot1.png</image:loc>
+            <image:title>شاشة المحادثات الرئيسية</image:title>
         </image:image>
     </url>
 
-    <!-- ===== صفحة تسجيل الدخول (عامة) ===== -->
+    <!-- ===== صفحة تسجيل الدخول ===== -->
     <url>
-        <loc>https://ramzapp.com/login.html</loc>
+        <loc>https://appramz.vercel.app/login.html</loc>
         <lastmod>2026-06-25</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
-        <xhtml:link rel="alternate" hreflang="ar" href="https://ramzapp.com/login.html" />
-        <xhtml:link rel="alternate" hreflang="en" href="https://ramzapp.com/login.html" />
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/login.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/login.html" />
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/icons/icon-192x192.png</image:loc>
+            <image:title>تسجيل الدخول إلى RamzApp</image:title>
+        </image:image>
     </url>
 
-    <!-- ===== صفحة القنوات (للعرض العام) ===== -->
+    <!-- ======================================================================
+         الصفحات العامة (ذات الأولوية المتوسطة)
+         ====================================================================== -->
+
+    <!-- ===== صفحة القنوات ===== -->
     <url>
-        <loc>https://ramzapp.com/channel.html</loc>
+        <loc>https://appramz.vercel.app/channel.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.7</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/channel.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/channel.html" />
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/icons/icon-192x192.png</image:loc>
+            <image:title>القنوات في RamzApp</image:title>
+        </image:image>
+    </url>
+
+    <!-- ===== صفحة منشورات القناة ===== -->
+    <url>
+        <loc>https://appramz.vercel.app/channel-feed.html</loc>
         <lastmod>2026-06-25</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.6</priority>
-        <xhtml:link rel="alternate" hreflang="ar" href="https://ramzapp.com/channel.html" />
-        <xhtml:link rel="alternate" hreflang="en" href="https://ramzapp.com/channel.html" />
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/channel-feed.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/channel-feed.html" />
     </url>
 
-    <!-- ===== صفحة الإعدادات (عامة جزئياً) ===== -->
+    <!-- ===== صفحة الإعدادات ===== -->
     <url>
-        <loc>https://ramzapp.com/settings.html</loc>
+        <loc>https://appramz.vercel.app/settings.html</loc>
         <lastmod>2026-06-25</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.5</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/settings.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/settings.html" />
     </url>
 
-    <!-- ===== صفحة تعديل الملف الشخصي (عامة جزئياً) ===== -->
+    <!-- ===== صفحة تعديل الملف الشخصي ===== -->
     <url>
-        <loc>https://ramzapp.com/edit-profile.html</loc>
+        <loc>https://appramz.vercel.app/edit-profile.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/edit-profile.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/edit-profile.html" />
+    </url>
+
+    <!-- ===== صفحة إعادة التوجيه (الروابط المباشرة) ===== -->
+    <url>
+        <loc>https://appramz.vercel.app/redirect.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.4</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://appramz.vercel.app/redirect.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://appramz.vercel.app/en/redirect.html" />
+    </url>
+
+    <!-- ======================================================================
+         صفحات إضافية (اختيارية – يمكن تفعيلها لاحقاً)
+         ====================================================================== -->
+
+    <!--
+    <url>
+        <loc>https://appramz.vercel.app/about.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/privacy.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/terms.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/help.html</loc>
         <lastmod>2026-06-25</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.4</priority>
     </url>
 
-    <!-- ===== صفحات إضافية (اختياري) ===== -->
+    <url>
+        <loc>https://appramz.vercel.app/faq.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.4</priority>
+    </url>
+    -->
+
+    <!-- ======================================================================
+         صفحات PWA (للتثبيت والتحديثات)
+         ====================================================================== -->
+
+    <url>
+        <loc>https://appramz.vercel.app/manifest.json</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.1</priority>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/sw.js</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.1</priority>
+    </url>
+
+    <!-- ======================================================================
+         روابط الأيقونات (لضمان فهرستها)
+         ====================================================================== -->
+
+    <!-- أيقونات PWA -->
+    <url>
+        <loc>https://appramz.vercel.app/assets/icons/icon-512x512.png</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.1</priority>
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/icons/icon-512x512.png</image:loc>
+            <image:title>شعار RamzApp (512x512)</image:title>
+        </image:image>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/assets/icons/icon-192x192.png</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.1</priority>
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/icons/icon-192x192.png</image:loc>
+            <image:title>شعار RamzApp (192x192)</image:title>
+        </image:image>
+    </url>
+
+    <!-- ======================================================================
+         لقطات الشاشة (لظهورها في نتائج البحث)
+         ====================================================================== -->
+
+    <url>
+        <loc>https://appramz.vercel.app/assets/screenshots/screenshot1.png</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.1</priority>
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/screenshots/screenshot1.png</image:loc>
+            <image:title>شاشة المحادثات الرئيسية في RamzApp</image:title>
+            <image:caption>واجهة الدردشات مع قائمة المحادثات</image:caption>
+        </image:image>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/assets/screenshots/screenshot2.png</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.1</priority>
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/screenshots/screenshot2.png</image:loc>
+            <image:title>شاشة الدردشة والمحادثة في RamzApp</image:title>
+            <image:caption>واجهة المحادثة مع الرسائل</image:caption>
+        </image:image>
+    </url>
+
+    <url>
+        <loc>https://appramz.vercel.app/assets/screenshots/screenshot3.png</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.1</priority>
+        <image:image>
+            <image:loc>https://appramz.vercel.app/assets/screenshots/screenshot3.png</image:loc>
+            <image:title>جهات الاتصال والقنوات في RamzApp</image:title>
+            <image:caption>واجهة جهات الاتصال والقنوات</image:caption>
+        </image:image>
+    </url>
+
+    <!-- ======================================================================
+         ملاحظات للمطورين:
+         ====================================================================== -->
     <!--
-    <url>
-        <loc>https://ramzapp.com/about.html</loc>
-        <lastmod>2026-06-25</lastmod>
-        <changefreq>yearly</changefreq>
-        <priority>0.3</priority>
-    </url>
-    <url>
-        <loc>https://ramzapp.com/privacy.html</loc>
-        <lastmod>2026-06-25</lastmod>
-        <changefreq>yearly</changefreq>
-        <priority>0.3</priority>
-    </url>
-    <url>
-        <loc>https://ramzapp.com/terms.html</loc>
-        <lastmod>2026-06-25</lastmod>
-        <changefreq>yearly</changefreq>
-        <priority>0.3</priority>
-    </url>
+    1. هذا الملف يُوضع في جذر الموقع (https://appramz.vercel.app/sitemap.xml)
+    2. يتم تحديثه تلقائياً عند إضافة صفحات جديدة.
+    3. يمكن التحقق من صحة الملف عبر:
+       - https://www.xml-sitemaps.com/validate-xml-sitemap.html
+       - Google Search Console
+    4. يُوصى بإعادة إرسال الملف إلى Google Search Console بعد كل تحديث.
+    5. لتحديث التواريخ، يُرجى تغيير قيمة lastmod في كل صفحة.
+    6. الأولوية (priority) تتراوح بين 0.0 و 1.0
+    7. تغيير التردد (changefreq): always, hourly, daily, weekly, monthly, yearly, never
     -->
 
 </urlset>
