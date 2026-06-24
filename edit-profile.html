@@ -13,7 +13,7 @@
 
     <style>
         /* ======================================================================
-                   الأنماط الأساسية – متوافقة مع RamzApp v5.0
+                   الأنماط الأساسية – متوافقة مع RamzApp v7.4
                    ====================================================================== */
         :root {
             --bg: #0d0d0d;
@@ -29,6 +29,8 @@
             --green: #00a884;
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
             --font: 'Cairo', 'Segoe UI', 'Arial', sans-serif;
+            --radius: 20px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .light-theme {
             --bg: #f0f2f5;
@@ -47,7 +49,7 @@
             background: var(--bg);
             font-family: var(--font);
             color: var(--text);
-            transition: background 0.2s, color 0.2s;
+            transition: background var(--transition), color var(--transition);
             min-height: 100vh;
             padding-bottom: 30px;
         }
@@ -102,7 +104,7 @@
 
         /* ===== المحتوى ===== */
         .container {
-            max-width: 500px;
+            max-width: 600px;
             margin: 0 auto;
             padding: 16px;
         }
@@ -112,20 +114,25 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
         }
         .avatar-wrapper {
             position: relative;
-            width: 120px;
-            height: 120px;
+            width: 130px;
+            height: 130px;
             border-radius: 50%;
             border: 4px solid var(--accent);
             overflow: hidden;
             background: var(--surface2);
             cursor: pointer;
             transition: 0.2s;
+            box-shadow: 0 4px 20px rgba(255, 0, 80, 0.15);
         }
-        .avatar-wrapper:hover { opacity: 0.85; }
+        .avatar-wrapper:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 30px rgba(255, 0, 80, 0.25);
+        }
+        .avatar-wrapper:active { transform: scale(0.97); }
         .avatar-wrapper img {
             width: 100%;
             height: 100%;
@@ -137,22 +144,25 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 48px;
+            font-size: 52px;
             font-weight: 700;
-            color: var(--text);
+            color: #fff;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            opacity: 0.8;
         }
         .avatar-upload-overlay {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.75);
             color: #fff;
             text-align: center;
-            padding: 6px;
-            font-size: 11px;
+            padding: 8px;
+            font-size: 12px;
             font-weight: 600;
             display: none;
+            backdrop-filter: blur(4px);
         }
         .avatar-wrapper:hover .avatar-upload-overlay { display: block; }
         .avatar-hint {
@@ -161,7 +171,7 @@
             margin-top: 8px;
         }
 
-        /* ===== الحقول ===== */
+        /* ===== حقول الإدخال ===== */
         .input-group {
             margin-bottom: 20px;
         }
@@ -172,39 +182,81 @@
             font-size: 14px;
             color: var(--text2);
         }
-        .input-group input,
-        .input-group textarea {
-            width: 100%;
-            padding: 12px 16px;
+        .input-group .field-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: var(--surface2);
             border-radius: 16px;
             border: 2px solid var(--border);
-            background: var(--surface2);
+            transition: 0.2s;
+        }
+        .input-group .field-wrapper:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(255, 0, 80, 0.08);
+        }
+        .input-group .field-wrapper .icon-left {
+            padding: 0 12px 0 4px;
+            color: var(--text3);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .input-group .field-wrapper input,
+        .input-group .field-wrapper textarea {
+            width: 100%;
+            padding: 14px 16px 14px 0;
+            border: none;
+            background: transparent;
             color: var(--text);
             font-family: inherit;
             font-size: 16px;
             outline: none;
-            transition: 0.2s;
             resize: vertical;
         }
-        .input-group input:focus,
-        .input-group textarea:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px rgba(255, 0, 80, 0.08);
+        .input-group .field-wrapper textarea {
+            min-height: 70px;
+            padding: 14px 16px 14px 0;
         }
-        .input-group textarea {
-            min-height: 80px;
-        }
-        .char-count {
-            text-align: left;
+        .input-group .field-wrapper .char-counter {
+            position: absolute;
+            bottom: 6px;
+            left: 12px;
             font-size: 11px;
             color: var(--text3);
-            margin-top: 4px;
         }
+        .input-group .field-wrapper .clear-btn {
+            background: none;
+            border: none;
+            color: var(--text3);
+            cursor: pointer;
+            padding: 0 12px;
+            font-size: 16px;
+            display: none;
+            transition: 0.15s;
+        }
+        .input-group .field-wrapper .clear-btn:hover { color: var(--text); }
+        .input-group .field-wrapper .clear-btn.visible { display: block; }
 
+        /* ===== حقل رقم الهاتف (للقراءة فقط) ===== */
+        .phone-display {
+            background: var(--surface3);
+            border-radius: 16px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text3);
+            font-size: 15px;
+            border: 1px solid var(--border);
+        }
+        .phone-display i { font-size: 18px; color: var(--green); }
+        .phone-display .number { color: var(--text); font-weight: 600; }
+
+        /* ===== الفاصل ===== */
         .divider {
             border: none;
             border-top: 1px solid var(--border);
-            margin: 16px 0;
+            margin: 20px 0;
         }
 
         /* ===== معلومات إضافية ===== */
@@ -218,19 +270,26 @@
             align-items: center;
             gap: 12px;
             margin-bottom: 16px;
+            border: 1px solid var(--border);
         }
         .info-note i { color: var(--green); font-size: 20px; }
 
-        /* ===== زر الحذف ===== */
+        /* ===== زر حذف الصورة ===== */
         .delete-btn {
             background: transparent !important;
             border: 1px solid #ff4444 !important;
             color: #ff4444 !important;
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             margin-top: 8px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.2s;
         }
-        .delete-btn:active { transform: scale(0.95); }
+        .delete-btn:hover { background: rgba(255, 68, 68, 0.08); }
+        .delete-btn:active { transform: scale(0.97); }
 
         /* ===== Toast ===== */
         .toast {
@@ -264,24 +323,26 @@
             z-index: 2000;
             flex-direction: column;
             gap: 16px;
+            backdrop-filter: blur(6px);
         }
         .loading-overlay.show { display: flex; }
         .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255,255,255,0.2);
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(255,255,255,0.15);
             border-top-color: var(--accent);
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { color: #fff; font-size: 14px; }
+        .loading-text { color: #fff; font-size: 16px; font-weight: 600; }
 
-        /* ===== توافق ===== */
+        /* ===== توافق مع الشاشات الصغيرة ===== */
         @media (max-width: 400px) {
             .avatar-wrapper { width: 100px; height: 100px; }
-            .avatar-wrapper .avatar-placeholder { font-size: 36px; }
-            .input-group input { font-size: 14px; }
+            .avatar-wrapper .avatar-placeholder { font-size: 38px; }
+            .input-group .field-wrapper input { font-size: 14px; }
+            .header h2 { font-size: 16px; }
         }
     </style>
 </head>
@@ -305,21 +366,38 @@
                 <div class="avatar-upload-overlay"><i class="fas fa-camera"></i> تغيير الصورة</div>
             </div>
             <input type="file" id="avatarInput" accept="image/*" style="display:none;">
-            <div class="avatar-hint">اضغط على الصورة لتغييرها</div>
+            <div class="avatar-hint">اضغط على الصورة لتغييرها (JPG, PNG, WEBP)</div>
         </div>
 
         <!-- الاسم -->
         <div class="input-group">
             <label for="nameInput">الاسم</label>
-            <input type="text" id="nameInput" placeholder="أدخل اسمك" maxlength="50">
-            <div class="char-count"><span id="nameCount">0</span>/50</div>
+            <div class="field-wrapper">
+                <span class="icon-left"><i class="fas fa-user"></i></span>
+                <input type="text" id="nameInput" placeholder="أدخل اسمك" maxlength="50">
+                <button class="clear-btn" id="clearNameBtn"><i class="fas fa-times-circle"></i></button>
+                <span class="char-counter" id="nameCounter">0/50</span>
+            </div>
         </div>
 
         <!-- الحالة (Bio) -->
         <div class="input-group">
             <label for="bioInput">الحالة</label>
-            <textarea id="bioInput" placeholder="أكتب شيئاً عن نفسك..." maxlength="150"></textarea>
-            <div class="char-count"><span id="bioCount">0</span>/150</div>
+            <div class="field-wrapper">
+                <span class="icon-left"><i class="fas fa-pen"></i></span>
+                <textarea id="bioInput" placeholder="أكتب شيئاً عن نفسك..." maxlength="150" rows="2"></textarea>
+                <span class="char-counter" id="bioCounter">0/150</span>
+            </div>
+        </div>
+
+        <!-- رقم الهاتف (للقراءة فقط) -->
+        <div class="input-group">
+            <label>رقم الهاتف</label>
+            <div class="phone-display">
+                <i class="fas fa-phone"></i>
+                <span class="number" id="phoneDisplay">-</span>
+                <span style="margin-right:auto;font-size:12px;color:var(--text3);">(غير قابل للتعديل)</span>
+            </div>
         </div>
 
         <hr class="divider">
@@ -327,12 +405,17 @@
         <!-- معلومات إضافية -->
         <div class="info-note">
             <i class="fas fa-shield-alt"></i>
-            <span>بياناتك الشخصية مشفرة وآمنة. يتم تحديثها على جهازك وفي السحابة العامة.</span>
+            <span>بياناتك الشخصية مشفرة وآمنة. يتم تحديثها على جهازك وفي السحابة.</span>
         </div>
 
         <!-- زر حذف الصورة -->
-        <button class="save-btn delete-btn" id="deletePhotoBtn">
+        <button class="delete-btn" id="deletePhotoBtn">
             <i class="fas fa-trash-alt"></i> حذف الصورة
+        </button>
+
+        <!-- زر حفظ إضافي (أسفل الصفحة) -->
+        <button class="save-btn" id="saveBtnBottom" style="width:100%;margin-top:16px;padding:14px;font-size:16px;">
+            <i class="fas fa-save"></i> حفظ التغييرات
         </button>
     </div>
 
@@ -394,17 +477,22 @@
             const avatarInput = document.getElementById('avatarInput');
             const nameInput = document.getElementById('nameInput');
             const bioInput = document.getElementById('bioInput');
-            const nameCount = document.getElementById('nameCount');
-            const bioCount = document.getElementById('bioCount');
+            const nameCounter = document.getElementById('nameCounter');
+            const bioCounter = document.getElementById('bioCounter');
+            const clearNameBtn = document.getElementById('clearNameBtn');
+            const phoneDisplay = document.getElementById('phoneDisplay');
             const saveBtn = document.getElementById('saveBtn');
+            const saveBtnBottom = document.getElementById('saveBtnBottom');
             const backBtn = document.getElementById('backBtn');
             const deletePhotoBtn = document.getElementById('deletePhotoBtn');
             const loadingOverlay = document.getElementById('loadingOverlay');
 
-            let avatarFile = null;          // ملف الصورة المرفوع
-            let currentAvatarUrl = null;    // الرابط الحالي للصورة
+            let avatarFile = null;
+            let currentAvatarUrl = null;
             let originalName = '';
             let originalBio = '';
+            let originalAvatarUrl = null;
+            let hasUnsavedChanges = false;
 
             // ================================================================
             // تحميل بيانات المستخدم
@@ -417,21 +505,32 @@
                     return;
                 }
 
-                // تعيين الاسم والحالة من localStorage أولاً
                 nameInput.value = user.name || '';
                 bioInput.value = user.bio || '';
                 originalName = user.name || '';
                 originalBio = user.bio || '';
-                updateCharCounts();
+                originalAvatarUrl = user.avatar || null;
+                currentAvatarUrl = user.avatar || null;
 
-                // محاولة جلب أحدث البيانات من Supabase
+                phoneDisplay.textContent = user.phone || user.id || 'غير متاح';
+
+                if (user.avatar && user.avatar.startsWith('http')) {
+                    displayAvatar(user.avatar);
+                } else {
+                    displayAvatar(null);
+                }
+
+                updateCharCounts();
+                updateClearButton();
+                updateUnsavedChanges();
+
                 const supabase = getSupabase();
-                if (supabase && user.id) {
+                if (supabase && user.phone) {
                     try {
                         const { data, error } = await supabase
                             .from('users')
-                            .select('name, avatar_url, bio')
-                            .eq('id', user.id)
+                            .select('name, avatar_url, bio, phone')
+                            .eq('phone', user.phone)
                             .single();
                         if (!error && data) {
                             if (data.name) {
@@ -444,23 +543,23 @@
                             }
                             if (data.avatar_url) {
                                 currentAvatarUrl = data.avatar_url;
+                                originalAvatarUrl = data.avatar_url;
                                 displayAvatar(data.avatar_url);
                             }
-                            // تحديث localStorage
-                            const updatedUser = { ...user, name: data.name, bio: data.bio, avatar: data.avatar_url };
+                            if (data.phone) {
+                                phoneDisplay.textContent = data.phone;
+                            }
+                            const updatedUser = { ...user, name: data.name, bio: data.bio, avatar: data.avatar_url, phone: data
+                                    .phone };
                             localStorage.setItem('ramzapp_user', JSON.stringify(updatedUser));
                             if (window.inMemoryDB) window.inMemoryDB.user = updatedUser;
                         }
                     } catch (e) { /* ignore */ }
                 }
 
-                // إذا كانت هناك صورة محلية في localStorage ولم تكن في Supabase
-                if (!currentAvatarUrl && user.avatar) {
-                    currentAvatarUrl = user.avatar;
-                    displayAvatar(user.avatar);
-                }
-
                 updateCharCounts();
+                updateClearButton();
+                updateUnsavedChanges();
             }
 
             // ================================================================
@@ -470,20 +569,21 @@
                 if (!url) {
                     avatarPlaceholder.style.display = 'flex';
                     avatarImg.style.display = 'none';
+                    avatarImg.src = '';
+                    currentAvatarUrl = null;
                     return;
                 }
-                // إذا كانت data URL أو رابط
                 if (url.startsWith('data:') || url.startsWith('http')) {
                     avatarImg.src = url;
                     avatarImg.style.display = 'block';
                     avatarPlaceholder.style.display = 'none';
                     currentAvatarUrl = url;
                 } else {
-                    // افتراضي: استخدام الحرف الأول
                     const name = nameInput.value || 'م';
                     avatarPlaceholder.textContent = name.charAt(0).toUpperCase();
                     avatarPlaceholder.style.display = 'flex';
                     avatarImg.style.display = 'none';
+                    currentAvatarUrl = null;
                 }
             }
 
@@ -491,39 +591,128 @@
             // تحديث عداد الأحرف
             // ================================================================
             function updateCharCounts() {
-                nameCount.textContent = nameInput.value.length;
-                bioCount.textContent = bioInput.value.length;
+                const nameLen = nameInput.value.length;
+                const bioLen = bioInput.value.length;
+                nameCounter.textContent = nameLen + '/50';
+                bioCounter.textContent = bioLen + '/150';
+                nameCounter.style.color = nameLen > 45 ? '#ff4444' : 'var(--text3)';
+                bioCounter.style.color = bioLen > 135 ? '#ff4444' : 'var(--text3)';
             }
 
             // ================================================================
-            // رفع الصورة إلى Supabase Storage
+            // إظهار/إخفاء زر المسح
             // ================================================================
-            async function uploadAvatar(file) {
+            function updateClearButton() {
+                clearNameBtn.classList.toggle('visible', nameInput.value.length > 0);
+            }
+
+            // ================================================================
+            // التحقق من وجود تغييرات غير محفوظة (محسّن)
+            // ================================================================
+            function updateUnsavedChanges() {
+                const currentName = nameInput.value.trim();
+                const currentBio = bioInput.value.trim();
+                const nameChanged = currentName !== originalName;
+                const bioChanged = currentBio !== originalBio;
+                const avatarChanged = avatarFile !== null || currentAvatarUrl !== originalAvatarUrl;
+                hasUnsavedChanges = nameChanged || bioChanged || avatarChanged;
+                return hasUnsavedChanges;
+            }
+
+            // ================================================================
+            // رفع الصورة إلى Supabase Storage مع إعادة المحاولة
+            // ================================================================
+            async function uploadAvatar(file, retries = 2) {
                 const supabase = getSupabase();
                 if (!supabase) throw new Error('Supabase غير متاح');
 
                 const user = getCurrentUser();
-                if (!user || !user.id) throw new Error('المستخدم غير مسجل');
+                if (!user || !user.phone) throw new Error('المستخدم غير مسجل');
 
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${user.id}_${Date.now()}.${fileExt}`;
+                // ضغط الصورة
+                let processedFile = file;
+                if (file.size > 2 * 1024 * 1024) {
+                    try {
+                        processedFile = await compressImage(file);
+                    } catch (e) {
+                        console.warn('⚠️ فشل ضغط الصورة، سيتم رفعها بحجمها الأصلي', e);
+                    }
+                }
+
+                const fileExt = processedFile.name.split('.').pop() || 'jpg';
+                const fileName = `${user.phone}_${Date.now()}.${fileExt}`;
                 const filePath = `avatars/${fileName}`;
 
-                const { error: uploadError } = await supabase.storage
-                    .from('ramz-images')
-                    .upload(filePath, file, { cacheControl: '3600', upsert: true });
+                let lastError = null;
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        const { error: uploadError } = await supabase.storage
+                            .from('ramz-images')
+                            .upload(filePath, processedFile, {
+                                cacheControl: '3600',
+                                upsert: true,
+                                contentType: processedFile.type || 'image/jpeg'
+                            });
 
-                if (uploadError) throw uploadError;
+                        if (uploadError) throw uploadError;
 
-                const { data: urlData } = supabase.storage
-                    .from('ramz-images')
-                    .getPublicUrl(filePath);
+                        const { data: urlData } = supabase.storage
+                            .from('ramz-images')
+                            .getPublicUrl(filePath);
 
-                return urlData.publicUrl;
+                        return urlData.publicUrl;
+                    } catch (err) {
+                        console.warn(`⚠️ محاولة الرفع ${attempt + 1} فشلت:`, err);
+                        lastError = err;
+                        if (attempt < retries) {
+                            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+                        }
+                    }
+                }
+                throw lastError || new Error('فشل رفع الصورة بعد عدة محاولات');
             }
 
             // ================================================================
-            // حفظ التغييرات
+            // ضغط الصورة
+            // ================================================================
+            function compressImage(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            const maxSize = 800;
+                            if (width > maxSize || height > maxSize) {
+                                const ratio = Math.min(maxSize / width, maxSize / height);
+                                width = Math.round(width * ratio);
+                                height = Math.round(height * ratio);
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            canvas.toBlob((blob) => {
+                                if (blob) {
+                                    const compressedFile = new File([blob], file.name, { type: 'image/jpeg' });
+                                    resolve(compressedFile);
+                                } else {
+                                    reject(new Error('فشل ضغط الصورة'));
+                                }
+                            }, 'image/jpeg', 0.8);
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // ================================================================
+            // حفظ التغييرات (محسّن بالكامل مع استخدام phone بدلاً من id)
             // ================================================================
             async function saveChanges() {
                 const name = nameInput.value.trim();
@@ -536,23 +725,31 @@
                 }
 
                 saveBtn.disabled = true;
+                saveBtnBottom.disabled = true;
                 loadingOverlay.classList.add('show');
 
                 try {
                     const supabase = getSupabase();
                     const user = getCurrentUser();
-                    if (!supabase || !user || !user.id) {
-                        throw new Error('بيانات المستخدم غير مكتملة');
+                    if (!supabase || !user || !user.phone) {
+                        throw new Error('بيانات المستخدم غير مكتملة (رقم الهاتف مطلوب)');
                     }
 
                     let avatarUrl = currentAvatarUrl;
 
-                    // رفع الصورة إذا تم اختيار ملف جديد
                     if (avatarFile) {
-                        avatarUrl = await uploadAvatar(avatarFile);
+                        try {
+                            avatarUrl = await uploadAvatar(avatarFile);
+                        } catch (uploadError) {
+                            console.error('❌ فشل رفع الصورة:', uploadError);
+                            toast('⚠️ فشل رفع الصورة: ' + (uploadError.message || 'خطأ في الشبكة أو صلاحيات التخزين'));
+                            saveBtn.disabled = false;
+                            saveBtnBottom.disabled = false;
+                            loadingOverlay.classList.remove('show');
+                            return;
+                        }
                     }
 
-                    // تحديث في Supabase (جدول users)
                     const updates = {
                         name: name,
                         bio: bio,
@@ -560,14 +757,21 @@
                         updated_at: new Date().toISOString()
                     };
 
+                    // استخدام phone بدلاً من id لأن جدول users يستخدم phone كمفتاح أساسي
                     const { error } = await supabase
                         .from('users')
                         .update(updates)
-                        .eq('id', user.id);
+                        .eq('phone', user.phone);
 
                     if (error) throw error;
 
-                    // تحديث localStorage و inMemoryDB
+                    // تحديث جميع المتغيرات بعد نجاح الحفظ
+                    originalName = name;
+                    originalBio = bio;
+                    originalAvatarUrl = avatarUrl;
+                    currentAvatarUrl = avatarUrl;
+                    avatarFile = null;
+
                     const updatedUser = {
                         ...user,
                         name: name,
@@ -577,8 +781,6 @@
                     localStorage.setItem('ramzapp_user', JSON.stringify(updatedUser));
                     if (window.inMemoryDB) window.inMemoryDB.user = updatedUser;
 
-                    // تحديث الواجهة المحلية
-                    currentAvatarUrl = avatarUrl;
                     if (avatarUrl) {
                         displayAvatar(avatarUrl);
                     } else {
@@ -587,18 +789,19 @@
                         avatarImg.style.display = 'none';
                     }
 
-                    // تحديث اسم المستخدم في جميع المحادثات المحلية
+                    hasUnsavedChanges = false;
+
                     const chats = window.getChats ? window.getChats() : [];
                     for (const chat of chats) {
-                        if (chat.id === user.id) {
+                        if (chat.id === user.phone || chat.phone === user.phone) {
                             chat.name = name;
+                            chat.avatar = avatarUrl || chat.avatar;
                             window.saveChat ? window.saveChat(chat) : null;
                         }
                     }
 
                     toast('✅ تم حفظ التغييرات بنجاح');
 
-                    // إعادة توجيه بعد فترة قصيرة
                     setTimeout(() => {
                         window.location.href = 'settings.html';
                     }, 1200);
@@ -608,6 +811,7 @@
                     toast('❌ فشل حفظ التغييرات: ' + (e.message || 'خطأ غير معروف'));
                 } finally {
                     saveBtn.disabled = false;
+                    saveBtnBottom.disabled = false;
                     loadingOverlay.classList.remove('show');
                 }
             }
@@ -616,47 +820,20 @@
             // حذف الصورة
             // ================================================================
             async function deleteAvatar() {
-                if (!currentAvatarUrl) {
+                if (!currentAvatarUrl && !originalAvatarUrl) {
                     toast('⚠️ لا توجد صورة لحذفها');
                     return;
                 }
                 if (!confirm('هل أنت متأكد من حذف الصورة؟')) return;
 
-                const supabase = getSupabase();
-                const user = getCurrentUser();
-
-                // تحديث في Supabase (تعيين avatar_url = null)
-                if (supabase && user && user.id) {
-                    try {
-                        await supabase
-                            .from('users')
-                            .update({ avatar_url: null })
-                            .eq('id', user.id);
-                    } catch (e) { /* ignore */ }
-                }
-
-                // تحديث محلياً
                 currentAvatarUrl = null;
                 avatarFile = null;
                 avatarPlaceholder.textContent = (nameInput.value || 'م').charAt(0).toUpperCase();
                 avatarPlaceholder.style.display = 'flex';
                 avatarImg.style.display = 'none';
                 avatarImg.src = '';
-
-                const updatedUser = { ...user, avatar: null };
-                localStorage.setItem('ramzapp_user', JSON.stringify(updatedUser));
-                if (window.inMemoryDB) window.inMemoryDB.user = updatedUser;
-
-                toast('🗑 تم حذف الصورة');
-            }
-
-            // ================================================================
-            // التحقق من وجود تغييرات غير محفوظة
-            // ================================================================
-            function hasUnsavedChanges() {
-                const currentName = nameInput.value.trim();
-                const currentBio = bioInput.value.trim();
-                return (currentName !== originalName || currentBio !== originalBio || avatarFile !== null);
+                hasUnsavedChanges = true;
+                toast('🗑 تم حذف الصورة (اضغط حفظ لتأكيد التغيير)');
             }
 
             // ================================================================
@@ -664,19 +841,30 @@
             // ================================================================
             document.addEventListener('DOMContentLoaded', function() {
 
-                // تحميل البيانات
                 loadUserData();
 
-                // عدادات الأحرف
-                nameInput.addEventListener('input', updateCharCounts);
-                bioInput.addEventListener('input', updateCharCounts);
+                nameInput.addEventListener('input', () => {
+                    updateCharCounts();
+                    updateClearButton();
+                    updateUnsavedChanges();
+                });
+                bioInput.addEventListener('input', () => {
+                    updateCharCounts();
+                    updateUnsavedChanges();
+                });
 
-                // فتح نافذة اختيار الصورة
+                clearNameBtn.addEventListener('click', () => {
+                    nameInput.value = '';
+                    nameInput.focus();
+                    updateCharCounts();
+                    updateClearButton();
+                    updateUnsavedChanges();
+                });
+
                 avatarWrapper.addEventListener('click', () => {
                     avatarInput.click();
                 });
 
-                // معالجة اختيار الصورة
                 avatarInput.addEventListener('change', function(e) {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -684,8 +872,8 @@
                         toast('⚠️ يرجى اختيار صورة فقط');
                         return;
                     }
-                    if (file.size > 5 * 1024 * 1024) {
-                        toast('⚠️ حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                    if (file.size > 10 * 1024 * 1024) {
+                        toast('⚠️ حجم الصورة يجب أن يكون أقل من 10 ميجابايت');
                         return;
                     }
 
@@ -693,28 +881,27 @@
                     const reader = new FileReader();
                     reader.onload = function(ev) {
                         displayAvatar(ev.target.result);
+                        hasUnsavedChanges = true;
                     };
                     reader.readAsDataURL(file);
-                    avatarInput.value = ''; // إعادة تعيين الإدخال
+                    avatarInput.value = '';
                 });
 
-                // حفظ
                 saveBtn.addEventListener('click', saveChanges);
+                saveBtnBottom.addEventListener('click', saveChanges);
 
-                // حذف الصورة
                 deletePhotoBtn.addEventListener('click', deleteAvatar);
 
-                // رجوع
                 backBtn.addEventListener('click', () => {
-                    if (hasUnsavedChanges()) {
-                        if (!confirm('⚠️ لديك تغييرات غير محفوظة. هل تريد المغادرة؟')) {
+                    updateUnsavedChanges();
+                    if (hasUnsavedChanges) {
+                        if (!confirm('⚠️ لديك تغييرات غير محفوظة. هل تريد المغادرة دون حفظ؟')) {
                             return;
                         }
                     }
                     window.location.href = 'settings.html';
                 });
 
-                // الضغط على Enter في حقل الاسم يحفظ
                 nameInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
@@ -722,7 +909,6 @@
                     }
                 });
 
-                // الضغط على Ctrl+Enter في حقل الحالة يحفظ
                 bioInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
@@ -730,11 +916,20 @@
                     }
                 });
 
-                console.log('✅ edit-profile.html (الإصدار النهائي v5.0) جاهز');
+                window.addEventListener('beforeunload', (e) => {
+                    updateUnsavedChanges();
+                    if (hasUnsavedChanges) {
+                        e.preventDefault();
+                        e.returnValue = '⚠️ لديك تغييرات غير محفوظة. هل تريد المغادرة؟';
+                        return e.returnValue;
+                    }
+                });
+
+                console.log('✅ edit-profile.html (الإصدار النهائي v7.4) جاهز');
             });
 
             // ================================================================
-            // دعم الوضع الليلي/النهاري (مشاركة مع التطبيق)
+            // دعم الوضع الليلي/النهاري
             // ================================================================
             function loadTheme() {
                 const theme = localStorage.getItem('ramzapp_theme') || 'dark';
@@ -742,7 +937,6 @@
             }
             loadTheme();
 
-            // الاستماع لتغييرات الثيم من التطبيق
             window.addEventListener('storage', (e) => {
                 if (e.key === 'ramzapp_theme') {
                     document.body.classList.toggle('light-theme', e.newValue === 'light');
