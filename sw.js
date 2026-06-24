@@ -1,9 +1,10 @@
 // ======================================================================
-// sw.js - Service Worker لتطبيق RamzApp v5.0 (PWA)
+// sw.js - الإصدار النهائي v5.2 (Service Worker لتطبيق RamzApp PWA)
+// يدعم التخزين المؤقت، العمل دون اتصال، والإشعارات الفورية
 // ======================================================================
 
 // ==================== التكوين الأساسي ====================
-const CACHE_NAME = 'ramzapp-v5.0';
+const CACHE_NAME = 'ramzapp-v5.2';
 const STATIC_CACHE_NAME = `static-${CACHE_NAME}`;
 const DYNAMIC_CACHE_NAME = `dynamic-${CACHE_NAME}`;
 const IMAGES_CACHE_NAME = `images-${CACHE_NAME}`;
@@ -27,7 +28,7 @@ const STATIC_ASSETS = [
   '/test.js',
   '/manifest.json',
   '/favicon.ico',
-  // الخطوط والأيقونات (CDN)
+  // ملفات CDN (يتم تخزينها مؤقتاً لتسريع التحميل)
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
   'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
@@ -48,7 +49,7 @@ self.addEventListener('install', event => {
       })
       .catch(err => {
         console.error('❌ Failed to cache static assets:', err);
-        // إعادة محاولة التخزين المؤقت للملفات الأساسية
+        // إعادة محاولة التخزين المؤقت للملفات الأساسية فقط
         return caches.open(STATIC_CACHE_NAME).then(cache => {
           return cache.addAll([
             '/',
@@ -71,7 +72,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.filter(cacheName => {
-          // حذف الكاشات القديمة (غير المستخدمة)
+          // حذف الكاشات القديمة
           return cacheName !== STATIC_CACHE_NAME &&
                  cacheName !== DYNAMIC_CACHE_NAME &&
                  cacheName !== IMAGES_CACHE_NAME &&
@@ -94,7 +95,7 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // تجاهل طلبات chrome-extension و localhost (للتطوير)
+  // تجاهل طلبات chrome-extension و localhost
   if (url.protocol === 'chrome-extension:' || url.hostname === 'localhost') {
     return;
   }
@@ -105,19 +106,19 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // ====== استراتيجية لـ Supabase API (وسيط) ======
+  // ====== استراتيجية لـ Supabase API ======
   if (url.hostname === 'serlegwdzjulfcxabxzv.supabase.co') {
     event.respondWith(handleApiRequest(request));
     return;
   }
 
-  // ====== استراتيجية للملفات الثابتة (HTML, CSS, JS) ======
+  // ====== استراتيجية للملفات الثابتة ======
   if (STATIC_ASSETS.some(asset => request.url.includes(asset) || request.url.endsWith(asset))) {
     event.respondWith(handleStaticRequest(request));
     return;
   }
 
-  // ====== استراتيجية للطلبات العامة (Network First مع Cache) ======
+  // ====== استراتيجية للطلبات العامة ======
   event.respondWith(handleNetworkFirstRequest(request));
 });
 
@@ -147,7 +148,7 @@ async function handleImageRequest(request) {
   try {
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
-      // تحديث في الخلفية (للحصول على الصورة الأحدث)
+      // تحديث في الخلفية
       fetch(request).then(response => {
         if (response && response.status === 200) {
           caches.open(IMAGES_CACHE_NAME).then(cache => {
@@ -165,7 +166,6 @@ async function handleImageRequest(request) {
     return networkResponse;
   } catch (error) {
     console.warn('⚠️ Image request failed:', request.url);
-    // محاولة عرض صورة احتياطية
     return new Response('', { status: 404 });
   }
 }
@@ -185,7 +185,6 @@ async function handleApiRequest(request) {
       return cachedResponse;
     }
     console.warn('⚠️ API request failed:', request.url);
-    // إرجاع استجابة خطأ بدلاً من تعطيل التطبيق
     return new Response(JSON.stringify({ error: 'Network error', offline: true }), {
       status: 503,
       headers: { 'Content-Type': 'application/json' }
@@ -239,7 +238,6 @@ self.addEventListener('push', event => {
       { action: 'reply', title: '💬 رد سريع' },
       { action: 'close', title: '✖️ إغلاق' }
     ],
-    // تحسين ظهور الإشعار في الأجهزة المختلفة
     silent: false,
     requireInteraction: true,
     tag: data.chatId || 'ramzapp-notification',
@@ -265,7 +263,6 @@ self.addEventListener('notificationclick', event => {
   const chatId = event.notification.data?.chatId || null;
 
   if (action === 'close') {
-    // فقط أغلق الإشعار (تم بالفعل)
     return;
   }
 
@@ -317,7 +314,6 @@ self.addEventListener('message', event => {
     self.skipWaiting();
   }
 
-  // يمكن استخدام هذا لتحديث الكاش أو إرسال إشعارات من التطبيق
   if (event.data && event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
       caches.keys().then(cacheNames => {
@@ -333,7 +329,6 @@ self.addEventListener('message', event => {
 });
 
 // ==================== التنظيف الدوري للكاش ====================
-// حذف الكاش القديم بشكل دوري (كل 24 ساعة)
 setInterval(() => {
   console.log('🔄 Periodic cache cleanup...');
   caches.keys().then(cacheNames => {
@@ -342,7 +337,6 @@ setInterval(() => {
 
     return Promise.all(
       cacheNames.map(cacheName => {
-        // الاحتفاظ بالكاشات الأساسية فقط
         if (cacheName === STATIC_CACHE_NAME) return;
         if (cacheName === API_CACHE_NAME) return;
 
@@ -359,7 +353,7 @@ setInterval(() => {
 }, 24 * 60 * 60 * 1000);
 
 // ==================== تسجيل الإنجاز ====================
-console.log('✅ RamzApp Service Worker v5.0 ready');
+console.log('✅ RamzApp Service Worker v5.2 ready');
 console.log('📦 Caches:', {
   static: STATIC_CACHE_NAME,
   dynamic: DYNAMIC_CACHE_NAME,
