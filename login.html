@@ -4,14 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
     <title>RamzApp - تسجيل الدخول</title>
-    <!-- تحميل Supabase أولاً (مهم لوجود الدوال) -->
+
+    <!-- ===== تحميل Supabase (للمصادقة والاستعلامات) ===== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <!-- ===== Font Awesome (مصادر متعددة) ===== -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://use.fontawesome.com">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.0/css/all.css">
+
+    <!-- ===== Google Fonts ===== -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+
     <style>
         /* ======================================================================
-                   الأنماط الأساسية – متوافقة مع تطبيق RamzApp
+                   الأنماط الأساسية – متوافقة مع RamzApp v7.4
                    ====================================================================== */
         :root {
             --bg: #0d0d0d;
@@ -26,6 +34,16 @@
             --shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
             --radius: 20px;
             --font: 'Cairo', 'Segoe UI', 'Arial', sans-serif;
+        }
+        .light-theme {
+            --bg: #f0f2f5;
+            --surface: #fff;
+            --surface2: #f5f5f5;
+            --text: #111;
+            --text2: #333;
+            --text3: #667781;
+            --border: #e0e0e0;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
         * {
             margin: 0;
@@ -273,18 +291,23 @@
 </head>
 <body>
 
+    <!-- ===== الشعار ===== -->
     <div class="logo">💬 RamzApp</div>
     <div class="subtitle">تطبيق مراسلة آمن ومتكامل</div>
     <div id="statusBar">⏳ جاري التهيئة...</div>
 
+    <!-- ===== حاوية النموذج ===== -->
     <div class="form-container">
-        <!-- تبويبات -->
+
+        <!-- ===== تبويبات ===== -->
         <div class="tab-row">
             <button class="tab-btn active" id="tabEmail">📧 البريد الإلكتروني</button>
             <button class="tab-btn" id="tabPhone">📱 رقم الهاتف</button>
         </div>
 
-        <!-- نموذج البريد الإلكتروني (دخول / تسجيل) -->
+        <!-- ============================================================
+             نموذج البريد الإلكتروني (دخول / تسجيل)
+             ============================================================ -->
         <div id="emailForm">
             <!-- أزرار التبديل بين تسجيل الدخول وإنشاء حساب -->
             <div class="auth-toggle">
@@ -306,8 +329,16 @@
             <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;" id="emailToggleHint">🔑 سجل دخولك باستخدام بريدك الإلكتروني</p>
         </div>
 
-        <!-- نموذج الهاتف -->
+        <!-- ============================================================
+             نموذج الهاتف (دخول / إنشاء حساب) – مع دعم تسجيل رقم جديد
+             ============================================================ -->
         <div id="phoneForm" style="display:none;">
+            <!-- أزرار التبديل بين تسجيل الدخول وإنشاء حساب -->
+            <div class="auth-toggle">
+                <button id="phoneLoginToggle" class="active">🔑 تسجيل الدخول</button>
+                <button id="phoneSignupToggle">📝 إنشاء حساب</button>
+            </div>
+
             <div class="phone-row">
                 <select id="countryCode">
                     <option value="+967">🇾🇪 +967</option>
@@ -327,21 +358,28 @@
                 </select>
                 <input type="tel" class="login-input" id="phoneInput" placeholder="رقم الهاتف" dir="ltr">
             </div>
+
+            <!-- حقل الاسم (يظهر فقط عند إنشاء حساب) -->
+            <div id="phoneSignupFields" style="display:none;">
+                <input type="text" class="login-input" id="phoneNameInput" placeholder="الاسم (اختياري)" dir="rtl">
+            </div>
+
             <div class="error" id="phoneError"></div>
             <button class="login-btn" id="phoneLoginBtn"><span id="phoneBtnText">📱 متابعة</span></button>
+            <p style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px;" id="phoneToggleHint">🔑 سجل دخولك برقم هاتفك المسجل</p>
         </div>
 
-        <!-- زر الدخول كضيف -->
+        <!-- ===== زر الدخول كضيف ===== -->
         <button class="login-btn guest-btn" id="guestBtn"><span id="guestBtnText">👤 الدخول كضيف</span></button>
         <p class="hint">يتم إنشاء حساب رسمي تلقائياً. ستتمكن من الدخول لاحقاً</p>
     </div>
 
-    <!-- حاوية التوست -->
+    <!-- ===== حاوية التوست ===== -->
     <div class="toast-container" id="toastContainer">
         <div class="toast-msg" id="toastMsg"></div>
     </div>
 
-    <!-- تحميل supabase.js (يجب أن يكون في نفس المجلد) -->
+    <!-- ===== تحميل supabase.js (يحتوي على دوال المصادقة) ===== -->
     <script src="supabase.js"></script>
 
     <script>
@@ -352,7 +390,7 @@
             console.warn('⚠️ login.html تم تهيئته مسبقاً، تجاهل التكرار');
         } else {
             window._loginInit = true;
-            console.log('🚀 بدء تهيئة login.html (مع إنشاء حساب)');
+            console.log('🚀 بدء تهيئة login.html (مع دعم تسجيل رقم جديد)');
         }
 
         // ============================================================
@@ -381,17 +419,17 @@
         })();
 
         // ============================================================
-        // انتظار تحميل supabase.js (الدوال ستكون متاحة عبر window)
+        // انتظار تحميل دوال supabase.js
         // ============================================================
         function waitForSupabase() {
             return new Promise((resolve) => {
                 let attempts = 0;
                 const check = () => {
                     attempts++;
-                    // نتحقق من وجود دوال المصادقة في window (من supabase.js)
                     if (typeof window.signInWithEmail === 'function' &&
                         typeof window.signUpWithEmail === 'function' &&
                         typeof window.signInWithPhone === 'function' &&
+                        typeof window.signUpWithPhone === 'function' &&
                         typeof window.signInAsGuest === 'function') {
                         console.log('✅ دوال supabase.js جاهزة');
                         resolve(true);
@@ -443,7 +481,7 @@
         }
 
         // ============================================================
-        // ربط الأحداث
+        // ربط الأحداث الرئيسية
         // ============================================================
         document.addEventListener('DOMContentLoaded', async function() {
             const ready = await waitForSupabase();
@@ -473,14 +511,14 @@
                 phoneForm.style.display = 'block';
             });
 
-            // ====== تبديل بين تسجيل الدخول وإنشاء حساب ======
+            // ====== تبديل بين تسجيل الدخول وإنشاء حساب (البريد الإلكتروني) ======
             const loginToggle = document.getElementById('loginToggle');
             const signupToggle = document.getElementById('signupToggle');
             const signupFields = document.getElementById('signupFields');
             const emailBtnText = document.getElementById('emailBtnText');
             const emailHint = document.getElementById('emailToggleHint');
 
-            function setAuthMode(mode) {
+            function setEmailMode(mode) {
                 if (mode === 'login') {
                     loginToggle.classList.add('active');
                     signupToggle.classList.remove('active');
@@ -496,10 +534,36 @@
                 }
             }
 
-            loginToggle.addEventListener('click', () => setAuthMode('login'));
-            signupToggle.addEventListener('click', () => setAuthMode('signup'));
+            loginToggle.addEventListener('click', () => setEmailMode('login'));
+            signupToggle.addEventListener('click', () => setEmailMode('signup'));
 
-            // ====== معالج زر البريد الإلكتروني (دخول / تسجيل) ======
+            // ====== تبديل بين تسجيل الدخول وإنشاء حساب (الهاتف) ======
+            const phoneLoginToggle = document.getElementById('phoneLoginToggle');
+            const phoneSignupToggle = document.getElementById('phoneSignupToggle');
+            const phoneSignupFields = document.getElementById('phoneSignupFields');
+            const phoneBtnText = document.getElementById('phoneBtnText');
+            const phoneToggleHint = document.getElementById('phoneToggleHint');
+
+            function setPhoneMode(mode) {
+                if (mode === 'login') {
+                    phoneLoginToggle.classList.add('active');
+                    phoneSignupToggle.classList.remove('active');
+                    phoneSignupFields.style.display = 'none';
+                    phoneBtnText.textContent = '📱 متابعة';
+                    phoneToggleHint.textContent = '🔑 سجل دخولك برقم هاتفك المسجل';
+                } else {
+                    phoneLoginToggle.classList.remove('active');
+                    phoneSignupToggle.classList.add('active');
+                    phoneSignupFields.style.display = 'block';
+                    phoneBtnText.textContent = '📝 إنشاء حساب';
+                    phoneToggleHint.textContent = '📝 أنشئ حسابك الجديد برقم هاتفك';
+                }
+            }
+
+            phoneLoginToggle.addEventListener('click', () => setPhoneMode('login'));
+            phoneSignupToggle.addEventListener('click', () => setPhoneMode('signup'));
+
+            // ====== معالج زر البريد الإلكتروني ======
             const emailLoginBtn = document.getElementById('emailLoginBtn');
             emailLoginBtn.addEventListener('click', async () => {
                 const email = document.getElementById('emailInput').value.trim();
@@ -548,7 +612,6 @@
                         showToast('✅ مرحباً بعودتك!');
                     }
 
-                    // جلب بيانات المستخدم الإضافية من جدول users (إن وجدت)
                     let userData = {
                         id: user.id,
                         email: user.email,
@@ -565,7 +628,7 @@
                                 .single();
                             if (profile) {
                                 userData.name = profile.name || userData.name;
-                                userData.avatar = profile.avatar || '👤';
+                                userData.avatar = profile.avatar_url || '👤';
                                 userData.phone = profile.phone || '';
                             }
                         } catch (e) {}
@@ -573,45 +636,72 @@
                     localStorage.setItem('ramzapp_user', JSON.stringify(userData));
                     window.location.href = 'index.html';
                 } catch (err) {
+                    console.error('❌ فشل العملية:', err);
                     showError('emailError', err.message || 'فشل العملية');
                     setLoading('emailLoginBtn', 'emailBtnText', false, originalText);
                 }
             });
 
-            // ====== تسجيل الدخول بالهاتف ======
+            // ====== معالج زر الهاتف (دخول / إنشاء حساب جديد) ======
             const phoneLoginBtn = document.getElementById('phoneLoginBtn');
             phoneLoginBtn.addEventListener('click', async () => {
                 const countryCode = document.getElementById('countryCode').value;
                 let phone = document.getElementById('phoneInput').value.trim().replace(/[\s\-\(\)]/g, '');
+
                 if (!phone) {
                     showError('phoneError', 'يرجى إدخال رقم الهاتف');
                     return;
                 }
                 if (phone.startsWith('0')) phone = phone.substring(1);
                 const fullPhone = countryCode + phone;
+
                 if (!navigator.onLine) {
                     showError('phoneError', '📡 لا يوجد اتصال بالإنترنت');
                     return;
                 }
-                setLoading('phoneLoginBtn', 'phoneBtnText', true, '📱 متابعة');
+
+                const isSignup = phoneSignupToggle.classList.contains('active');
+                const originalText = phoneBtnText.textContent;
+                setLoading('phoneLoginBtn', 'phoneBtnText', true, originalText);
+
                 try {
-                    if (typeof window.signInWithPhone !== 'function') {
-                        throw new Error('خدمة المصادقة غير متاحة');
+                    let user;
+                    if (isSignup) {
+                        // ===== إنشاء حساب جديد برقم الهاتف =====
+                        const name = document.getElementById('phoneNameInput').value.trim() || 'مستخدم';
+                        if (typeof window.signUpWithPhone !== 'function') {
+                            throw new Error('خدمة التسجيل غير متاحة');
+                        }
+                        user = await window.signUpWithPhone(fullPhone, name);
+                        showToast('✅ تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...');
+                    } else {
+                        // ===== تسجيل الدخول برقم الهاتف =====
+                        if (typeof window.signInWithPhone !== 'function') {
+                            throw new Error('خدمة تسجيل الدخول غير متاحة');
+                        }
+                        user = await window.signInWithPhone(fullPhone);
+                        showToast('✅ مرحباً بعودتك!');
                     }
-                    const user = await window.signInWithPhone(fullPhone);
+
                     const userData = {
                         id: user.id,
-                        email: user.email || '',
+                        phone: user.phone || fullPhone,
                         name: user.name || 'مستخدم',
                         avatar: user.avatar || '👤',
-                        phone: user.phone || fullPhone
+                        public_key: user.public_key || null
                     };
                     localStorage.setItem('ramzapp_user', JSON.stringify(userData));
-                    showToast('✅ تم الدخول بنجاح');
+
+                    // تحديث inMemoryDB إذا كان موجوداً
+                    if (window.inMemoryDB) {
+                        window.inMemoryDB.user = userData;
+                    }
+
                     window.location.href = 'index.html';
                 } catch (err) {
-                    showError('phoneError', err.message || 'فشل تسجيل الدخول');
-                    setLoading('phoneLoginBtn', 'phoneBtnText', false, '📱 متابعة');
+                    console.error('❌ فشل العملية:', err);
+                    showError('phoneError', err.message || 'فشل العملية');
+                    setLoading('phoneLoginBtn', 'phoneBtnText', false, originalText);
                 }
             });
 
@@ -656,8 +746,9 @@
                 }
             });
 
-            console.log('✅ login.html (نسخة نهائية) جاهز');
+            console.log('✅ login.html (النسخة النهائية مع دعم تسجيل رقم جديد) جاهز');
         });
     </script>
+
 </body>
 </html>
