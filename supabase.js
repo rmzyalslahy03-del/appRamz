@@ -1,5 +1,6 @@
 // ======================================================================
-// supabase.js - الإصدار النهائي v5.6 (وسيط مؤقت مع تحميل ديناميكي)
+// supabase.js - الإصدار النهائي المعدل v5.7 (مع دعم sender_id الحقيقي)
+// جميع الميزات مفعلة | وسيط مؤقت مع تحميل ديناميكي
 // ======================================================================
 
 (function() {
@@ -251,7 +252,7 @@
         return result;
     };
 
-    // ----- رقم الهاتف -----
+    // ----- رقم الهاتف (محسن مع دعم تسجيل رقم جديد) -----
 
     window.signUpWithPhone = async function(phone, name, publicKey) {
         const client = ensureSupabase();
@@ -259,7 +260,7 @@
         if (!isOnline) throw new Error('📡 لا يوجد اتصال بالإنترنت');
 
         const cleanPhone = normalizePhone(phone);
-        const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        console.log('📱 جاري تسجيل رقم جديد:', cleanPhone);
 
         // التحقق من عدم وجود الرقم
         const { data: existing, error: findError } = await client
@@ -271,15 +272,19 @@
         if (findError && findError.code !== 'PGRST116') throw findError;
         if (existing) throw new Error('⚠️ هذا الرقم مسجل بالفعل');
 
+        const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        const userName = name || 'مستخدم';
+
         // إدراج المستخدم
         const { data: newUser, error: insertError } = await client
             .from('users')
             .insert({
+                id: userId,
                 phone: cleanPhone,
                 jid: cleanPhone + '@c.us',
                 lid: 'lid_' + Math.random().toString(36).substr(2, 8),
-                name: name || 'مستخدم',
-                avatar_url: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(name || 'مستخدم') + '&background=ff0050&color=fff&size=200',
+                name: userName,
+                avatar_url: 'https://ui-avatars.com/api/?name=' + encodeURIComponent(userName) + '&background=ff0050&color=fff&size=200',
                 public_key: publicKey || null,
                 status: 'مرحباً!',
                 is_online: true,
@@ -289,7 +294,12 @@
             .select()
             .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+            console.error('❌ فشل إدراج المستخدم:', insertError);
+            throw new Error('فشل حفظ بيانات المستخدم: ' + insertError.message);
+        }
+
+        console.log('✅ تم إنشاء الحساب بنجاح:', newUser);
 
         const userData = {
             id: newUser.phone,
@@ -318,7 +328,10 @@
 
         if (error) {
             console.error('❌ خطأ في الاستعلام:', error);
-            throw new Error('⚠️ هذا الرقم غير مسجل في التطبيق');
+            if (error.code === 'PGRST116') {
+                throw new Error('⚠️ هذا الرقم غير مسجل في التطبيق');
+            }
+            throw error;
         }
 
         if (!user) {
@@ -329,10 +342,14 @@
         console.log('✅ تم العثور على المستخدم:', user.name);
 
         // تحديث حالة الاتصال
-        await client
+        const { error: updateError } = await client
             .from('users')
             .update({ is_online: true, last_seen: new Date().toISOString() })
             .eq('phone', cleanPhone);
+
+        if (updateError) {
+            console.warn('⚠️ فشل تحديث حالة الاتصال:', updateError);
+        }
 
         const userData = {
             id: user.phone,
@@ -477,6 +494,7 @@
         channel.on('broadcast', { event: 'new_message' }, (payload) => {
             if (!isOnline) return;
             const msg = payload.payload;
+            console.log(`📩 رسالة واردة من قناة ${chatId}:`, msg);
             if (!msg.chat_id) msg.chat_id = chatId;
             if (typeof onMessage === 'function') onMessage(msg);
         });
@@ -499,6 +517,28 @@
             }
         });
 
+        // استقبال طلبات المكالمات
+        channel.on('broadcast', { event: 'call_offer' }, (payload) => {
+            if (!isOnline) return;
+            if (typeof onMessage === 'function') {
+                onMessage(payload.payload);
+            }
+        });
+
+        channel.on('broadcast', { event: 'call_answer' }, (payload) => {
+            if (!isOnline) return;
+            if (typeof onMessage === 'function') {
+                onMessage(payload.payload);
+            }
+        });
+
+        channel.on('broadcast', { event: 'call_reject' }, (payload) => {
+            if (!isOnline) return;
+            if (typeof onMessage === 'function') {
+                onMessage(payload.payload);
+            }
+        });
+
         channel.subscribe((status) => {
             if (status === 'SUBSCRIBED') {
                 activeChannels[chatId] = channel;
@@ -506,6 +546,8 @@
                 window.fetchPendingMessages(chatId);
             } else if (status === 'CHANNEL_ERROR') {
                 console.warn(`⚠️ خطأ في قناة: ${chatId}`);
+            } else {
+                console.log(`📡 حالة القناة ${chatId}:`, status);
             }
         });
 
@@ -522,20 +564,39 @@
         return false;
     };
 
+    // ======================================================================
+    // 4. إرسال الرسائل (مع sender_id الحقيقي بدلاً من 'me')
+    // ======================================================================
+
     window.sendMessageRealtime = async function(msg) {
         const client = ensureSupabase();
-        if (!client || !isOnline) return { success: false, offline: true };
+        if (!client || !isOnline) {
+            console.warn('⚠️ لا يمكن الإرسال: Supabase غير متاح أو غير متصل');
+            return { success: false, offline: true };
+        }
 
         const chatId = msg.chat_id || msg.sid;
-        if (!chatId) return { success: false, error: 'معرف المحادثة مطلوب' };
+        if (!chatId) {
+            console.error('❌ معرف المحادثة مطلوب');
+            return { success: false, error: 'معرف المحادثة مطلوب' };
+        }
+
+        console.log(`📤 محاولة إرسال رسالة إلى قناة ${chatId}:`, msg);
 
         let channel = activeChannels[chatId];
         if (!channel) {
+            console.log(`🔧 إنشاء قناة جديدة لـ ${chatId}`);
             channel = client.channel(`chat:${chatId}`, {
                 config: { broadcast: { self: false } }
             });
-            await channel.subscribe();
-            activeChannels[chatId] = channel;
+            try {
+                await channel.subscribe();
+                activeChannels[chatId] = channel;
+                console.log(`✅ تم إنشاء قناة ${chatId}`);
+            } catch (err) {
+                console.error(`❌ فشل إنشاء قناة ${chatId}:`, err);
+                return { success: false, error: err.message };
+            }
         }
 
         try {
@@ -545,19 +606,31 @@
                 event: 'new_message',
                 payload: msg
             });
+            console.log(`✅ تم إرسال الرسالة عبر WebSocket إلى قناة ${chatId}`);
 
-            // 2. تخزين في pending_messages (للمستخدمين غير المتصلين)
-            await client
+            // 2. الحصول على رقم المستخدم الحقيقي (بدلاً من 'me')
+            const currentUser = getCurrentUser();
+            const senderPhone = currentUser?.phone || currentUser?.id || 'me';
+            console.log(`📤 إرسال رسالة من: ${senderPhone}`);
+
+            // 3. حفظ في pending_messages مع sender_id الصحيح
+            const { error: insertError } = await client
                 .from('pending_messages')
                 .insert({
                     message_id: msg.id,
                     chat_id: chatId,
-                    sender_id: msg.sender_id || 'me',
+                    sender_id: senderPhone,  // رقم حقيقي وليس 'me'
                     recipient_chat_id: chatId,
                     payload: msg,
                     created_at: new Date().toISOString(),
                     expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
                 });
+
+            if (insertError) {
+                console.warn('⚠️ فشل حفظ الرسالة في pending_messages:', insertError);
+            } else {
+                console.log(`✅ تم حفظ الرسالة في pending_messages (${msg.id})`);
+            }
 
             return { success: true };
         } catch (e) {
@@ -597,16 +670,23 @@
     };
 
     // ======================================================================
-    // 4. الرسائل المعلقة (Pending Messages) – تخزين مؤقت 10 أيام
+    // 5. الرسائل المعلقة (Pending Messages) – تخزين مؤقت 10 أيام
     // ======================================================================
 
     window.fetchPendingMessages = async function(chatId) {
         const client = ensureSupabase();
-        if (!client || !isOnline) return;
+        if (!client || !isOnline) {
+            console.warn('⚠️ لا يمكن جلب الرسائل المعلقة: غير متصل');
+            return;
+        }
         const userId = getCurrentUserId();
-        if (!userId) return;
+        if (!userId) {
+            console.warn('⚠️ لا يمكن جلب الرسائل المعلقة: المستخدم غير مسجل');
+            return;
+        }
 
         try {
+            console.log(`📥 جلب الرسائل المعلقة للمحادثة ${chatId} (المستخدم: ${userId})`);
             const { data, error } = await client
                 .from('pending_messages')
                 .select('*')
@@ -614,32 +694,48 @@
                 .neq('sender_id', userId)
                 .gt('expires_at', new Date().toISOString());
 
-            if (error) throw error;
-            if (!data || !data.length) return;
+            if (error) {
+                console.warn('⚠️ فشل جلب الرسائل المعلقة:', error);
+                return;
+            }
+            if (!data || !data.length) {
+                console.log(`ℹ️ لا توجد رسائل معلقة للمحادثة ${chatId}`);
+                return;
+            }
 
             console.log(`📥 جلب ${data.length} رسالة معلقة للمحادثة ${chatId}`);
 
             for (const record of data) {
-                const msg = record.payload;
-                msg.sync_status = 'delivered';
-                msg.status = 'delivered';
-                msg.chat_id = chatId;
+                try {
+                    const msg = record.payload;
+                    msg.sync_status = 'delivered';
+                    msg.status = 'delivered';
+                    msg.chat_id = chatId;
 
-                // إضافة الرسالة إلى التخزين المحلي (عبر common.js)
-                if (typeof window.handleIncomingMessage === 'function') {
-                    await window.handleIncomingMessage(msg);
-                } else if (typeof window.addMessage === 'function') {
-                    window.addMessage(msg);
+                    // إضافة الرسالة إلى التخزين المحلي (عبر common.js)
+                    if (typeof window.addMessage === 'function') {
+                        window.addMessage(msg);
+                        console.log(`✅ تمت إضافة الرسالة ${msg.id} إلى التخزين المحلي`);
+                    } else {
+                        console.warn('⚠️ window.addMessage غير متوفرة');
+                    }
+
+                    // حذف الرسالة من pending_messages بعد استلامها
+                    const { error: deleteError } = await client
+                        .from('pending_messages')
+                        .delete()
+                        .eq('message_id', record.message_id);
+                    if (deleteError) {
+                        console.warn('⚠️ فشل حذف الرسالة المعلقة:', deleteError);
+                    } else {
+                        console.log(`✅ تم حذف الرسالة المعلقة ${record.message_id}`);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ خطأ في معالجة رسالة معلقة:', e);
                 }
-
-                // حذف الرسالة من pending_messages بعد استلامها
-                await client
-                    .from('pending_messages')
-                    .delete()
-                    .eq('message_id', record.message_id);
             }
 
-            // تحديث الواجهة
+            // تحديث الواجهة (يتم عبر common.js)
             if (typeof window.renderMessages === 'function') window.renderMessages();
             if (typeof window.renderChats === 'function') window.renderChats();
 
@@ -655,14 +751,23 @@
         if (!userId) return [];
 
         try {
+            console.log(`📥 جلب جميع الرسائل المعلقة للمستخدم ${userId}`);
             const { data, error } = await client
                 .from('pending_messages')
                 .select('*')
                 .neq('sender_id', userId)
                 .gt('expires_at', new Date().toISOString());
 
-            if (error) throw error;
-            if (!data || !data.length) return [];
+            if (error) {
+                console.warn('⚠️ فشل جلب جميع الرسائل المعلقة:', error);
+                return [];
+            }
+            if (!data || !data.length) {
+                console.log('ℹ️ لا توجد رسائل معلقة');
+                return [];
+            }
+
+            console.log(`📥 جلب ${data.length} رسالة معلقة`);
 
             // تجميع الرسائل حسب المحادثة
             const grouped = {};
@@ -678,9 +783,7 @@
                     msg.sync_status = 'delivered';
                     msg.status = 'delivered';
                     msg.chat_id = chatId;
-                    if (typeof window.handleIncomingMessage === 'function') {
-                        await window.handleIncomingMessage(msg);
-                    } else if (typeof window.addMessage === 'function') {
+                    if (typeof window.addMessage === 'function') {
                         window.addMessage(msg);
                     }
                 }
@@ -700,7 +803,7 @@
     };
 
     // ======================================================================
-    // 5. إدارة الحالة (Online / Offline)
+    // 6. إدارة الحالة (Online / Offline)
     // ======================================================================
 
     window.setUserOnlineStatus = function(status) {
@@ -716,7 +819,7 @@
     };
 
     // ======================================================================
-    // 6. دوال الدعوة (Invite)
+    // 7. دوال الدعوة (Invite)
     // ======================================================================
 
     window.getInviteCode = async function() {
@@ -742,7 +845,7 @@
     };
 
     // ======================================================================
-    // 7. تحديث المفتاح العام
+    // 8. تحديث المفتاح العام
     // ======================================================================
 
     window.updateUserPublicKey = async function(publicKey) {
@@ -764,7 +867,7 @@
     };
 
     // ======================================================================
-    // 8. مستمعي أحداث الشبكة
+    // 9. مستمعي أحداث الشبكة
     // ======================================================================
 
     window.addEventListener('online', async () => {
@@ -792,7 +895,7 @@
     });
 
     // ======================================================================
-    // 9. التنظيف الدوري للرسائل المنتهية (يتم عبر Trigger في SQL)
+    // 10. التنظيف الدوري للرسائل المنتهية (يتم عبر Trigger في SQL)
     // ولكن يمكن استدعاء دالة تنظيف هنا كاحتياطي
     // ======================================================================
 
@@ -811,7 +914,7 @@
     setInterval(cleanupExpiredPendingMessages, 3600000);
 
     // ======================================================================
-    // 10. حالة الاتصال بالوسيط
+    // 11. حالة الاتصال بالوسيط
     // ======================================================================
 
     window.isSupabaseOnline = () => isOnline && supabase !== null;
@@ -821,7 +924,7 @@
     // رسالة الإتمام
     // ======================================================================
 
-    console.log('✅ supabase.js (الإصدار النهائي v5.6) جاهز');
+    console.log('✅ supabase.js (الإصدار النهائي v5.7) جاهز');
     console.log('🔗 متصل بـ:', SUPABASE_URL);
     console.log('📡 الوضع: ' + (isOnline ? '🟢 متصل' : '🔴 غير متصل'));
 
