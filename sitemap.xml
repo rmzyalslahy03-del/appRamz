@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ======================================================================
+     sitemap.xml - خريطة الموقع لتطبيق RamzApp v7.4
+     إرشادات لمحركات البحث لفهرسة الصفحات العامة
+     ====================================================================== -->
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:mobile="http://www.google.com/schemas/sitemap-mobile/1.0">
+
+    <!-- ===== الصفحة الرئيسية ===== -->
+    <url>
+        <loc>https://ramzapp.com/index.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://ramzapp.com/index.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://ramzapp.com/index.html" />
+        <image:image>
+            <image:loc>https://ramzapp.com/assets/icons/icon-512x512.png</image:loc>
+            <image:title>RamzApp - تطبيق مراسلة آمن ومتكامل</image:title>
+        </image:image>
+    </url>
+
+    <!-- ===== صفحة تسجيل الدخول (عامة) ===== -->
+    <url>
+        <loc>https://ramzapp.com/login.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://ramzapp.com/login.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://ramzapp.com/login.html" />
+    </url>
+
+    <!-- ===== صفحة القنوات (للعرض العام) ===== -->
+    <url>
+        <loc>https://ramzapp.com/channel.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.6</priority>
+        <xhtml:link rel="alternate" hreflang="ar" href="https://ramzapp.com/channel.html" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://ramzapp.com/channel.html" />
+    </url>
+
+    <!-- ===== صفحة الإعدادات (عامة جزئياً) ===== -->
+    <url>
+        <loc>https://ramzapp.com/settings.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- ===== صفحة تعديل الملف الشخصي (عامة جزئياً) ===== -->
+    <url>
+        <loc>https://ramzapp.com/edit-profile.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.4</priority>
+    </url>
+
+    <!-- ===== صفحات إضافية (اختياري) ===== -->
+    <!--
+    <url>
+        <loc>https://ramzapp.com/about.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+    <url>
+        <loc>https://ramzapp.com/privacy.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+    <url>
+        <loc>https://ramzapp.com/terms.html</loc>
+        <lastmod>2026-06-25</lastmod>
+        <changefreq>yearly</changefreq>
+        <priority>0.3</priority>
+    </url>
+    -->
+
+</urlset>
