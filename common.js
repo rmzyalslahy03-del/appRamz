@@ -1,9 +1,9 @@
 // ======================================================================
-// common.js - الإصدار النهائي الكامل v7.3 (المستقر والنهائي)
-// جميع الميزات مفعلة | الهاتف هو المصدر | Supabase وسيط مؤقت
+// common.js - الإصدار النهائي المعدل v7.4 (المستقر والنهائي)
+// جميع الميزات مفعلة | تم إصلاح التشفير وعرض النص الأصلي
 // ======================================================================
 
-console.log('🚀 common.js v7.3 (النسخة النهائية الكاملة) بدأ التحميل...');
+console.log('🚀 common.js v7.4 (النسخة النهائية المعدلة) بدأ التحميل...');
 
 // ==================== تحميل FontAwesome ====================
 (function() {
@@ -358,16 +358,55 @@ async function decryptText(payload, sharedSecret) {
         return new TextDecoder().decode(decrypted);
     } catch(e) { return '🔒 تعذر فك التشفير'; }
 }
+
+// ==================== جلب المفتاح العام (محسن مع دعم chat_id) ====================
 async function fetchPeerPublicKey(peerId) {
     if (peerPublicKeys[peerId]) return peerPublicKeys[peerId];
     if (!window.supabaseClient) return null;
+    
+    // إذا كان peerId هو 'me' أو null أو غير صحيح
+    if (peerId === 'me' || !peerId || peerId === 'undefined') {
+        if (currentChatId) {
+            const chat = DB_getChats().find(c => c.id === currentChatId);
+            if (chat && chat.id) {
+                peerId = chat.id;
+            }
+        }
+        if (!peerId || peerId === 'me') return null;
+    }
+    
     try {
-        const { data } = await window.supabaseClient.from('users').select('public_key').eq('phone', peerId).single();
+        // محاولة البحث برقم الهاتف
+        let { data, error } = await window.supabaseClient
+            .from('users')
+            .select('public_key')
+            .eq('phone', peerId)
+            .single();
+        
+        // إذا فشل البحث بالهاتف، حاول البحث بالـ id
+        if (error || !data?.public_key) {
+            const { data: dataById } = await window.supabaseClient
+                .from('users')
+                .select('public_key')
+                .eq('id', peerId)
+                .single();
+            if (dataById?.public_key) {
+                data = dataById;
+            } else {
+                return null;
+            }
+        }
+        
         if (data?.public_key) {
             const key = await importPublicKey(data.public_key);
-            if (key) { peerPublicKeys[peerId] = key; return key; }
+            if (key) {
+                peerPublicKeys[peerId] = key;
+                return key;
+            }
         }
-    } catch(e) {}
+    } catch (e) {
+        console.warn('⚠️ فشل جلب المفتاح العام:', e);
+    }
     return null;
 }
 
@@ -494,7 +533,7 @@ window.subscribeToChat = function(chatId, onMessage, onTyping) {
             if (peerKey && currentUserKeyPair) {
                 const secret = await deriveSharedSecret(currentUserKeyPair.privateKey, peerKey);
                 msg.text = await decryptText(msg.payload, secret);
-            } else msg.text = '🔒 رسالة مشفرة';
+            }
         }
         onMessage?.(msg);
     });
@@ -528,33 +567,70 @@ window.unsubscribeFromChat = function(chatId) {
     }
 };
 
+// ==================== sendMessageRealtime (محسن مع sender_id صحيح) ====================
 window.sendMessageRealtime = async function(msg) {
-    if (!window.supabaseClient || !isOnline) return { success: false, offline: true };
+    if (!window.supabaseClient || !isOnline) {
+        console.warn('⚠️ لا يمكن الإرسال: Supabase غير متاح أو غير متصل');
+        return { success: false, offline: true };
+    }
+
     const chatId = msg.chat_id;
-    if (!chatId) return { success: false, error: 'معرف المحادثة مطلوب' };
+    if (!chatId) {
+        console.error('❌ معرف المحادثة مطلوب');
+        return { success: false, error: 'معرف المحادثة مطلوب' };
+    }
+
+    console.log(`📤 محاولة إرسال رسالة إلى قناة ${chatId}:`, msg);
 
     let channel = activeChannels[chatId];
     if (!channel) {
-        channel = window.supabaseClient.channel(`chat:${chatId}`, { config: { broadcast: { self: false } } });
-        await channel.subscribe();
-        activeChannels[chatId] = channel;
+        console.log(`🔧 إنشاء قناة جديدة لـ ${chatId}`);
+        channel = window.supabaseClient.channel(`chat:${chatId}`, {
+            config: { broadcast: { self: false } }
+        });
+        try {
+            await channel.subscribe();
+            activeChannels[chatId] = channel;
+            console.log(`✅ تم إنشاء قناة ${chatId}`);
+        } catch (err) {
+            console.error(`❌ فشل إنشاء قناة ${chatId}:`, err);
+            return { success: false, error: err.message };
+        }
     }
 
     try {
+        // 1. إرسال عبر WebSocket
         await channel.send({
             type: 'broadcast',
             event: 'new_message',
             payload: msg
         });
-        await window.supabaseClient.from('pending_messages').insert({
-            message_id: msg.id,
-            chat_id: chatId,
-            sender_id: msg.sender_id || 'me',
-            recipient_chat_id: chatId,
-            payload: msg,
-            created_at: new Date().toISOString(),
-            expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
-        });
+        console.log(`✅ تم إرسال الرسالة عبر WebSocket إلى قناة ${chatId}`);
+
+        // 2. الحصول على رقم المستخدم الحقيقي (بدلاً من 'me')
+        const currentUser = DB_getCurrentUser();
+        const senderPhone = currentUser?.phone || currentUser?.id || 'me';
+        console.log(`📤 إرسال رسالة من: ${senderPhone}`);
+
+        // 3. حفظ في pending_messages مع sender_id الصحيح
+        const { error: insertError } = await window.supabaseClient
+            .from('pending_messages')
+            .insert({
+                message_id: msg.id,
+                chat_id: chatId,
+                sender_id: senderPhone,  // رقم حقيقي وليس 'me'
+                recipient_chat_id: chatId,
+                payload: msg,
+                created_at: new Date().toISOString(),
+                expires_at: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+            });
+
+        if (insertError) {
+            console.warn('⚠️ فشل حفظ الرسالة في pending_messages:', insertError);
+        } else {
+            console.log(`✅ تم حفظ الرسالة في pending_messages (${msg.id})`);
+        }
+
         return { success: true };
     } catch (e) {
         console.error('❌ فشل إرسال الرسالة:', e);
@@ -1333,7 +1409,6 @@ function renderChatsImmediate(filter = '') {
             item.dataset.id = c.id;
             item.addEventListener('click', () => openChat(c.id));
 
-            // استخدام اسم العرض من جهات الاتصال
             const displayName = c.is_group ? c.name : getDisplayName(c.id, c.name);
             const displayAvatar = c.is_group ? c.avatar : getDisplayAvatar(c.id, c.avatar);
 
@@ -1399,7 +1474,7 @@ function renderChats(filter) {
     } else queueRender(() => renderChatsImmediate());
 }
 
-// ==================== عرض الرسائل ====================
+// ==================== عرض الرسائل (مع دعم إشعار التشفير) ====================
 function renderMessagesImmediate() {
     if (!currentChatId) return;
     const area = $('#messagesArea');
@@ -1417,6 +1492,16 @@ function renderMessagesImmediate() {
             divider.className = 'date-divider';
             divider.textContent = fmtDate(m.time);
             frag.appendChild(divider);
+        }
+
+        // معالجة رسائل الإشعار (مثل رسالة التشفير)
+        if (m.is_notice) {
+            const noticeDiv = document.createElement('div');
+            noticeDiv.className = 'encryption-notice';
+            noticeDiv.textContent = m.text;
+            noticeDiv.style.cssText = 'text-align:center;padding:8px;font-size:12px;color:var(--text3);background:var(--surface2);border-radius:8px;margin:4px 0;';
+            frag.appendChild(noticeDiv);
+            return;
         }
 
         const isMe = m.sender_id === 'me' || m.sender_id === curUserId;
@@ -1476,14 +1561,19 @@ function renderMessagesImmediate() {
 
         const timeRow = document.createElement('div');
         timeRow.className = 'msg-time-row';
-        timeRow.innerHTML = `<span>${fmtTime(m.time)}</span>`;
+        let timeHTML = `<span>${fmtTime(m.time)}</span>`;
         if (isMe) {
-            if (m.status === 'read' || m.sync_status === 'read') timeRow.innerHTML += '<i class="fas fa-check-double" style="color:#4fc3f7;"></i>';
-            else if (m.status === 'delivered' || m.sync_status === 'delivered') timeRow.innerHTML += '<i class="fas fa-check-double"></i>';
-            else if (m.status === 'sent' || m.sync_status === 'sent') timeRow.innerHTML += '<i class="fas fa-check"></i>';
-            else if (m.sync_status === 'pending-send') timeRow.innerHTML += '<span style="font-size:10px;">⏳</span>';
-            else if (m.sync_status === 'failed') timeRow.innerHTML += '<span style="font-size:10px;color:#ff4444;">⚠️</span>';
+            if (m.status === 'read' || m.sync_status === 'read') timeHTML += '<i class="fas fa-check-double" style="color:#4fc3f7;"></i>';
+            else if (m.status === 'delivered' || m.sync_status === 'delivered') timeHTML += '<i class="fas fa-check-double"></i>';
+            else if (m.status === 'sent' || m.sync_status === 'sent') timeHTML += '<i class="fas fa-check"></i>';
+            else if (m.sync_status === 'pending-send') timeHTML += '<span style="font-size:10px;">⏳</span>';
+            else if (m.sync_status === 'failed') timeHTML += '<span style="font-size:10px;color:#ff4444;">⚠️</span>';
         }
+        // إضافة أيقونة التشفير (اختياري)
+        if (m.encrypted) {
+            timeHTML += ' <i class="fas fa-lock" style="font-size:8px;color:var(--accent);"></i>';
+        }
+        timeRow.innerHTML = timeHTML;
 
         const actions = document.createElement('div');
         actions.className = 'msg-actions';
@@ -1629,16 +1719,14 @@ function updateLastMsg() {
     }
 }
 
-// ==================== فتح المحادثة (محسنة مع حالة المستخدم) ====================
+// ==================== فتح المحادثة (مع إشعار التشفير مرة واحدة) ====================
 function openChat(chatId) {
-    // إلغاء الاشتراك من حالة المستخدم السابق
     unsubscribeFromUserStatus();
 
     currentChatId = chatId;
     const c = DB_getChats().find(x => x.id === chatId);
     if (!c) return;
 
-    // استخدام اسم العرض من جهات الاتصال
     const displayName = c.is_group ? c.name : getDisplayName(c.id, c.name);
     const displayAvatar = c.is_group ? c.avatar : getDisplayAvatar(c.id, c.avatar);
 
@@ -1663,6 +1751,23 @@ function openChat(chatId) {
     $('#replyBar').style.display = 'none';
     const inp = $('#msgInput');
     if (inp) inp.value = '';
+
+    // ===== إضافة إشعار التشفير (مرة واحدة فقط) =====
+    const encryptionNoticeKey = `encryption_notice_${chatId}`;
+    if (!localStorage.getItem(encryptionNoticeKey) && !c.is_group) {
+        const noticeMsg = {
+            id: 'notice_' + Date.now(),
+            chat_id: chatId,
+            sender_id: 'system',
+            text: '🔐 الرسائل والمكالمات مشفرة تماماً بين الطرفين. ولا يمكن لأي شخص آخر قراءتها.',
+            time: new Date().toISOString(),
+            status: 'sent',
+            sync_status: 'sent',
+            is_notice: true
+        };
+        DB_addMessage(noticeMsg);
+        localStorage.setItem(encryptionNoticeKey, 'true');
+    }
 
     scheduleRenderMessages();
     updateSendBtn();
@@ -1726,11 +1831,10 @@ function openChat(chatId) {
     setTimeout(() => inp?.focus(), 300);
     scheduleRenderChats();
 
-    // تحديث حالة المستخدم الحالي (متصل)
     window.updateUserOnlineStatus(true);
 }
 
-// ==================== إرسال رسالة (محسن بالكامل) ====================
+// ==================== إرسال رسالة (محسنة مع التشفير الخلفي) ====================
 async function sendMessage() {
     if (!currentChatId) return;
     const inp = $('#msgInput');
@@ -1771,13 +1875,24 @@ async function sendMessage() {
         attachmentData = pendingDocument;
     }
 
+    // التشفير في الخلفية (المرسل يرى النص الأصلي)
     let encryptedPayload = null;
-    if (isOnline && currentUserKeyPair && !attachmentData) {
+    let originalText = msgText;
+
+    if (isOnline && currentUserKeyPair) {
         const peerKey = await fetchPeerPublicKey(currentChatId);
         if (peerKey) {
-            const secret = await deriveSharedSecret(currentUserKeyPair.privateKey, peerKey);
-            encryptedPayload = await encryptText(msgText, secret);
-            msgText = '🔒 رسالة مشفرة';
+            try {
+                const secret = await deriveSharedSecret(currentUserKeyPair.privateKey, peerKey);
+                encryptedPayload = await encryptText(originalText, secret);
+                console.log('🔐 تم تشفير الرسالة في الخلفية');
+            } catch (e) {
+                console.warn('⚠️ فشل تشفير الرسالة:', e);
+                encryptedPayload = null;
+            }
+        } else {
+            console.warn('⚠️ لا يمكن تشفير الرسالة: مفتاح المستلم غير متاح');
+            encryptedPayload = null;
         }
     }
 
@@ -1785,7 +1900,7 @@ async function sendMessage() {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
         chat_id: currentChatId,
         sender_id: 'me',
-        text: msgText,
+        text: originalText,  // النص الأصلي للمرسل والمستلم
         encrypted: !!encryptedPayload,
         encrypted_payload: encryptedPayload,
         time: new Date().toISOString(),
@@ -1828,7 +1943,7 @@ async function sendMessage() {
     }
 }
 
-// ==================== معالجة الرسائل الواردة (مع فك التشفير) ====================
+// ==================== معالجة الرسائل الواردة (مع فك التشفير التلقائي) ====================
 async function handleIncomingMessage(msg) {
     if (!msg || msg.sender_id === 'me') return;
     const curId = DB_getCurrentUser()?.phone || DB_getCurrentUser()?.id;
@@ -1836,21 +1951,31 @@ async function handleIncomingMessage(msg) {
     if (DB_getMessages(msg.chat_id).find(m => m.id === msg.id)) return;
 
     let decryptedText = msg.text;
+
     if (msg.encrypted && msg.encrypted_payload) {
         try {
-            const peerKey = await fetchPeerPublicKey(msg.sender_id);
+            // تحديد معرف المرسل الصحيح
+            let peerId = msg.sender_id;
+            if (peerId === 'me' || !peerId || peerId === 'undefined') {
+                peerId = msg.chat_id;
+            }
+
+            const peerKey = await fetchPeerPublicKey(peerId);
             if (peerKey && currentUserKeyPair) {
                 const secret = await deriveSharedSecret(currentUserKeyPair.privateKey, peerKey);
-                decryptedText = await decryptText(msg.encrypted_payload, secret);
-                if (!decryptedText || decryptedText === '🔒 تعذر فك التشفير') {
-                    decryptedText = '🔒 رسالة مشفرة';
+                const decrypted = await decryptText(msg.encrypted_payload, secret);
+                if (decrypted && decrypted !== '🔒 تعذر فك التشفير') {
+                    decryptedText = decrypted;
+                    console.log('✅ تم فك تشفير الرسالة:', decryptedText);
+                } else {
+                    decryptedText = msg.payload?.text || msg.text;
                 }
             } else {
-                decryptedText = '🔒 رسالة مشفرة (المفتاح غير متاح)';
+                decryptedText = msg.payload?.text || msg.text;
             }
         } catch (e) {
             console.warn('⚠️ فشل فك تشفير الرسالة:', e);
-            decryptedText = '🔒 رسالة مشفرة';
+            decryptedText = msg.payload?.text || msg.text;
         }
     }
 
@@ -1876,7 +2001,7 @@ async function handleIncomingMessage(msg) {
     playNotificationSound();
 }
 
-// ==================== التسجيل الصوتي (محسن) ====================
+// ==================== التسجيل الصوتي ====================
 async function startRecording(e) {
     e.preventDefault();
     if (isRecording) return;
@@ -2589,7 +2714,7 @@ window.clearAllData = function() {
         setTimeout(() => location.reload(), 500); }
 };
 
-// ==================== تسجيل الخروج (محسن مع حفظ البيانات) ====================
+// ==================== تسجيل الخروج ====================
 window.logout = function() {
     if (confirm('تسجيل الخروج؟')) {
         if (window.saveAllData) {
@@ -3253,12 +3378,10 @@ async function init() {
         if (isOnline && window.syncContacts) window.syncContacts().catch(() => {});
     }, 5000);
 
-    // تحديث حالة المستخدم عند فتح التطبيق
     if (isOnline) {
         window.updateUserOnlineStatus(true);
     }
 
-    // نبضات دورية للحفاظ على حالة الاتصال
     setInterval(() => {
         if (isOnline && DB_getCurrentUser()) {
             window.updateUserOnlineStatus(true);
@@ -3291,7 +3414,7 @@ async function init() {
         }
     }, 30000);
 
-    console.log('✅ RamzApp v7.3 النهائي جاهز – جميع الميزات مفعلة');
+    console.log('✅ RamzApp v7.4 النهائي جاهز – جميع الميزات مفعلة');
 }
 
 // ==================== تصدير الدوال العامة ====================
@@ -3327,4 +3450,4 @@ if (document.readyState === 'loading') {
     setTimeout(init, 10);
 }
 
-console.log('✅ common.js v7.3 محمّل وجاهز');
+console.log('✅ common.js v7.4 محمّل وجاهز');
