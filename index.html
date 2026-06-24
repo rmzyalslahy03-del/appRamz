@@ -13,16 +13,16 @@
     <meta name="apple-mobile-web-app-title" content="RamzApp">
     <link rel="apple-touch-icon" href="/assets/icons/icon-192x192.png">
 
-    <!-- ===== FontAwesome (تحميل متعدد المصادر) ===== -->
+    <!-- ===== FontAwesome ===== -->
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://use.fontawesome.com">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" onload="console.log('✅ FontAwesome loaded from cdnjs')" onerror="console.warn('⚠️ FontAwesome CDN failed')">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.0/css/all.css" onload="console.log('✅ FontAwesome loaded from use.fontawesome.com')" onerror="console.warn('⚠️ FontAwesome alternative failed')">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.0/css/all.css">
 
     <!-- ===== Google Fonts ===== -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- ===== تحميل Supabase مسبقاً (يُستخدم بواسطة supabase.js) ===== -->
+    <!-- ===== Supabase ===== -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
     <style>
@@ -62,7 +62,7 @@
         }
 
         /* ======================================================================
-                   نظام الاحتياطي للأيقونات (في حال فشل FontAwesome)
+                   أنماط الاحتياطي للأيقونات
                    ====================================================================== */
         body.no-fontawesome .fa,
         body.no-fontawesome .fas,
@@ -81,7 +81,7 @@
         }
 
         /* ======================================================================
-                   الأنماط الأساسية
+                   الأنماط العامة
                    ====================================================================== */
         * {
             margin: 0;
@@ -103,9 +103,7 @@
             position: relative;
         }
 
-        /* ======================================================================
-                   مؤشر الاتصال
-                   ====================================================================== */
+        /* ===== مؤشر الاتصال ===== */
         .connection-indicator {
             position: fixed;
             top: 10px;
@@ -127,9 +125,7 @@
             background: rgba(255, 0, 0, 0.8);
         }
 
-        /* ======================================================================
-                   الحاوية الرئيسية
-                   ====================================================================== */
+        /* ===== الحاوية الرئيسية ===== */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -137,9 +133,7 @@
             position: relative;
         }
 
-        /* ======================================================================
-                   الشاشات (Screens)
-                   ====================================================================== */
+        /* ===== الشاشات ===== */
         .screen {
             display: none;
             flex-direction: column;
@@ -160,9 +154,7 @@
             bottom: 0;
         }
 
-        /* ======================================================================
-                   رأس التطبيق (App Header)
-                   ====================================================================== */
+        /* ===== رأس التطبيق ===== */
         .app-header {
             background: var(--surface);
             padding: 10px 16px;
@@ -208,9 +200,7 @@
             gap: 4px;
         }
 
-        /* ======================================================================
-                   شريط البحث
-                   ====================================================================== */
+        /* ===== شريط البحث ===== */
         .search-bar {
             padding: 8px 14px;
             background: var(--surface);
@@ -232,9 +222,7 @@
             box-shadow: 0 0 0 3px rgba(255, 0, 80, 0.12);
         }
 
-        /* ======================================================================
-                   قائمة المحادثات (Chats List)
-                   ====================================================================== */
+        /* ===== قائمة المحادثات ===== */
         .chats-list {
             flex: 1;
             overflow-y: auto;
@@ -334,20 +322,12 @@
             color: var(--accent);
             font-size: 10px;
         }
-        .check-mark {
-            font-size: 10px;
-            color: var(--text3);
-        }
-        .check-mark.read {
-            color: var(--blue-check);
-        }
         .typing-indicator-chat {
             font-size: 11px;
             color: var(--green);
             font-style: italic;
             animation: pulse 1.2s infinite;
         }
-
         @keyframes pulse {
             0%,
             100% {
@@ -358,9 +338,7 @@
             }
         }
 
-        /* ======================================================================
-                   رأس المحادثة (Chat Header)
-                   ====================================================================== */
+        /* ===== رأس المحادثة ===== */
         .chat-header-bar {
             background: var(--surface);
             padding: 8px 12px;
@@ -405,9 +383,7 @@
             animation: pulse 1.2s infinite;
         }
 
-        /* ======================================================================
-                   شريط التشفير (Encryption Banner)
-                   ====================================================================== */
+        /* ===== شريط التشفير ===== */
         .encryption-banner {
             background: #1f2c33;
             padding: 8px 12px;
@@ -423,9 +399,7 @@
             color: #25D366;
         }
 
-        /* ======================================================================
-                   منطقة الرسائل (Messages Area)
-                   ====================================================================== */
+        /* ===== منطقة الرسائل ===== */
         .messages-area {
             flex: 1;
             overflow-y: auto;
@@ -483,13 +457,12 @@
         }
         .own .msg-bubble {
             background: #25D366;
-            color: #ffffff;
+            color: #fff;
             border-bottom-right-radius: 4px;
         }
         .other .msg-bubble {
             background: #1f2c33;
             color: #e9edef;
-            border: none;
             border-bottom-left-radius: 4px;
         }
         .reply-preview {
@@ -589,9 +562,7 @@
             border-radius: 2px;
         }
 
-        /* ======================================================================
-                   شريط الرد والإدخال
-                   ====================================================================== */
+        /* ===== شريط الرد والإدخال ===== */
         .reply-bar {
             background: var(--surface);
             padding: 8px 14px;
@@ -672,9 +643,7 @@
             }
         }
 
-        /* ======================================================================
-                   منتقي الإيموجي (Emoji Picker)
-                   ====================================================================== */
+        /* ===== منتقي الإيموجي ===== */
         .emoji-picker {
             position: absolute;
             bottom: 75px;
@@ -707,9 +676,7 @@
             transform: scale(1.2);
         }
 
-        /* ======================================================================
-                   صفحة المرفقات (Attach Sheet)
-                   ====================================================================== */
+        /* ===== صفحة المرفقات ===== */
         .attach-sheet {
             position: fixed;
             bottom: -100%;
@@ -771,9 +738,7 @@
             transform: scale(0.9);
         }
 
-        /* ======================================================================
-                   عارض الصور (Image Viewer)
-                   ====================================================================== */
+        /* ===== عارض الصور ===== */
         .image-viewer {
             position: fixed;
             inset: 0;
@@ -820,9 +785,7 @@
             transition: 0.2s;
         }
 
-        /* ======================================================================
-                   شاشة المكالمات (Call Screen)
-                   ====================================================================== */
+        /* ===== شاشة المكالمات ===== */
         .call-screen-overlay {
             position: fixed;
             inset: 0;
@@ -897,9 +860,7 @@
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* ======================================================================
-                   عارض القصص (Story Viewer)
-                   ====================================================================== */
+        /* ===== عارض القصص ===== */
         .story-viewer-active {
             position: fixed;
             top: 0;
@@ -1010,9 +971,7 @@
             max-width: 80%;
         }
 
-        /* ======================================================================
-                   النوافذ المنبثقة (Modal / Popup)
-                   ====================================================================== */
+        /* ===== النوافذ المنبثقة ===== */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -1118,6 +1077,7 @@
             z-index: 2001;
         }
 
+        /* ===== القائمة المنبثقة العامة ===== */
         .popup-overlay {
             position: fixed;
             inset: 0;
@@ -1178,9 +1138,7 @@
             color: #ff4444;
         }
 
-        /* ======================================================================
-                   شاشة فارغة (Empty State)
-                   ====================================================================== */
+        /* ===== شاشة فارغة ===== */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -1192,9 +1150,7 @@
             opacity: 0.5;
         }
 
-        /* ======================================================================
-                   شريط القصص (Story Bar) – أفقي
-                   ====================================================================== */
+        /* ===== شريط القصص ===== */
         .story-bar {
             padding: 12px 14px;
             border-bottom: 1px solid var(--border);
@@ -1265,9 +1221,7 @@
             white-space: nowrap;
         }
 
-        /* ======================================================================
-                   قائمة معاينات القصص (أفقية)
-                   ====================================================================== */
+        /* ===== قائمة القصص ===== */
         #storiesList {
             padding: 8px 16px 12px;
             display: flex;
@@ -1338,9 +1292,7 @@
             color: var(--text);
         }
 
-        /* ======================================================================
-                   أقسام أخرى (القنوات، الأدوات، الملف الشخصي، الإعدادات)
-                   ====================================================================== */
+        /* ===== أقسام أخرى ===== */
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -1398,9 +1350,7 @@
             color: var(--text3);
         }
 
-        /* ======================================================================
-                   الأدوات (Tools)
-                   ====================================================================== */
+        /* ===== الأدوات ===== */
         .tools-grid {
             padding: 16px;
             display: flex;
@@ -1497,9 +1447,7 @@
             color: var(--text3);
         }
 
-        /* ======================================================================
-                   الملف الشخصي
-                   ====================================================================== */
+        /* ===== الملف الشخصي ===== */
         .profile-section {
             text-align: center;
             padding: 30px 20px;
@@ -1526,9 +1474,7 @@
             margin: 6px 0 16px;
         }
 
-        /* ======================================================================
-                   الإعدادات (داخلية)
-                   ====================================================================== */
+        /* ===== الإعدادات ===== */
         .settings-list {
             padding: 16px;
         }
@@ -1589,9 +1535,7 @@
             right: 24px;
         }
 
-        /* ======================================================================
-                   الشريط السفلي (Bottom Navigation)
-                   ====================================================================== */
+        /* ===== الشريط السفلي ===== */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -1630,9 +1574,7 @@
             color: var(--accent);
         }
 
-        /* ======================================================================
-                   Toast (رسالة مؤقتة)
-                   ====================================================================== */
+        /* ===== Toast ===== */
         .toast {
             position: fixed;
             bottom: 90px;
@@ -1655,157 +1597,190 @@
             opacity: 1;
         }
 
-        /* ======================================================================
-                   عناصر إضافية (البحث داخل المحادثة، الكتالوج، إلخ)
-                   ====================================================================== */
-        .catalog-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            padding: 16px;
-        }
-        .catalog-card {
-            background: var(--surface);
-            border-radius: 16px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .catalog-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-        .catalog-img {
-            height: 120px;
-            background: var(--surface3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-        }
-        .catalog-info {
-            padding: 10px 12px;
-        }
-        .catalog-info h5 {
-            font-size: 13px;
-            margin-bottom: 2px;
-        }
-        .catalog-info span {
-            font-size: 11px;
-            color: var(--accent);
-            font-weight: 700;
-        }
-
-        .icon-loading-indicator {
-            position: fixed;
-            top: -100px;
-            left: -100px;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
-            font-family: 'Font Awesome 6 Free', 'Cairo', sans-serif;
-        }
-
-        .in-chat-search {
-            display: none;
-            padding: 8px 12px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            align-items: center;
-            gap: 8px;
-        }
-        .in-chat-search.active {
-            display: flex;
-        }
-        .in-chat-search input {
-            flex: 1;
-            background: var(--surface3);
-            border: none;
-            border-radius: 20px;
-            padding: 8px 16px;
-            color: var(--text);
-            font-family: inherit;
-        }
-        .search-results {
-            max-height: 150px;
-            overflow-y: auto;
-            background: var(--surface);
-            font-size: 12px;
-        }
-        .search-result-item {
-            padding: 8px 16px;
-            border-bottom: 1px solid var(--border);
-            cursor: pointer;
-        }
-        .search-result-item:hover {
-            background: var(--surface2);
-        }
-        .sync-pending {
-            opacity: 0.8;
-        }
-        .sync-pending::after {
-            content: ' ⏳';
-            font-size: 10px;
-        }
-        .sync-failed::after {
-            content: ' ⚠️';
-            font-size: 10px;
-            color: #ff4444;
-        }
-
-        /* ======================================================================
-                   مودالات المجموعات والقنوات
-                   ====================================================================== */
-        .group-modal,
-        .channel-modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
-            z-index: 5000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .group-modal.active,
-        .channel-modal.active {
-            display: flex;
-        }
-        .group-card,
-        .channel-card {
-            background: var(--surface);
-            border-radius: 28px;
-            width: 340px;
-            max-width: 90%;
-            padding: 20px;
+        /* ===== القائمة المنبثقة للمحادثة ===== */
+        .chat-popup-menu {
+            width: 280px !important;
             max-height: 80vh;
             overflow-y: auto;
         }
-        .group-card input,
-        .channel-card input,
-        .group-card textarea,
-        .channel-card textarea {
-            width: 100%;
-            padding: 12px;
-            border-radius: 25px;
-            border: 1px solid var(--border);
-            background: var(--surface2);
-            color: var(--text);
-            margin-bottom: 12px;
-            font-family: inherit;
+        .popup-section {
+            display: block;
         }
-        .group-card textarea,
-        .channel-card textarea {
-            border-radius: 16px;
-            resize: vertical;
-            min-height: 60px;
+        .popup-section .popup-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            transition: 0.15s;
+            color: var(--text2);
+            font-size: 14px;
+        }
+        .popup-section .popup-item:last-child {
+            border-bottom: none;
+        }
+        .popup-section .popup-item:hover {
+            background: var(--surface2);
+        }
+        .popup-section .popup-item:active {
+            transform: scale(0.98);
+            background: var(--surface3);
+        }
+        .popup-section .popup-item i {
+            width: 22px;
+            font-size: 18px;
+            color: var(--text3);
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .popup-section .popup-item.danger i,
+        .popup-section .popup-item.danger span {
+            color: #ff4444;
+        }
+        .popup-section .popup-item .popup-badge {
+            margin-right: auto;
+            font-size: 11px;
+            background: var(--surface3);
+            padding: 2px 12px;
+            border-radius: 12px;
+            color: var(--text3);
+            font-weight: 600;
+        }
+        .popup-section .popup-item .popup-badge.active {
+            background: var(--accent);
+            color: #fff;
+        }
+        .popup-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+        .popup-back-item {
+            color: var(--accent) !important;
+            font-weight: 600;
+        }
+        .popup-back-item i {
+            color: var(--accent) !important;
+        }
+        .popup-more-item i:last-child {
+            margin-right: auto !important;
+            font-size: 12px !important;
         }
 
-        /* ======================================================================
-                   زر تثبيت PWA
-                   ====================================================================== */
+        /* ===== مودال عرض جهة الاتصال ===== */
+        .contact-modal .modal-card {
+            max-width: 380px;
+            text-align: right;
+        }
+        .contact-modal .contact-info {
+            padding: 8px 0;
+        }
+        .contact-modal .contact-info .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .contact-modal .contact-info .row .label {
+            color: var(--text3);
+        }
+        .contact-modal .contact-info .row .value {
+            font-weight: 600;
+            color: var(--text);
+        }
+        .contact-modal .contact-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .contact-modal .contact-actions button {
+            background: none;
+            border: none;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 4px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.15s;
+        }
+        .contact-modal .contact-actions button:hover {
+            background: var(--surface2);
+        }
+        .contact-modal .contact-actions button i {
+            font-size: 22px;
+            color: var(--accent);
+        }
+        .contact-modal .contact-actions button span {
+            font-size: 10px;
+            color: var(--text3);
+        }
+
+        /* ===== مودال الوسائط ===== */
+        .media-modal .media-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .media-modal .media-grid .media-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            background: var(--surface3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: var(--text3);
+            transition: 0.15s;
+            position: relative;
+        }
+        .media-modal .media-grid .media-item img,
+        .media-modal .media-grid .media-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .media-modal .media-grid .media-item:hover {
+            transform: scale(1.02);
+            border: 2px solid var(--accent);
+        }
+        .media-modal .media-grid .media-item .media-type {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* ===== البحث داخل المحادثة ===== */
+        .in-chat-search.active {
+            display: flex !important;
+        }
+        .search-result-item.highlight {
+            background: var(--accent) !important;
+            color: #fff !important;
+        }
+        .search-result-item.highlight span {
+            color: #fff !important;
+        }
+
+        /* ===== زر تثبيت PWA ===== */
         #installAppBtn {
             display: none;
             margin: 8px 16px;
@@ -1827,9 +1802,7 @@
             transform: scale(1.02);
         }
 
-        /* ======================================================================
-                   توافق مع الشاشات الصغيرة
-                   ====================================================================== */
+        /* ===== توافق مع الشاشات الصغيرة ===== */
         @media (max-width: 380px) {
             .chat-name {
                 font-size: 14px;
@@ -1851,6 +1824,15 @@
                 width: 120px;
                 min-width: 110px;
             }
+            .chat-popup-menu {
+                width: 250px !important;
+            }
+            .contact-modal .contact-actions {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .media-modal .media-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
     </style>
 </head>
@@ -1867,12 +1849,9 @@
              ============================================================ -->
         <div class="screen active" id="chatsScreen">
             <div class="app-header">
-                <button class="header-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
                 <h2>💬 RamzApp</h2>
                 <div class="header-actions">
-                    <button class="header-btn" id="contactsBtn"><i class="fas fa-address-book"></i></button>
                     <button class="header-btn" id="cameraBtn"><i class="fas fa-camera"></i></button>
-                    <button class="header-btn" id="searchBtn"><i class="fas fa-search"></i></button>
                     <button class="header-btn" id="mainMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
@@ -1987,14 +1966,27 @@
                     <button class="header-btn" id="updatesMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
+
+            <!-- شريط القصص العلوي -->
             <div class="story-bar" id="storyBar"></div>
-            <div class="stories-actions">
-                <button class="promo-btn" id="addStoryBtn" style="background:var(--accent);color:#fff;width:100%;">📸 إضافة قصة</button>
+
+            <!-- زر إضافة قصة -->
+            <div style="padding: 8px 16px;">
+                <button class="promo-btn" id="addStoryBtn" style="background:var(--accent);color:#fff;width:100%;">
+                    <i class="fas fa-camera"></i> إضافة قصة جديدة
+                </button>
+            </div>
+
+            <!-- قائمة القصص -->
+            <div class="section-header">
+                <h3>📖 القصص</h3>
+                <span style="color:var(--text3);font-size:12px;" id="storiesCount">0 قصة</span>
             </div>
             <div id="storiesList"></div>
-            <!-- القنوات مع شريط بحث -->
+
+            <!-- القنوات -->
             <div class="section-header" style="padding-top: 8px; padding-bottom: 4px;">
-                <h3>القنوات</h3>
+                <h3>📢 القنوات</h3>
                 <button class="header-btn" id="createChannelBtn"><i class="fas fa-plus-circle"></i></button>
             </div>
             <div style="padding: 0 16px 8px;">
@@ -2044,7 +2036,7 @@
         </div>
 
         <!-- ============================================================
-             الشاشة: الإعدادات (داخلية – سيتم استبدالها بـ settings.html عبر القائمة)
+             الشاشة: الإعدادات
              ============================================================ -->
         <div class="screen no-nav" id="settingsScreen">
             <div class="app-header">
@@ -2059,7 +2051,7 @@
                 <div class="setting-item" onclick="importData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>استيراد النسخة الاحتياطية</span></div><i class="fas fa-chevron-left"></i></div>
                 <div class="setting-item" onclick="clearAllData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt"></i></div><span>حذف جميع المحادثات</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
                 <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span>تسجيل الخروج</span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v5.0 | جميع الحقوق محفوظة © 2026</p>
+                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v7.2 | جميع الحقوق محفوظة © 2026</p>
             </div>
         </div>
 
@@ -2095,29 +2087,87 @@
         </div>
     </div>
 
-    <!-- مودال تفاصيل القناة (سيتم استبداله بالانتقال إلى channel-feed.html) -->
-    <div class="modal-overlay" id="channelDetailsModal">
-        <button class="modal-close" id="closeChannelDetailsBtn">&times;</button>
-        <div class="modal-card" style="max-width: 360px; text-align: right;">
-            <div id="channelDetailsContent">
-                <!-- يتم ملؤه بواسطة JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <!-- مودال إدارة القناة -->
-    <div class="modal-overlay" id="channelManagementModal">
-        <button class="modal-close" id="closeChannelManagementBtn">&times;</button>
-        <div class="modal-card" style="max-width: 360px; text-align: right;">
-            <div id="channelManagementContent">
-                <!-- يتم ملؤه بواسطة JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <!-- القائمة المنبثقة (عامة) -->
+    <!-- القائمة المنبثقة العامة -->
     <div class="popup-overlay" id="popupOverlay">
         <div class="popup-menu" id="popupMenu"></div>
+    </div>
+
+    <!-- القائمة المنبثقة للمحادثة -->
+    <div class="popup-overlay" id="chatPopupOverlay">
+        <div class="popup-menu chat-popup-menu" id="chatPopupMenu">
+            <!-- القائمة الرئيسية -->
+            <div class="popup-section" id="popupMainSection">
+                <div class="popup-item" data-action="view-contact">
+                    <i class="fas fa-address-card"></i>
+                    <span>عرض جهة الاتصال</span>
+                </div>
+                <div class="popup-item" data-action="search">
+                    <i class="fas fa-search"></i>
+                    <span>بحث</span>
+                </div>
+                <div class="popup-item" data-action="media">
+                    <i class="fas fa-photo-video"></i>
+                    <span>وسائط وروابط</span>
+                </div>
+                <div class="popup-item" data-action="mute">
+                    <i class="fas fa-bell-slash"></i>
+                    <span>كتم الإشعارات</span>
+                    <span class="popup-badge" id="muteBadge"></span>
+                </div>
+                <div class="popup-item" data-action="disappear">
+                    <i class="fas fa-clock"></i>
+                    <span>رسائل ذاتية الاختفاء</span>
+                    <span class="popup-badge" id="disappearBadge">إيقاف</span>
+                </div>
+                <div class="popup-item" data-action="new-group">
+                    <i class="fas fa-users"></i>
+                    <span>مجموعة جديدة</span>
+                </div>
+                <div class="popup-item" data-action="theme">
+                    <i class="fas fa-palette"></i>
+                    <span>سمة الدردشة</span>
+                    <span class="popup-badge" id="themeBadge">داكن</span>
+                </div>
+                <div class="popup-item popup-more-item" data-action="more">
+                    <i class="fas fa-ellipsis-h"></i>
+                    <span>المزيد</span>
+                    <i class="fas fa-chevron-left" style="margin-right:auto;font-size:12px;color:var(--text3);"></i>
+                </div>
+            </div>
+
+            <!-- القائمة الفرعية (المزيد) -->
+            <div class="popup-section" id="popupSubSection" style="display:none;">
+                <div class="popup-item popup-back-item" data-action="back-main">
+                    <i class="fas fa-arrow-right"></i>
+                    <span>رجوع</span>
+                </div>
+                <div class="popup-divider"></div>
+                <div class="popup-item" data-action="report">
+                    <i class="fas fa-flag"></i>
+                    <span>إبلاغ</span>
+                </div>
+                <div class="popup-item danger" data-action="block">
+                    <i class="fas fa-ban"></i>
+                    <span>حظر</span>
+                </div>
+                <div class="popup-item danger" data-action="clear-chat">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>مسح المحادثة</span>
+                </div>
+                <div class="popup-item" data-action="transfer-chat">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>نقل الدردشة</span>
+                </div>
+                <div class="popup-item" data-action="add-shortcut">
+                    <i class="fas fa-plus-square"></i>
+                    <span>إضافة اختصار</span>
+                </div>
+                <div class="popup-item" data-action="more-options">
+                    <i class="fas fa-ellipsis-h"></i>
+                    <span>المزيد (تجريبي)</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Toast -->
@@ -2129,7 +2179,7 @@
         <img src="" alt="صورة" id="viewerImage">
     </div>
 
-    <!-- شاشة المكالمات (Overlay) -->
+    <!-- شاشة المكالمات -->
     <div class="call-screen-overlay" id="callScreen">
         <div class="call-avatar-lg" id="callAvatar">م</div>
         <div class="call-status" id="callStatusText">جاري الاتصال...</div>
@@ -2139,7 +2189,6 @@
             <button class="call-action-btn call-end" id="callEndBtn"><i class="fas fa-phone-slash"></i></button>
             <button class="call-action-btn call-speaker" id="callSpeakerBtn"><i class="fas fa-volume-up"></i></button>
         </div>
-        <!-- عناصر الفيديو للمكالمات المرئية -->
         <div style="display:none;position:relative;width:100%;max-width:400px;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;margin-top:20px;" id="videoContainer">
             <video id="remoteVideo" autoplay playsinline style="width:100%;height:100%;object-fit:cover;"></video>
             <video id="localVideo" autoplay playsinline muted style="position:absolute;bottom:10px;right:10px;width:80px;height:60px;object-fit:cover;border-radius:8px;border:2px solid #fff;display:none;"></video>
@@ -2150,7 +2199,7 @@
     <button id="installAppBtn"><i class="fas fa-download"></i> تثبيت التطبيق</button>
 
     <!-- ================================================================
-         الشريط السفلي (Bottom Navigation) – 5 أزرار فقط
+         الشريط السفلي
          ================================================================ -->
     <div class="bottom-nav" id="bottomNav" style="display:none;">
         <button class="nav-item active" data-nav="chats"><i class="fas fa-comment-dots"></i><span>الدردشات</span></button>
@@ -2161,28 +2210,20 @@
     </div>
 
     <!-- ================================================================
-         تحميل السكربتات (ترتيب التحميل مهم جداً)
+         تحميل السكربتات
          ================================================================ -->
-    <!-- 1. قاعدة البيانات المحلية (أولاً) -->
     <script src="db.js"></script>
-    <!-- 2. وسيط Supabase -->
     <script src="supabase.js"></script>
-    <!-- 3. المزامنة -->
     <script src="sync.js"></script>
-    <!-- 4. منطق التطبيق الرئيسي -->
     <script src="common.js"></script>
-    <!-- 5. أدوات الاختبار (اختياري) -->
-    <script src="test.js"></script>
 
     <!-- ================================================================
-         فحص المستخدم والتوجيه (يعمل فوراً)
+         فحص المستخدم والتوجيه
          ================================================================ -->
     <script>
         (function() {
-            // هذا السكربت يعمل قبل تحميل common.js بالكامل للتوجيه السريع
             const savedUser = localStorage.getItem('ramzapp_user');
             if (!savedUser) {
-                // إذا لم يكن هناك مستخدم، التوجيه إلى login.html
                 window.location.href = 'login.html';
                 return;
             }
@@ -2193,7 +2234,6 @@
                     window.location.href = 'login.html';
                     return;
                 }
-                // المستخدم موجود – سيتم عرض التطبيق بواسطة common.js
                 console.log('✅ مستخدم موجود:', user.name);
             } catch (e) {
                 localStorage.removeItem('ramzapp_user');
@@ -2202,7 +2242,7 @@
         })();
     </script>
 
-    <!-- ===== تسجيل Service Worker (PWA) ===== -->
+    <!-- ===== Service Worker ===== -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
@@ -2216,7 +2256,6 @@
             });
         }
 
-        // قبل تثبيت PWA
         let deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -2247,5 +2286,3 @@
 
 </body>
 </html>
-</body>
-        </html>
