@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title> RamzApp |   </title>
+    <title>RamzApp |    </title>
 
     <!-- ===== PWA ===== -->
     <link rel="manifest" href="/manifest.json">
@@ -27,8 +27,8 @@
 
     <style>
         /* ======================================================================
-                     –   
-                   ====================================================================== */
+             –   RamzApp v8.0
+           ====================================================================== */
         :root {
             --bg: #0d0d0d;
             --surface: #1a1a1a;
@@ -62,8 +62,8 @@
         }
 
         /* ======================================================================
-                     
-                   ====================================================================== */
+            
+           ====================================================================== */
         body.no-fontawesome .fa,
         body.no-fontawesome .fas,
         body.no-fontawesome .far,
@@ -80,9 +80,6 @@
             text-align: center;
         }
 
-        /* ======================================================================
-                    
-                   ====================================================================== */
         * {
             margin: 0;
             padding: 0;
@@ -125,7 +122,7 @@
             background: rgba(255, 0, 0, 0.8);
         }
 
-        /* =====   ===== */
+        /* =====   ===== */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -154,7 +151,7 @@
             bottom: 0;
         }
 
-        /* =====   ===== */
+        /* =====   ===== */
         .app-header {
             background: var(--surface);
             padding: 10px 16px;
@@ -329,16 +326,11 @@
             animation: pulse 1.2s infinite;
         }
         @keyframes pulse {
-            0%,
-            100% {
-                opacity: 0.6;
-            }
-            50% {
-                opacity: 1;
-            }
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
 
-        /* =====   ===== */
+        /* =====   ===== */
         .chat-header-bar {
             background: var(--surface);
             padding: 8px 12px;
@@ -393,6 +385,7 @@
             font-size: 12px;
             color: #8696a0;
             border-bottom: 1px solid #2a373f;
+            flex-shrink: 0;
         }
         .encryption-banner i {
             font-size: 16px;
@@ -432,14 +425,8 @@
             animation: fadeUp 0.3s ease;
         }
         @keyframes fadeUp {
-            from {
-                opacity: 0;
-                transform: translateY(12px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .msg-row.own {
             justify-content: flex-end;
@@ -474,7 +461,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0,0,0,0.1);
             border-radius: 0 4px 4px 0;
             padding: 3px 8px;
             cursor: pointer;
@@ -512,7 +499,7 @@
             color: #ff0050;
         }
         .msg-actions button:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
         }
         .attachment-img {
             max-width: 200px;
@@ -634,16 +621,11 @@
             animation: pulseRec 0.8s infinite;
         }
         @keyframes pulseRec {
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.5);
-            }
-            50% {
-                box-shadow: 0 0 0 15px rgba(255, 0, 0, 0);
-            }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.5); }
+            50% { box-shadow: 0 0 0 15px rgba(255,0,0,0); }
         }
 
-        /* =====   ===== */
+        /* =====   ===== */
         .emoji-picker {
             position: absolute;
             bottom: 75px;
@@ -697,7 +679,7 @@
         .attach-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,0.5);
             z-index: 1199;
             display: none;
         }
@@ -742,7 +724,7 @@
         .image-viewer {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(0,0,0,0.95);
             z-index: 3000;
             display: none;
             align-items: center;
@@ -756,24 +738,18 @@
             max-width: 95vw;
             max-height: 90vh;
             border-radius: 8px;
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
             animation: zoomIn 0.25s ease;
         }
         @keyframes zoomIn {
-            from {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
         .image-viewer-close {
             position: absolute;
             top: 20px;
             left: 20px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
             border: none;
             color: #fff;
             font-size: 24px;
@@ -812,17 +788,12 @@
             font-size: 44px;
             font-weight: 800;
             animation: pulseCall 2s infinite;
-            border: 3px solid rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255,255,255,0.2);
             color: var(--text);
         }
         @keyframes pulseCall {
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 168, 132, 0.5);
-            }
-            50% {
-                box-shadow: 0 0 0 25px rgba(0, 168, 132, 0);
-            }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0,168,132,0.5); }
+            50% { box-shadow: 0 0 0 25px rgba(0,168,132,0); }
         }
         .call-status {
             font-size: 16px;
@@ -854,10 +825,10 @@
             background: #ff0000;
         }
         .call-mute {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
         }
         .call-speaker {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
         }
 
         /* =====   ===== */
@@ -867,7 +838,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(0,0,0,0.95);
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -888,7 +859,7 @@
         .story-viewer-active .progress-segment {
             flex: 1;
             height: 3px;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255,255,255,0.3);
             border-radius: 2px;
             overflow: hidden;
         }
@@ -922,7 +893,7 @@
             top: 20px;
             right: 20px;
             z-index: 10000;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,0.5);
             border: none;
             color: #fff;
             font-size: 24px;
@@ -948,7 +919,7 @@
             object-fit: contain;
         }
         .story-viewer-active .content .text-story {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255,255,255,0.1);
             padding: 30px;
             border-radius: 16px;
             color: #fff;
@@ -962,20 +933,20 @@
             bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(255,255,255,0.8);
             font-size: 14px;
             text-align: center;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,0.5);
             padding: 8px 16px;
             border-radius: 20px;
             max-width: 80%;
         }
 
-        /* =====   ===== */
+        /* =====   () ===== */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.7);
             backdrop-filter: blur(6px);
             z-index: 2000;
             display: none;
@@ -996,14 +967,8 @@
             animation: popIn 0.3s ease;
         }
         @keyframes popIn {
-            from {
-                opacity: 0;
-                transform: scale(0.85) translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+            from { opacity: 0; transform: scale(0.85) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
         .modal-avatar {
             width: 100px;
@@ -1066,7 +1031,7 @@
             position: absolute;
             top: 16px;
             left: 16px;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,0.5);
             border: none;
             color: #fff;
             font-size: 20px;
@@ -1077,11 +1042,11 @@
             z-index: 2001;
         }
 
-        /* =====    ===== */
+        /* =====   ===== */
         .popup-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,0.5);
             z-index: 1500;
             display: none;
             justify-content: flex-end;
@@ -1102,14 +1067,8 @@
             animation: slideIn 0.25s ease;
         }
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-12px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         .popup-item {
             display: flex;
@@ -1253,7 +1212,7 @@
             gap: 6px;
             cursor: pointer;
             transition: 0.2s;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .story-card:hover {
             border-color: var(--accent);
@@ -1292,7 +1251,7 @@
             color: var(--text);
         }
 
-        /* =====   ===== */
+        /* =====   ===== */
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -1350,7 +1309,7 @@
             color: var(--text3);
         }
 
-        /* =====  ===== */
+        /* =====   ===== */
         .tools-grid {
             padding: 16px;
             display: flex;
@@ -1597,7 +1556,7 @@
             opacity: 1;
         }
 
-        /* =====    ===== */
+        /* =====    ===== */
         .chat-popup-menu {
             width: 280px !important;
             max-height: 80vh;
@@ -1668,7 +1627,7 @@
             font-size: 12px !important;
         }
 
-        /* =====     ===== */
+        /* =====    ===== */
         .contact-modal .modal-card {
             max-width: 380px;
             text-align: right;
@@ -1761,7 +1720,7 @@
             position: absolute;
             bottom: 4px;
             right: 4px;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.7);
             color: #fff;
             font-size: 10px;
             padding: 2px 8px;
@@ -1780,7 +1739,7 @@
             color: #fff !important;
         }
 
-        /* =====   PWA ===== */
+        /* =====   (PWA) ===== */
         #installAppBtn {
             display: none;
             margin: 8px 16px;
@@ -1802,50 +1761,29 @@
             transform: scale(1.02);
         }
 
-        /* =====     ===== */
+        /* =====    ===== */
         @media (max-width: 380px) {
-            .chat-name {
-                font-size: 14px;
-            }
-            .msg-bubble {
-                font-size: 12.5px;
-            }
-            .nav-item {
-                font-size: 9px;
-            }
-            .modal-card {
-                width: 280px;
-            }
-            .group-card,
-            .channel-card {
-                width: 300px;
-            }
-            .story-card {
-                width: 120px;
-                min-width: 110px;
-            }
-            .chat-popup-menu {
-                width: 250px !important;
-            }
-            .contact-modal .contact-actions {
-                grid-template-columns: repeat(3, 1fr);
-            }
-            .media-modal .media-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
+            .chat-name { font-size: 14px; }
+            .msg-bubble { font-size: 12.5px; }
+            .nav-item { font-size: 9px; }
+            .modal-card { width: 280px; }
+            .story-card { width: 120px; min-width: 110px; }
+            .chat-popup-menu { width: 250px !important; }
+            .contact-modal .contact-actions { grid-template-columns: repeat(3, 1fr); }
+            .media-modal .media-grid { grid-template-columns: repeat(3, 1fr); }
         }
     </style>
 </head>
 <body>
 
     <!-- =====   ===== -->
-    <div class="connection-indicator" id="connectionIndicator">    </div>
+    <div class="connection-indicator" id="connectionIndicator">   –    </div>
 
-    <!-- =====   ===== -->
+    <!-- =====   ===== -->
     <div class="app-container" id="appContainer" style="display:none;">
 
         <!-- ============================================================
-             : 
+              
              ============================================================ -->
         <div class="screen active" id="chatsScreen">
             <div class="app-header">
@@ -1855,20 +1793,22 @@
                     <button class="header-btn" id="mainMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
                 </div>
             </div>
-            <div class="search-bar"><input type="text" id="searchChatsInput" placeholder="   ..."></div>
+            <div class="search-bar">
+                <input type="text" id="searchChatsInput" placeholder="   ...">
+            </div>
             <div class="chats-list" id="chatsList"></div>
         </div>
 
         <!-- ============================================================
-             : 
+               ()
              ============================================================ -->
         <div class="screen no-nav" id="chatScreen">
             <div class="chat-header-bar">
                 <button class="header-btn" id="backBtn"><i class="fas fa-arrow-right"></i></button>
                 <div class="avatar" id="chatAvatar"></div>
                 <div class="chat-header-info" id="chatHeaderInfo">
-                    <div class="chat-header-name" id="chatNameDisp"></div>
-                    <div class="chat-header-status online" id="chatStatusDisp"> </div>
+                    <div class="chat-header-name" id="chatNameDisp"></div>
+                    <div class="chat-header-status" id="chatStatusDisp">  </div>
                 </div>
                 <div class="header-actions">
                     <button class="header-btn" id="voiceCallBtn"><i class="fas fa-phone"></i></button>
@@ -1877,18 +1817,18 @@
                 </div>
             </div>
 
-            <!--    -->
-            <div class="in-chat-search" id="inChatSearch">
-                <input type="text" placeholder="  ..." id="inChatSearchInput">
-                <button class="header-btn" id="closeInChatSearch">&times;</button>
-            </div>
-            <div class="search-results" id="searchResults" style="display:none;"></div>
-
-            <!--   -->
+            <!--   +  "  " -->
             <div class="encryption-banner">
                 <i class="fas fa-lock" style="color: #25D366;"></i>
-                <span>     .      .</span>
+                <span>      •  "  " –    </span>
             </div>
+
+            <!--    -->
+            <div class="in-chat-search" id="inChatSearch" style="display:none; padding:8px 12px; background:var(--surface); border-bottom:1px solid var(--border);">
+                <input type="text" placeholder="   ..." id="inChatSearchInput" style="flex:1; padding:8px 14px; border-radius:25px; border:none; background:var(--surface3); color:var(--text); font-family:inherit; outline:none;">
+                <button class="header-btn" id="closeInChatSearch">&times;</button>
+            </div>
+            <div class="search-results" id="searchResults" style="display:none; max-height:200px; overflow-y:auto; background:var(--surface); border-bottom:1px solid var(--border); padding:4px 0;"></div>
 
             <!--   -->
             <div class="messages-area" id="messagesArea"></div>
@@ -1908,16 +1848,16 @@
                 <button class="input-btn mic-btn" id="micBtn" style="display:flex;"><i class="fas fa-microphone"></i></button>
             </div>
 
-            <!--   -->
+            <!--   -->
             <div class="emoji-picker" id="emojiPicker"></div>
 
             <!--   -->
             <div class="attach-overlay" id="attachOverlay"></div>
             <div class="attach-sheet" id="attachSheet">
                 <button class="header-btn" id="closeAttachBtn" style="float:left;">&times;</button>
-                <h4 style="text-align:center;"> </h4>
+                <h4 style="text-align:center;">  </h4>
                 <div class="attach-grid">
-                    <div class="attach-option" data-type="gallery"><div class="circle"><i class="fas fa-image"></i></div><span></span></div>
+                    <div class="attach-option" data-type="gallery"><div class="circle"><i class="fas fa-image"></i></div><span></span></div>
                     <div class="attach-option" data-type="camera"><div class="circle"><i class="fas fa-camera"></i></div><span></span></div>
                     <div class="attach-option" data-type="document"><div class="circle"><i class="fas fa-file-alt"></i></div><span></span></div>
                     <div class="attach-option" data-type="contact"><div class="circle"><i class="fas fa-address-card"></i></div><span> </span></div>
@@ -1927,7 +1867,7 @@
         </div>
 
         <!-- ============================================================
-             :  
+               
              ============================================================ -->
         <div class="screen" id="contactsScreen">
             <div class="app-header">
@@ -1941,11 +1881,11 @@
             <div style="padding:8px 16px;">
                 <button class="promo-btn" id="syncContactsBtn" style="background:var(--accent);color:#fff;width:100%;">   </button>
             </div>
-            <div class="contacts-list" id="contactsList"></div>
+            <div class="chats-list" id="contactsList"></div>
         </div>
 
         <!-- ============================================================
-             : 
+              
              ============================================================ -->
         <div class="screen" id="callsScreen">
             <div class="app-header">
@@ -1956,7 +1896,7 @@
         </div>
 
         <!-- ============================================================
-             :  ( )
+               ( + )
              ============================================================ -->
         <div class="screen" id="updatesScreen">
             <div class="app-header">
@@ -1967,13 +1907,13 @@
                 </div>
             </div>
 
-            <!--    -->
+            <!--   -->
             <div class="story-bar" id="storyBar"></div>
 
             <!--    -->
             <div style="padding: 8px 16px;">
                 <button class="promo-btn" id="addStoryBtn" style="background:var(--accent);color:#fff;width:100%;">
-                    <i class="fas fa-camera"></i>   
+                    <i class="fas fa-camera"></i>   
                 </button>
             </div>
 
@@ -1990,13 +1930,13 @@
                 <button class="header-btn" id="createChannelBtn"><i class="fas fa-plus-circle"></i></button>
             </div>
             <div style="padding: 0 16px 8px;">
-                <input type="text" id="searchChannelsInput" placeholder="   ..." style="width:100%; padding:10px 16px; border-radius:25px; border:none; background:var(--surface3); color:var(--text); font-family:inherit; font-size:14px; outline:none; transition:all var(--transition);">
+                <input type="text" id="searchChannelsInput" placeholder="   ..." style="width:100%; padding:10px 16px; border-radius:25px; border:none; background:var(--surface3); color:var(--text); font-family:inherit; font-size:14px; outline:none; transition:all var(--transition);">
             </div>
-            <div id="channelsList" style="flex:1;overflow-y:auto;"></div>
+            <div id="channelsList" style="flex:1; overflow-y:auto;"></div>
         </div>
 
         <!-- ============================================================
-             : 
+              
              ============================================================ -->
         <div class="screen" id="toolsScreen">
             <div class="app-header">
@@ -2005,38 +1945,56 @@
             </div>
             <div class="tools-grid">
                 <div class="stat-card">
-                    <div style="color:var(--text3);font-size:12px;margin-bottom:12px;">    7 </div>
+                    <div style="color:var(--text3);font-size:12px;margin-bottom:12px;">  </div>
                     <div class="stat-row">
-                        <div class="stat-box"><div class="stat-num" id="statViews">0</div><div class="stat-label"></div></div>
+                        <div class="stat-box"><div class="stat-num" id="statViews">0</div><div class="stat-label"></div></div>
                         <div class="stat-box"><div class="stat-num" id="statCatalog">0</div><div class="stat-label"></div></div>
-                        <div class="stat-box"><div class="stat-num" id="statChats">0</div><div class="stat-label"></div></div>
+                        <div class="stat-box"><div class="stat-num" id="statChats">0</div><div class="stat-label"></div></div>
                     </div>
                 </div>
-                <div class="promo-card"><h4>    </h4><p>        Ramz-App.</p><button class="promo-btn" id="startAdBtn"> </button></div>
-                <div class="tool-row" id="catalogBtn"><div class="tool-icon"><i class="fas fa-boxes"></i></div><div class="tool-info"><div class="tool-name"></div><div class="tool-desc">  </div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
-                <div class="tool-row" id="broadcastBtn"><div class="tool-icon"><i class="fas fa-bullhorn"></i></div><div class="tool-info"><div class="tool-name"> </div><div class="tool-desc">    </div></div><i class="fas fa-chevron-left" style="color:var(--text3);"></i></div>
+                <div class="promo-card">
+                    <h4>   </h4>
+                    <p>     Ramz-App.</p>
+                    <button class="promo-btn" id="startAdBtn"> </button>
+                </div>
+                <div class="tool-row" id="catalogBtn">
+                    <div class="tool-icon"><i class="fas fa-boxes"></i></div>
+                    <div class="tool-info">
+                        <div class="tool-name"> </div>
+                        <div class="tool-desc">  </div>
+                    </div>
+                    <i class="fas fa-chevron-left" style="color:var(--text3);"></i>
+                </div>
+                <div class="tool-row" id="broadcastBtn">
+                    <div class="tool-icon"><i class="fas fa-bullhorn"></i></div>
+                    <div class="tool-info">
+                        <div class="tool-name">  </div>
+                        <div class="tool-desc">    </div>
+                    </div>
+                    <i class="fas fa-chevron-left" style="color:var(--text3);"></i>
+                </div>
             </div>
         </div>
 
         <!-- ============================================================
-             :  
+               
              ============================================================ -->
         <div class="screen no-nav" id="profileScreen">
             <div class="app-header">
                 <button class="header-btn" id="backFromProfileBtn"><i class="fas fa-arrow-right"></i></button>
-                <h2> </h2>
+                <h2>  </h2>
                 <button class="header-btn" id="profileMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
             <div class="profile-section">
                 <div class="profile-avatar-lg" id="profileAvatar"></div>
                 <div class="profile-name-lg" id="profileName"></div>
                 <div class="profile-bio-lg" id="profileBio"></div>
-                <button class="promo-btn" id="profileChatBtn" style="background:var(--accent);color:#fff;"> </button>
+                <button class="promo-btn" id="profileChatBtn" style="background:var(--accent);color:#fff;">  </button>
             </div>
         </div>
 
         <!-- ============================================================
-             : 
+              
              ============================================================ -->
         <div class="screen no-nav" id="settingsScreen">
             <div class="app-header">
@@ -2045,20 +2003,59 @@
                 <button class="header-btn" id="settingsMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
             </div>
             <div class="settings-list">
-                <div class="setting-item" id="themeToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-moon"></i></div><span> </span></div><div class="toggle-sw active" id="themeSwitch"></div></div>
-                <div class="setting-item" id="notifToggle"><div class="setting-left"><div class="setting-icon"><i class="fas fa-bell"></i></div><span></span></div><div class="toggle-sw active" id="notifSwitch"></div></div>
-                <div class="setting-item" onclick="exportData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-download"></i></div><span> </span></div><i class="fas fa-chevron-left"></i></div>
-                <div class="setting-item" onclick="importData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-upload"></i></div><span>  </span></div><i class="fas fa-chevron-left"></i></div>
-                <div class="setting-item" onclick="clearAllData()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-trash-alt"></i></div><span>  </span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <div class="setting-item" onclick="logout()"><div class="setting-left"><div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div><span> </span></div><i class="fas fa-chevron-left" style="color:#ff4444;"></i></div>
-                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">RamzApp v7.2 |    © 2026</p>
+                <div class="setting-item" id="themeToggle">
+                    <div class="setting-left">
+                        <div class="setting-icon"><i class="fas fa-moon"></i></div>
+                        <span> </span>
+                    </div>
+                    <div class="toggle-sw active" id="themeSwitch"></div>
+                </div>
+                <div class="setting-item" id="notifToggle">
+                    <div class="setting-left">
+                        <div class="setting-icon"><i class="fas fa-bell"></i></div>
+                        <span></span>
+                    </div>
+                    <div class="toggle-sw active" id="notifSwitch"></div>
+                </div>
+                <div class="setting-item" onclick="exportData()">
+                    <div class="setting-left">
+                        <div class="setting-icon"><i class="fas fa-download"></i></div>
+                        <span> </span>
+                    </div>
+                    <i class="fas fa-chevron-left"></i>
+                </div>
+                <div class="setting-item" onclick="importData()">
+                    <div class="setting-left">
+                        <div class="setting-icon"><i class="fas fa-upload"></i></div>
+                        <span> </span>
+                    </div>
+                    <i class="fas fa-chevron-left"></i>
+                </div>
+                <div class="setting-item" onclick="clearAllData()">
+                    <div class="setting-left">
+                        <div class="setting-icon"><i class="fas fa-trash-alt"></i></div>
+                        <span>  </span>
+                    </div>
+                    <i class="fas fa-chevron-left" style="color:#ff4444;"></i>
+                </div>
+                <div class="setting-item" onclick="logout()">
+                    <div class="setting-left">
+                        <div class="setting-icon"><i class="fas fa-sign-out-alt"></i></div>
+                        <span> </span>
+                    </div>
+                    <i class="fas fa-chevron-left" style="color:#ff4444;"></i>
+                </div>
+                <p style="text-align:center;color:var(--text3);margin-top:16px;font-size:11px;">
+                    RamzApp v8.0 |  "  " –    <br>
+                    © 2026   
+                </p>
             </div>
         </div>
 
     </div> <!--  app-container -->
 
     <!-- ================================================================
-           
+           (   )
          ================================================================ -->
 
     <!--   -->
@@ -2071,7 +2068,7 @@
             <div class="modal-actions">
                 <button class="modal-action" id="modalChatBtn"><i class="fas fa-comment-dots"></i><span></span></button>
                 <button class="modal-action" id="modalCallBtn"><i class="fas fa-phone"></i><span></span></button>
-                <button class="modal-action" id="modalVideoBtn"><i class="fas fa-video"></i><span></span></button>
+                <button class="modal-action" id="modalVideoBtn"><i class="fas fa-video"></i><span></span></button>
                 <button class="modal-action" id="modalInfoBtn"><i class="fas fa-info-circle"></i><span></span></button>
             </div>
         </div>
@@ -2081,9 +2078,7 @@
     <div class="modal-overlay" id="groupManagementModal">
         <button class="modal-close" id="closeGroupManagementBtn">&times;</button>
         <div class="modal-card" style="max-width: 400px; text-align: right;">
-            <div id="groupManagementContent">
-                <!--    JavaScript -->
-            </div>
+            <div id="groupManagementContent"></div>
         </div>
     </div>
 
@@ -2095,7 +2090,7 @@
     <!--    -->
     <div class="popup-overlay" id="chatPopupOverlay">
         <div class="popup-menu chat-popup-menu" id="chatPopupMenu">
-            <!--   -->
+            <!--   -->
             <div class="popup-section" id="popupMainSection">
                 <div class="popup-item" data-action="view-contact">
                     <i class="fas fa-address-card"></i>
@@ -2107,16 +2102,16 @@
                 </div>
                 <div class="popup-item" data-action="media">
                     <i class="fas fa-photo-video"></i>
-                    <span> </span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="mute">
                     <i class="fas fa-bell-slash"></i>
                     <span> </span>
-                    <span class="popup-badge" id="muteBadge"></span>
+                    <span class="popup-badge" id="muteBadge"></span>
                 </div>
                 <div class="popup-item" data-action="disappear">
                     <i class="fas fa-clock"></i>
-                    <span>  </span>
+                    <span> </span>
                     <span class="popup-badge" id="disappearBadge"></span>
                 </div>
                 <div class="popup-item" data-action="new-group">
@@ -2125,7 +2120,7 @@
                 </div>
                 <div class="popup-item" data-action="theme">
                     <i class="fas fa-palette"></i>
-                    <span> </span>
+                    <span></span>
                     <span class="popup-badge" id="themeBadge"></span>
                 </div>
                 <div class="popup-item popup-more-item" data-action="more">
@@ -2134,8 +2129,7 @@
                     <i class="fas fa-chevron-left" style="margin-right:auto;font-size:12px;color:var(--text3);"></i>
                 </div>
             </div>
-
-            <!--   () -->
+            <!--   () -->
             <div class="popup-section" id="popupSubSection" style="display:none;">
                 <div class="popup-item popup-back-item" data-action="back-main">
                     <i class="fas fa-arrow-right"></i>
@@ -2144,7 +2138,7 @@
                 <div class="popup-divider"></div>
                 <div class="popup-item" data-action="report">
                     <i class="fas fa-flag"></i>
-                    <span></span>
+                    <span></span>
                 </div>
                 <div class="popup-item danger" data-action="block">
                     <i class="fas fa-ban"></i>
@@ -2156,7 +2150,7 @@
                 </div>
                 <div class="popup-item" data-action="transfer-chat">
                     <i class="fas fa-exchange-alt"></i>
-                    <span> </span>
+                    <span> </span>
                 </div>
                 <div class="popup-item" data-action="add-shortcut">
                     <i class="fas fa-plus-square"></i>
@@ -2164,7 +2158,7 @@
                 </div>
                 <div class="popup-item" data-action="more-options">
                     <i class="fas fa-ellipsis-h"></i>
-                    <span> ()</span>
+                    <span> </span>
                 </div>
             </div>
         </div>
@@ -2179,7 +2173,7 @@
         <img src="" alt="" id="viewerImage">
     </div>
 
-    <!--   -->
+    <!--   -->
     <div class="call-screen-overlay" id="callScreen">
         <div class="call-avatar-lg" id="callAvatar"></div>
         <div class="call-status" id="callStatusText"> ...</div>
@@ -2203,22 +2197,23 @@
          ================================================================ -->
     <div class="bottom-nav" id="bottomNav" style="display:none;">
         <button class="nav-item active" data-nav="chats"><i class="fas fa-comment-dots"></i><span></span></button>
-        <button class="nav-item" data-nav="contacts"><i class="fas fa-address-book"></i><span> </span></button>
+        <button class="nav-item" data-nav="contacts"><i class="fas fa-address-book"></i><span> </span></button>
         <button class="nav-item" data-nav="calls"><i class="fas fa-phone"></i><span></span></button>
         <button class="nav-item" data-nav="updates"><i class="fas fa-sync-alt"></i><span></span></button>
         <button class="nav-item" data-nav="tools"><i class="fas fa-tools"></i><span></span></button>
     </div>
 
     <!-- ================================================================
-          
+            ( )
          ================================================================ -->
     <script src="db.js"></script>
     <script src="supabase.js"></script>
+    <script src="media.js"></script>
     <script src="sync.js"></script>
     <script src="common.js"></script>
 
     <!-- ================================================================
-           
+             
          ================================================================ -->
     <script>
         (function() {
@@ -2234,7 +2229,7 @@
                     window.location.href = 'login.html';
                     return;
                 }
-                console.log('  :', user.name);
+                console.log('  :', user.name || user.id);
             } catch (e) {
                 localStorage.removeItem('ramzapp_user');
                 window.location.href = 'login.html';
@@ -2242,20 +2237,23 @@
         })();
     </script>
 
-    <!-- ===== Service Worker ===== -->
+    <!-- ================================================================
+          Service Worker
+         ================================================================ -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                        console.log(' Service Worker registered successfully:', registration);
+                    .then(function(reg) {
+                        console.log(' Service Worker  :', reg);
                     })
                     .catch(function(err) {
-                        console.warn(' Service Worker registration failed:', err);
+                        console.warn('   Service Worker:', err);
                     });
             });
         }
 
+        //   PWA
         let deferredPrompt = null;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -2266,10 +2264,10 @@
                 btn.addEventListener('click', () => {
                     if (deferredPrompt) {
                         deferredPrompt.prompt();
-                        deferredPrompt.userChoice.then((choiceResult) => {
-                            if (choiceResult.outcome === 'accepted') {
+                        deferredPrompt.userChoice.then((choice) => {
+                            if (choice.outcome === 'accepted') {
                                 console.log('   ');
-                                toast('   RamzApp  ');
+                                toast('   RamzApp!');
                             }
                             deferredPrompt = null;
                         });
@@ -2278,9 +2276,9 @@
             }
         });
 
-        window.addEventListener('appinstalled', (evt) => {
-            console.log(' RamzApp installed successfully');
-            toast('   RamzApp!');
+        window.addEventListener('appinstalled', () => {
+            console.log(' RamzApp   ');
+            toast(' RamzApp    !');
         });
     </script>
 
